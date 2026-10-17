@@ -41,7 +41,7 @@ export function OrderStatusView({ initial, placePhone }: { initial: Order; place
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl bg-surface px-5 py-6">
+      <div className="rounded-[1.4rem] bg-surface shadow-card px-5 py-6">
         <p className="text-lg text-ink-soft">Ordre</p>
         <p className="font-display text-6xl font-extrabold tracking-tight tabular-nums">{order.number}</p>
         <p className="mt-1 text-lg">Sig nummeret, når du henter hos {order.placeName}.</p>
@@ -84,7 +84,7 @@ export function OrderStatusView({ initial, placePhone }: { initial: Order; place
         <HomeScreenGuide reason="Vil du have besked, når maden er klar?" />
       )}
 
-      <div className="rounded-3xl bg-surface px-5 py-4 text-lg">
+      <div className="rounded-[1.4rem] bg-surface shadow-card px-5 py-4 text-lg">
         <p className="font-bold">Du har bestilt</p>
         <ul className="mt-2 space-y-1">
           {order.lines.map((l) => (

@@ -27,7 +27,7 @@ export function BookingStatusView({ initial, placePhone }: { initial: Booking; p
           </a>
         )}
       </div>
-      <div className="rounded-3xl bg-surface px-5 py-4 text-lg">
+      <div className="rounded-[1.4rem] bg-surface shadow-card px-5 py-4 text-lg">
         <p className="font-bold first-letter:uppercase">{when}</p>
         <p>{people} · {b.customerName}, {b.customerPhone}</p>
         {b.note && <p className="text-ink-soft">{b.note}</p>}
