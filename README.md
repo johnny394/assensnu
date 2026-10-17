@@ -16,9 +16,9 @@ Uden Supabase kører siden i afprøvningstilstand: spisestederne kommer fra `src
 
 Til drift:
 
-1. Opret et projekt på supabase.com og kør `supabase/migrations/0001_init.sql`.
+1. Opret et projekt på supabase.com og kør `supabase/migrations/0001_init.sql` og derefter `supabase/seed.sql` i SQL Editor. Seed-filen laves med `node --experimental-strip-types scripts/lav-seed.ts`.
 2. Kopiér `.env.example` til `.env.local` og udfyld `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` og `PANEL_SECRET`.
-3. Giv hver restaurant en kode: gem `sha256(kode)` i `places.panel_pin_hash`.
+3. Giv hver restaurant en kode: gem `sha256(kode)` i `places.panel_pin_hash`. Prøvepizza får koden 1234 fra seed-filen.
 
 ## Sådan hænger det sammen
 

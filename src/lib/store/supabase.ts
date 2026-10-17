@@ -52,6 +52,7 @@ function toPlace(r: PlaceRow): Place {
     prepMinutes: r.prep_minutes,
     extraWaitMinutes: r.extra_wait_minutes,
     closedToday: r.closed_on === todayInCopenhagen(),
+    demo: r.slug === "proevepizza" || undefined,
     hours: r.opening_hours.map((h) => ({ day: h.day as Weekday, open: h.open.slice(0, 5), close: h.close.slice(0, 5) })),
     menu: [...r.menu_categories].sort(byPosition).map((c) => ({
       name: c.name,
