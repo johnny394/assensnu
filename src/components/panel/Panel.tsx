@@ -146,14 +146,22 @@ function Orders({ orders, onChange }: { orders: Order[]; onChange: () => void })
             <p className={`${big} mt-4 flex items-center justify-center bg-paper text-ink-soft`}>Gemmer…</p>
           ) : o.status === "new" && (
             <div className="mt-4">
-              <p className="mb-2 font-bold">Hvornår er den klar?</p>
-              <div className="grid grid-cols-4 gap-2">
-                {[15, 20, 30, 45].map((m) => (
-                  <button key={m} onClick={() => set(o, "accepted", m)} className={`${big} bg-go text-white`}>
-                    {m} min
-                  </button>
-                ))}
-              </div>
+              {o.pickup === "asap" ? (
+                <>
+                  <p className="mb-2 font-bold">Hvornår er den klar?</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[15, 20, 30, 45].map((m) => (
+                      <button key={m} onClick={() => set(o, "accepted", m)} className={`${big} bg-go text-white`}>
+                        {m} min
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <button onClick={() => set(o, "accepted")} className={`${big} w-full bg-go text-white`}>
+                  Godkend · klar kl. {o.pickup}
+                </button>
+              )}
               <button onClick={() => confirm(`Afvis ordre ${o.number}?`) && set(o, "rejected")} className="mt-2 w-full py-2 text-lg text-signal underline">
                 Afvis ordren
               </button>
