@@ -9,27 +9,32 @@ Mål: første version i luften 1. december 2026.
 ```bash
 npm install
 npm run dev     # http://localhost:3000
-npm test        # tests af åbningstider
+npm test        # tests af åbningstider, afhentningstider og bestillinger
 ```
 
-Uden Supabase bruger siden startlisten i `src/data/places.ts`. Med Supabase:
+Uden Supabase kører siden i afprøvningstilstand: spisestederne kommer fra `src/data/places.ts`, og ordrer og bookinger gemmes kun i hukommelsen. Prøv "Prøvepizza (demo)" og restaurantpanelet på `/panel` med koden 1234.
 
-1. Opret et projekt på supabase.com og kør `supabase/migrations/0001_init.sql`.
-2. Kopiér `.env.example` til `.env.local` og udfyld URL og anon-nøgle.
+Til drift:
 
-## Struktur
+1. Opret et projekt på supabase.com og kør `supabase/migrations/0001_init.sql` og derefter `supabase/seed.sql` i SQL Editor. Seed-filen laves med `node --experimental-strip-types scripts/lav-seed.ts`.
+2. Kopiér `.env.example` til `.env.local` og udfyld `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` og `PANEL_SECRET`.
+3. Giv hver restaurant en kode: gem `sha256(kode)` i `places.panel_pin_hash`. Prøvepizza får koden 1234 fra seed-filen.
+
+## Sådan hænger det sammen
+
+Kun serveren taler med databasen. Browseren henter status igen hvert 4.-5. sekund, så der er ingen websockets eller sms.
 
 | Sti | Indhold |
 | --- | --- |
-| `src/app/page.tsx` | Forside med søgning og filtre |
-| `src/app/sted/[slug]` | Side for hvert spisested |
-| `src/lib/hours.ts` | "Åben nu" i dansk tid, også over midnat |
-| `src/lib/places.ts` | Henter fra Supabase eller startlisten |
-| `supabase/migrations` | Database: steder, åbningstider, menuer, ordrer, bookinger |
+| `src/app/page.tsx` | Forside: hvem har åbent, søgning og filtre |
+| `src/app/sted/[slug]` | Restaurantside med menu og kurv, `bestil` og `book` |
+| `src/app/ordre/[id]`, `src/app/booking/[id]` | Kundens statusside, opdaterer sig selv |
+| `src/app/panel` | Restaurantpanel til mobil og tablet, login med kode |
+| `src/app/api` | Opret ordre/booking, panelets handlinger |
+| `src/lib/hours.ts` | "Åben nu" og afhentningstider i dansk tid |
+| `src/lib/orders.ts` | Tjek af bestillinger; prisen regnes altid ud fra menuen |
+| `src/lib/store` | Gemmer data: `memory.ts` (afprøvning) eller `supabase.ts` (drift) |
 
-## Plan
+## Design
 
-1. Fundament (17.–26. okt): projekt, database, design
-2. Find og se (27. okt–9. nov): restaurantsider, menuer, søgning, åben nu
-3. Bestil og book (10.–23. nov): takeaway, bordbooking, restaurantpanel
-4. Test og klargøring (24.–30. nov)
+Bæltblå tekst, fjordhvid baggrund og bøjegul til det, der er åbent eller kan trykkes på. Det gule ÅBEN-skilt er sidens kendetegn. Skrifter: Schibsted Grotesk til overskrifter og Atkinson Hyperlegible til tekst, valgt fordi den er let at læse for alle. Grundstørrelsen er 17 px, og knapper er mindst 48 px høje.

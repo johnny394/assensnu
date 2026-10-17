@@ -1,40 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
-import Link from "next/link";
+import { Atkinson_Hyperlegible, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// Atkinson Hyperlegible er lavet til at være let at læse for alle, også med dårligt syn
+const atkinson = Atkinson_Hyperlegible({ variable: "--font-atkinson", subsets: ["latin"], weight: ["400", "700"] });
+const schibsted = Schibsted_Grotesk({ variable: "--font-schibsted", subsets: ["latin"], weight: ["600", "800"] });
 
 export const metadata: Metadata = {
-  title: "AssensNu · Mad, takeaway og bordbooking i Assens",
-  description: "Alle spisesteder i Assens samlet ét sted. Se hvem der har åbent, find menuen, bestil takeaway og book bord.",
-  appleWebApp: { title: "AssensNu", capable: true },
+  title: "AssensNu · Hvem har åbent i Assens?",
+  description: "Alle spisesteder i Assens ét sted. Se hvem der har åbent, find menuen, bestil takeaway og book bord.",
+  appleWebApp: { title: "AssensNu", capable: true, statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#fafaf9",
+  themeColor: "#eef3f2",
+  viewportFit: "cover",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="da">
-      <body className={`${geistSans.variable} antialiased`}>
-        <header className="border-b border-stone-200 bg-white/80 backdrop-blur">
-          <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-            <Link href="/" className="text-lg font-bold tracking-tight text-stone-900">
-              Assens<span className="text-orange-600">Nu</span>
-            </Link>
-          </div>
-        </header>
-        {children}
-      </body>
+      <body className={`${atkinson.variable} ${schibsted.variable} antialiased`}>{children}</body>
     </html>
   );
 }

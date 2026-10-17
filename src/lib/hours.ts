@@ -87,3 +87,50 @@ export function describeStatus(status: OpenStatus, today: Weekday): string {
     }
   }
 }
+
+export function toTime(minutes: number): string {
+  const m = ((minutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+export type PickupOptions = {
+  asapMinutes: number | null; // null = kan ikke bestille "hurtigst muligt" lige nu
+  slots: string[]; // afhentningstider i dag, hvert kvarter
+};
+
+// Hvornår kan man hente takeaway i dag? Tom liste betyder: ikke muligt i dag.
+export function pickupOptions(
+  place: Pick<Place, "hours" | "closedToday" | "prepMinutes" | "extraWaitMinutes">,
+  date = new Date(),
+): PickupOptions {
+  const none = { asapMinutes: null, slots: [] };
+  if (place.closedToday || place.hours.length === 0) return none;
+  const now = copenhagenNow(date);
+  const wait = place.prepMinutes + place.extraWaitMinutes;
+  const slots: string[] = [];
+  let asapMinutes: number | null = null;
+
+  for (const p of place.hours) {
+    const open = toMinutes(p.open);
+    const rawClose = toMinutes(p.close);
+    let start: number;
+    let end: number;
+    if (p.day === now.day) {
+      start = open;
+      end = rawClose <= open ? 24 * 60 - 15 : rawClose;
+    } else if (rawClose <= open && (p.day + 1) % 7 === now.day) {
+      start = 0; // åbent fra i går over midnat
+      end = rawClose;
+    } else continue;
+
+    if (now.minutes >= start && now.minutes < end) asapMinutes = wait;
+    const earliest = Math.max(start, now.minutes) + wait;
+    for (let t = Math.ceil(earliest / 15) * 15; t <= end; t += 15) slots.push(toTime(t));
+  }
+
+  return { asapMinutes, slots: [...new Set(slots)].sort() };
+}
+
+export function todayInCopenhagen(date = new Date()): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Copenhagen" }).format(date);
+}
