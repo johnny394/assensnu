@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AssensNu
 
-## Getting Started
+Alle spisesteder i Assens samlet ét sted: se hvem der har åbent, find menuen, ring, bestil takeaway og book bord. Senere også events og festivaler.
 
-First, run the development server:
+Mål: første version i luften 1. december 2026.
+
+## Kom i gang
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
+npm test        # tests af åbningstider
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Uden Supabase bruger siden startlisten i `src/data/places.ts`. Med Supabase:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Opret et projekt på supabase.com og kør `supabase/migrations/0001_init.sql`.
+2. Kopiér `.env.example` til `.env.local` og udfyld URL og anon-nøgle.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Struktur
 
-## Learn More
+| Sti | Indhold |
+| --- | --- |
+| `src/app/page.tsx` | Forside med søgning og filtre |
+| `src/app/sted/[slug]` | Side for hvert spisested |
+| `src/lib/hours.ts` | "Åben nu" i dansk tid, også over midnat |
+| `src/lib/places.ts` | Henter fra Supabase eller startlisten |
+| `supabase/migrations` | Database: steder, åbningstider, menuer, ordrer, bookinger |
 
-To learn more about Next.js, take a look at the following resources:
+## Plan
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Fundament (17.–26. okt): projekt, database, design
+2. Find og se (27. okt–9. nov): restaurantsider, menuer, søgning, åben nu
+3. Bestil og book (10.–23. nov): takeaway, bordbooking, restaurantpanel
+4. Test og klargøring (24.–30. nov)
