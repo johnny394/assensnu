@@ -13,11 +13,12 @@ type Data = { place: Place; orders: Order[]; bookings: Booking[] };
 type Tab = "orders" | "bookings" | "settings";
 
 async function post(url: string, body: unknown) {
-  await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+  return !!res?.ok;
 }
 
 // Restaurantens skærm: nye ordrer og bordforespørgsler øverst, med lyd
-export function Panel({ initial }: { initial: Data }) {
+export function Panel({ initial, noDatabase }: { initial: Data; noDatabase?: boolean }) {
   const router = useRouter();
   const [version, setVersion] = useState(0);
   const data = usePolling<Data>(`/api/panel?v=${version}`, initial, 4000);
@@ -59,6 +60,12 @@ export function Panel({ initial }: { initial: Data }) {
         </nav>
       </header>
 
+      {noDatabase && (
+        <p className="bg-signal px-5 py-3 text-center text-lg font-bold text-white">
+          Databasen er ikke koblet på, så ordrer kan forsvinde. Se hvad der mangler på <a className="underline" href="/status">opsætningssiden</a>.
+        </p>
+      )}
+
       {!armed && (
         <div className="fixed inset-0 z-30 grid place-items-center bg-ink/80 px-6">
           <div className="max-w-sm rounded-3xl bg-surface p-6 text-center">
@@ -99,10 +106,18 @@ const big = "min-h-14 whitespace-nowrap rounded-2xl px-2 text-lg font-bold";
 function Orders({ orders, onChange }: { orders: Order[]; onChange: () => void }) {
   const active = orders.filter((o) => o.status === "new" || o.status === "accepted" || o.status === "ready");
   const done = orders.filter((o) => o.status === "picked_up" || o.status === "rejected");
+  const [saving, setSaving] = useState<{ id: string; from: Order["status"] } | null>(null);
   const set = async (o: Order, status: Order["status"], readyInMinutes?: number) => {
-    await post(`/api/panel/orders/${o.id}`, { status, readyInMinutes });
+    setSaving({ id: o.id, from: o.status });
+    if (!(await post(`/api/panel/orders/${o.id}`, { status, readyInMinutes }))) {
+      setSaving(null);
+      alert("Det gik ikke igennem. Prøv igen.");
+      return;
+    }
     onChange();
   };
+  // Knapperne står som "Gemmer…", indtil ordren har fået sin nye status
+  const busy = saving && orders.find((o) => o.id === saving.id)?.status === saving.from ? saving.id : null;
 
   if (orders.length === 0) return <Empty text="Ingen ordrer endnu i dag. Panelet ringer, når der kommer en." />;
 
@@ -127,7 +142,9 @@ function Orders({ orders, onChange }: { orders: Order[]; onChange: () => void })
             {o.customerName} · <a className="underline" href={telLink(o.customerPhone)}>{o.customerPhone}</a> · {kr(o.total)}
           </p>
 
-          {o.status === "new" && (
+          {busy === o.id ? (
+            <p className={`${big} mt-4 flex items-center justify-center bg-paper text-ink-soft`}>Gemmer…</p>
+          ) : o.status === "new" && (
             <div className="mt-4">
               <p className="mb-2 font-bold">Hvornår er den klar?</p>
               <div className="grid grid-cols-4 gap-2">
@@ -142,12 +159,12 @@ function Orders({ orders, onChange }: { orders: Order[]; onChange: () => void })
               </button>
             </div>
           )}
-          {o.status === "accepted" && (
+          {busy !== o.id && o.status === "accepted" && (
             <button onClick={() => set(o, "ready")} className={`${big} mt-4 w-full bg-buoy text-ink`}>
               Maden er klar{o.readyAt && <span className="font-normal"> (lovet {o.readyAt})</span>}
             </button>
           )}
-          {o.status === "ready" && (
+          {busy !== o.id && o.status === "ready" && (
             <button onClick={() => set(o, "picked_up")} className={`${big} mt-4 w-full border-2 border-ink`}>
               Kunden har hentet
             </button>
