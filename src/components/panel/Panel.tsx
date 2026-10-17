@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Wordmark } from "@/components/AppShell";
 import { usePolling } from "@/components/usePolling";
 import { kr, longDate, telLink } from "@/lib/format";
@@ -50,9 +50,9 @@ export function Panel({ initial, noDatabase }: { initial: Data; noDatabase?: boo
           </div>
           {!data.place.acceptsOrders && <span className="rounded-full bg-signal-soft px-3 py-1 font-bold text-signal">Bestilling er slået fra</span>}
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-2 px-5 pb-3 lg:hidden">
+        <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-5 pb-3 [scrollbar-width:none] lg:hidden">
           {tabs.map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)} aria-pressed={tab === t.key} className={`rounded-full px-4 py-2 text-lg ${tab === t.key ? "bg-ink font-bold text-white" : "bg-surface"}`}>
+            <button key={t.key} onClick={() => setTab(t.key)} aria-pressed={tab === t.key} className={`shrink-0 rounded-full px-3 py-2 text-base sm:px-4 sm:text-lg ${tab === t.key ? "bg-ink font-bold text-white" : "bg-surface"}`}>
               {t.label}
               {!!t.count && <span className="ml-2 rounded-full bg-buoy px-2 font-bold text-ink">{t.count}</span>}
             </button>
@@ -79,7 +79,7 @@ export function Panel({ initial, noDatabase }: { initial: Data; noDatabase?: boo
       <main className="mx-auto grid max-w-6xl gap-6 px-5 py-5 lg:grid-cols-[1fr_1fr_20rem]">
         <section className={tab === "orders" ? "" : "hidden lg:block"}>
           <h2 className="mb-3 hidden font-display text-2xl font-extrabold tracking-tight lg:block">Ordrer</h2>
-          <Orders orders={data.orders} onChange={refresh} />
+          <Orders orders={data.orders} waitMinutes={data.place.prepMinutes + data.place.extraWaitMinutes} onChange={refresh} />
         </section>
         <section className={tab === "bookings" ? "" : "hidden lg:block"}>
           <h2 className="mb-3 hidden font-display text-2xl font-extrabold tracking-tight lg:block">Borde</h2>
@@ -103,21 +103,32 @@ export function Panel({ initial, noDatabase }: { initial: Data; noDatabase?: boo
 
 const big = "min-h-14 whitespace-nowrap rounded-2xl px-2 text-lg font-bold";
 
-function Orders({ orders, onChange }: { orders: Order[]; onChange: () => void }) {
+function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]; waitMinutes: number; onChange: () => void }) {
+  // Et tryk vises med det samme. Serveren gemmer i baggrunden, og panelet retter sig efter den bagefter.
+  const [pending, setPending] = useState<Record<string, { status: Order["status"]; readyAt?: string }>>({});
+  const orders = fromServer.map((o) => (pending[o.id] && pending[o.id].status !== o.status ? { ...o, ...pending[o.id] } : o));
+  const forget = (id: string) =>
+    setPending((p) => {
+      const next = { ...p };
+      delete next[id];
+      return next;
+    });
+  useEffect(() => {
+    // Når serveren har fået den nye status, er der ikke mere at vente på
+    for (const o of fromServer) if (pending[o.id]?.status === o.status) forget(o.id);
+  }, [fromServer, pending]);
   const active = orders.filter((o) => o.status === "new" || o.status === "accepted" || o.status === "ready");
   const done = orders.filter((o) => o.status === "picked_up" || o.status === "rejected");
-  const [saving, setSaving] = useState<{ id: string; from: Order["status"] } | null>(null);
   const set = async (o: Order, status: Order["status"], readyInMinutes?: number) => {
-    setSaving({ id: o.id, from: o.status });
+    const readyAt = status !== "accepted" ? o.readyAt : o.pickup !== "asap" ? o.pickup : toTime(copenhagenNow().minutes + (readyInMinutes ?? 0));
+    setPending((p) => ({ ...p, [o.id]: { status, readyAt } }));
     if (!(await post(`/api/panel/orders/${o.id}`, { status, readyInMinutes }))) {
-      setSaving(null);
+      forget(o.id);
       alert("Det gik ikke igennem. Prøv igen.");
       return;
     }
     onChange();
   };
-  // Knapperne står som "Gemmer…", indtil ordren har fået sin nye status
-  const busy = saving && orders.find((o) => o.id === saving.id)?.status === saving.from ? saving.id : null;
 
   if (orders.length === 0) return <Empty text="Ingen ordrer endnu i dag. Panelet ringer, når der kommer en." />;
 
@@ -142,16 +153,17 @@ function Orders({ orders, onChange }: { orders: Order[]; onChange: () => void })
             {o.customerName} · <a className="underline" href={telLink(o.customerPhone)}>{o.customerPhone}</a> · {kr(o.total)}
           </p>
 
-          {busy === o.id ? (
-            <p className={`${big} mt-4 flex items-center justify-center bg-paper text-ink-soft`}>Gemmer…</p>
-          ) : o.status === "new" && (
+          {o.status === "new" && (
             <div className="mt-4">
               {o.pickup === "asap" ? (
                 <>
-                  <p className="mb-2 font-bold">Hvornår er den klar?</p>
-                  <div className="grid grid-cols-4 gap-2">
+                  <button onClick={() => set(o, "accepted", waitMinutes)} className={`${big} w-full bg-go text-white`}>
+                    Accepter · klar om {waitMinutes} min
+                  </button>
+                  <p className="mb-2 mt-3 text-ink-soft">Eller vælg en anden tid:</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {[15, 20, 30, 45].map((m) => (
-                      <button key={m} onClick={() => set(o, "accepted", m)} className={`${big} bg-go text-white`}>
+                      <button key={m} onClick={() => set(o, "accepted", m)} className={`${big} border-2 border-go text-go`}>
                         {m} min
                       </button>
                     ))}
@@ -159,7 +171,7 @@ function Orders({ orders, onChange }: { orders: Order[]; onChange: () => void })
                 </>
               ) : (
                 <button onClick={() => set(o, "accepted")} className={`${big} w-full bg-go text-white`}>
-                  Godkend · klar kl. {o.pickup}
+                  Accepter · klar kl. {o.pickup}
                 </button>
               )}
               <button onClick={() => confirm(`Afvis ordre ${o.number}?`) && set(o, "rejected")} className="mt-2 w-full py-2 text-lg text-signal underline">
@@ -167,12 +179,12 @@ function Orders({ orders, onChange }: { orders: Order[]; onChange: () => void })
               </button>
             </div>
           )}
-          {busy !== o.id && o.status === "accepted" && (
+          {o.status === "accepted" && (
             <button onClick={() => set(o, "ready")} className={`${big} mt-4 w-full bg-buoy text-ink`}>
               Maden er klar{o.readyAt && <span className="font-normal"> (lovet {o.readyAt})</span>}
             </button>
           )}
-          {busy !== o.id && o.status === "ready" && (
+          {o.status === "ready" && (
             <button onClick={() => set(o, "picked_up")} className={`${big} mt-4 w-full border-2 border-ink`}>
               Kunden har hentet
             </button>
@@ -259,17 +271,27 @@ function Bookings({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
   );
 }
 
-function Settings({ place, onChange, onLogout }: { place: Place; onChange: () => void; onLogout: () => void }) {
-  const save = async (settings: object) => {
-    await post("/api/panel/settings", settings);
+function Settings({ place: fromServer, onChange, onLogout }: { place: Place; onChange: () => void; onLogout: () => void }) {
+  // Valget vises med det samme; serveren gemmer i baggrunden
+  const [place, setPlace] = useState(fromServer);
+  const saving = useRef(0);
+  useEffect(() => {
+    if (saving.current === 0) setPlace(fromServer);
+  }, [fromServer]);
+  const save = async (settings: object, show: (p: Place) => Place) => {
+    setPlace(show);
+    saving.current++;
+    const ok = await post("/api/panel/settings", settings);
+    saving.current--;
+    if (!ok) alert("Det gik ikke igennem. Prøv igen.");
     onChange();
   };
 
   return (
     <div className="space-y-3">
       <div className="rounded-3xl bg-surface px-5 py-2">
-        <Toggle label="Tag imod bestillinger" on={place.acceptsOrders} onClick={() => save({ acceptsOrders: !place.acceptsOrders })} />
-        <Toggle label="Lukket i dag" hint="Vises som lukket indtil i morgen" on={!!place.closedToday} onClick={() => save({ closedToday: !place.closedToday })} />
+        <Toggle label="Tag imod bestillinger" on={place.acceptsOrders} onClick={() => save({ acceptsOrders: !place.acceptsOrders }, (p) => ({ ...p, acceptsOrders: !p.acceptsOrders }))} />
+        <Toggle label="Lukket i dag" hint="Vises som lukket indtil i morgen" on={!!place.closedToday} onClick={() => save({ closedToday: !place.closedToday }, (p) => ({ ...p, closedToday: !p.closedToday }))} />
       </div>
 
       <div className="rounded-3xl bg-surface px-5 py-4">
@@ -279,7 +301,7 @@ function Settings({ place, onChange, onLogout }: { place: Place; onChange: () =>
           {[0, 15, 30, 45].map((m) => (
             <button
               key={m}
-              onClick={() => save({ extraWaitMinutes: m })}
+              onClick={() => save({ extraWaitMinutes: m }, (p) => ({ ...p, extraWaitMinutes: m }))}
               aria-pressed={place.extraWaitMinutes === m}
               className={`${big} ${place.extraWaitMinutes === m ? "bg-ink text-white" : "border-2 border-line"}`}
             >
@@ -293,7 +315,12 @@ function Settings({ place, onChange, onLogout }: { place: Place; onChange: () =>
         <div className="rounded-3xl bg-surface px-5 py-2">
           <p className="pt-2 text-lg font-bold">Udsolgt i dag</p>
           {place.menu.flatMap((c) => c.items).map((item) => (
-            <Toggle key={item.id} label={item.name} on={!!item.soldOut} onClick={() => save({ soldOut: { itemId: item.id, soldOut: !item.soldOut } })} />
+            <Toggle key={item.id} label={item.name} on={!!item.soldOut} onClick={() =>
+                save({ soldOut: { itemId: item.id, soldOut: !item.soldOut } }, (p) => ({
+                  ...p,
+                  menu: p.menu.map((c) => ({ ...c, items: c.items.map((i) => (i.id === item.id ? { ...i, soldOut: !i.soldOut } : i)) })),
+                }))
+              } />
           ))}
         </div>
       )}

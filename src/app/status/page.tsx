@@ -44,7 +44,9 @@ async function runChecks(): Promise<Check[]> {
 
   try {
     const db = createClient(url, key, { auth: { persistSession: false } });
+    const started = Date.now();
     const { count, error } = await db.from("places").select("slug", { count: "exact", head: true });
+    const ms = Date.now() - started;
     if (error) {
       const msg = `${error.code ?? ""} ${error.message ?? ""}`;
       if (/PGRST205|42P01|does not exist|schema cache/i.test(msg)) {
@@ -63,6 +65,15 @@ async function runChecks(): Promise<Check[]> {
       return checks;
     }
     checks.push({ ok: true, text: `Databasen virker og har ${count} spisesteder.` });
+    checks.push(
+      ms < 300
+        ? { ok: true, text: `Databasen svarer på ${ms} ms (server: ${process.env.VERCEL_REGION ?? "lokal"}).` }
+        : {
+            ok: false,
+            text: `Databasen svarer langsomt: ${ms} ms (server: ${process.env.VERCEL_REGION ?? "lokal"}).`,
+            fix: "Genindlæs siden. Er det stadig over 300 ms, ligger databasen langt fra serveren. Skriv tallet til Claude.",
+          },
+    );
   } catch (e) {
     checks.push({ ok: false, text: `Kunne ikke nå Supabase: ${e instanceof Error ? e.message : "ukendt fejl"}`, fix: "Tjek at SUPABASE_URL er rigtig." });
     return checks;
