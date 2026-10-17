@@ -13,7 +13,7 @@ export default async function BookingStatusPage({ params }: { params: Promise<{ 
   const place = await store.getPlace(booking.placeSlug);
   return (
     <AppShell>
-      <main className="mx-auto max-w-2xl px-5 pb-10 pt-6">
+      <main className="mx-auto max-w-2xl px-5 sm:px-8 pb-10 pt-6">
         <h1 className="mb-4 font-display text-[2.3rem] font-extrabold leading-tight tracking-tight">Bord hos {booking.placeName}</h1>
         <BookingStatusView initial={booking} placePhone={place?.phone} />
       </main>

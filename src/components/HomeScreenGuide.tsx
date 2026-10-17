@@ -36,7 +36,7 @@ export function HomeScreenGuide({ reason }: { reason: string }) {
     ) : null;
 
   if (platform === "installed") {
-    return askNotify ? <div className="rounded-3xl bg-surface px-5 py-5 text-lg"><p>{reason}</p>{askNotify}</div> : null;
+    return askNotify ? <div className="rounded-[1.4rem] bg-surface shadow-card px-5 py-5 text-lg"><p>{reason}</p>{askNotify}</div> : null;
   }
 
   return (

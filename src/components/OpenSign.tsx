@@ -8,30 +8,36 @@ type Props = { place: Pick<Place, "hours" | "closedToday">; now: Date | null; la
 
 // Et lille butiksskilt: lyser gult, når der er åbent, og er slukket, når der er lukket
 export function OpenSign({ place, now, large }: Props) {
-  if (!now) return <span className={large ? "block h-14" : "block h-11"} aria-hidden />;
+  if (!now) return <span className={large ? "block h-10" : "block h-7"} aria-hidden />;
   const status = openStatus(place, now);
   const text = describeStatus(status, copenhagenNow(now).day);
-  const size = large ? "text-sm px-3 py-1.5" : "text-xs px-2 py-1";
+  const size = large ? "text-[0.8rem] px-2.5 py-1" : "text-[0.68rem] px-2 py-[0.2rem]";
+  const label = large ? "text-lg" : "text-[0.95rem]";
 
   if (status.state === "open") {
     return (
       <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-        <span className={`sign-lit rounded-md border-2 border-buoy-deep bg-buoy font-display font-extrabold tracking-[0.18em] text-ink shadow-[0_0_14px_2px_rgba(255,200,69,0.55)] ${size}`}>
+        <span className={`sign-lit rounded-[0.4rem] bg-buoy font-display font-extrabold tracking-[0.16em] text-ink shadow-[0_0_14px_1px_rgba(247,197,72,0.6)] ${size}`}>
           ÅBEN
         </span>
-        <span className="text-ink">{text}</span>
+        <span className={`font-bold text-ink ${label}`}>{text}</span>
       </span>
     );
   }
   if (status.state === "closed") {
     return (
       <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-        <span className={`rounded-md border-2 border-line font-display font-extrabold tracking-[0.18em] text-ink-soft/60 ${size}`}>LUKKET</span>
-        <span className="text-ink-soft">{text.replace(/^Lukket, /, "")}</span>
+        <span className={`rounded-[0.4rem] border-[1.5px] border-ink-soft/30 font-display font-extrabold tracking-[0.16em] text-ink-soft/70 ${size}`}>LUKKET</span>
+        <span className={`text-ink-soft ${label}`}>{text.replace(/^Lukket, /, "")}</span>
       </span>
     );
   }
-  return <span className="text-ink-soft">{text}</span>;
+  return (
+    <span className={`flex items-center gap-2 text-ink-soft ${label}`}>
+      <span className="h-2 w-2 rounded-full border-[1.5px] border-ink-soft/50" aria-hidden />
+      {text}
+    </span>
+  );
 }
 
 export function LiveOpenSign(props: Omit<Props, "now">) {

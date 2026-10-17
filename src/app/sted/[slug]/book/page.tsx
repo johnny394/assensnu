@@ -9,7 +9,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
   const place = await store.getPlace((await params).slug);
   if (!place || !place.acceptsBookings) notFound();
   return (
-    <main className="mx-auto max-w-2xl px-5 pb-16 pt-5">
+    <main className="mx-auto max-w-2xl px-5 sm:px-8 pb-16 pt-5">
       <Link href={`/sted/${place.slug}`} className="inline-block py-2 text-lg text-ink-soft">
         ‹ {place.name}
       </Link>

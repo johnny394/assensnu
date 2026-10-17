@@ -71,7 +71,7 @@ export function Checkout({ place }: { place: Place }) {
 
   if (lines.length === 0) {
     return (
-      <div className="mt-6 rounded-3xl bg-surface px-5 py-8 text-center text-lg">
+      <div className="mt-6 rounded-[1.4rem] bg-surface shadow-card px-5 py-8 text-center text-lg">
         <p>Kurven er tom.</p>
         <Link href={`/sted/${place.slug}`} className="mt-3 inline-block font-bold text-sea underline">
           Se menuen hos {place.name}
@@ -83,7 +83,7 @@ export function Checkout({ place }: { place: Place }) {
   return (
     <form onSubmit={send} className="mt-6 space-y-8">
       <section>
-        <ul className="overflow-hidden rounded-3xl bg-surface">
+        <ul className="overflow-hidden rounded-[1.4rem] bg-surface shadow-card">
           {lines.map((i) => (
             <li key={i.id} className="flex items-center gap-3 border-b border-line px-5 py-3 last:border-b-0">
               <div className="flex shrink-0 items-center gap-1 rounded-full border-2 border-line">
