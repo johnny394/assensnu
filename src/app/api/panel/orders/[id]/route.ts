@@ -13,7 +13,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { status, readyInMinutes } = (await request.json()) as { status: OrderStatus; readyInMinutes?: number };
   if (!STATUSES.includes(status)) return NextResponse.json({ error: "Ukendt status." }, { status: 400 });
-  const readyAt = status === "accepted" && readyInMinutes ? toTime(copenhagenNow().minutes + readyInMinutes) : undefined;
+  // Har kunden valgt et tidspunkt, er det det, restauranten lover
+  const readyAt =
+    status !== "accepted" ? undefined : order.pickup !== "asap" ? order.pickup : readyInMinutes ? toTime(copenhagenNow().minutes + readyInMinutes) : undefined;
   await store.setOrderStatus(order.id, status, readyAt);
   return NextResponse.json({ ok: true });
 }
