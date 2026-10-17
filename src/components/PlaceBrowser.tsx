@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { openStatus } from "@/lib/hours";
+import { copenhagenNow, openStatus, toTime } from "@/lib/hours";
 import type { Place } from "@/lib/types";
-import { OpenBadge, useNow } from "./OpenBadge";
+import { OpenSign } from "./OpenSign";
+import { useNow } from "./useNow";
 
 type Filter = "open" | "takeaway" | "dineIn";
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "open", label: "Åben nu" },
   { key: "takeaway", label: "Takeaway" },
-  { key: "dineIn", label: "Spis her" },
+  { key: "dineIn", label: "Spis på stedet" },
 ];
 
-export function PlaceBrowser({ places }: { places: Place[] }) {
+const RANK = { open: 0, closed: 1, unknown: 2 } as const;
+
+export function PlaceBrowser({ places, title = "Hvem har åbent?" }: { places: Place[]; title?: string }) {
   const now = useNow();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Set<Filter>>(new Set());
@@ -23,21 +26,26 @@ export function PlaceBrowser({ places }: { places: Place[] }) {
   const cuisines = useMemo(() => {
     const counts = new Map<string, number>();
     for (const p of places) for (const c of p.cuisines) counts.set(c, (counts.get(c) ?? 0) + 1);
-    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "da")).map(([c]) => c);
+    return [...counts.entries()].filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "da")).map(([c]) => c);
   }, [places]);
 
-  const visible = places.filter((p) => {
-    const q = query.trim().toLowerCase();
-    if (q) {
-      const haystack = [p.name, ...p.cuisines, ...p.menu.flatMap((c) => c.items.map((i) => i.name))].join(" ").toLowerCase();
-      if (!haystack.includes(q)) return false;
-    }
-    if (cuisine && !p.cuisines.includes(cuisine)) return false;
-    if (filters.has("takeaway") && !p.takeaway) return false;
-    if (filters.has("dineIn") && !p.dineIn) return false;
-    if (filters.has("open") && (!now || openStatus(p, now).state !== "open")) return false;
-    return true;
-  });
+  const state = (p: Place) => (now ? openStatus(p, now).state : "unknown");
+  const openCount = now ? places.filter((p) => state(p) === "open").length : null;
+
+  const q = query.trim().toLowerCase();
+  const visible = places
+    .filter((p) => {
+      if (q) {
+        const words = [p.name, ...p.cuisines, ...p.menu.flatMap((c) => c.items.map((i) => i.name))].join(" ").toLowerCase();
+        if (!words.includes(q)) return false;
+      }
+      if (cuisine && !p.cuisines.includes(cuisine)) return false;
+      if (filters.has("takeaway") && !p.takeaway) return false;
+      if (filters.has("dineIn") && !p.dineIn) return false;
+      if (filters.has("open") && state(p) !== "open") return false;
+      return true;
+    })
+    .sort((a, b) => RANK[state(a)] - RANK[state(b)] || a.name.localeCompare(b.name, "da"));
 
   const toggle = (f: Filter) =>
     setFilters((prev) => {
@@ -47,58 +55,84 @@ export function PlaceBrowser({ places }: { places: Place[] }) {
       return next;
     });
 
-  const chip = (active: boolean) =>
-    `shrink-0 rounded-full border px-3.5 py-1.5 text-sm transition ${
-      active ? "border-stone-900 bg-stone-900 text-white" : "border-stone-300 bg-white text-stone-700 hover:border-stone-500"
+  const chip = (on: boolean) =>
+    `shrink-0 rounded-full border-2 px-4 py-2 text-base transition-colors ${
+      on ? "border-ink bg-ink text-white" : "border-line bg-surface text-ink hover:border-ink-soft"
     }`;
 
   return (
     <div>
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Søg efter sted eller ret, fx pizza"
-        className="w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-base outline-none focus:border-stone-900"
-      />
+      <h1 className="font-display text-[2.6rem] font-extrabold leading-[1.02] tracking-tight">{title}</h1>
+      <p className="mt-2 min-h-7 text-lg text-ink-soft">
+        {now && openCount !== null && (
+          <>
+            Klokken er {toTime(copenhagenNow(now).minutes)}.{" "}
+            {openCount === 0 ? "Ingen har åbent lige nu." : `${openCount} ${openCount === 1 ? "sted har" : "steder har"} åbent lige nu.`}
+          </>
+        )}
+      </p>
 
-      <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
+      <label className="mt-6 flex items-center gap-3 rounded-2xl border-2 border-line bg-surface px-4 focus-within:border-ink">
+        <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-4-4" />
+        </svg>
+        <span className="sr-only">Søg</span>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Søg, fx pizza eller durum"
+          className="w-full bg-transparent py-3.5 text-lg outline-none placeholder:text-ink-soft/70"
+        />
+      </label>
+
+      <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
         {FILTERS.map((f) => (
-          <button key={f.key} onClick={() => toggle(f.key)} className={chip(filters.has(f.key))}>
+          <button key={f.key} onClick={() => toggle(f.key)} aria-pressed={filters.has(f.key)} className={chip(filters.has(f.key))}>
             {f.label}
           </button>
         ))}
-        <span className="mx-1 w-px shrink-0 bg-stone-300" />
         {cuisines.map((c) => (
-          <button key={c} onClick={() => setCuisine(cuisine === c ? null : c)} className={chip(cuisine === c)}>
+          <button key={c} onClick={() => setCuisine(cuisine === c ? null : c)} aria-pressed={cuisine === c} className={chip(cuisine === c)}>
             {c}
           </button>
         ))}
       </div>
 
-      <p className="mt-4 text-sm text-stone-500">
-        {visible.length} {visible.length === 1 ? "spisested" : "spisesteder"}
-      </p>
-
-      <ul className="mt-2 divide-y divide-stone-200 rounded-2xl border border-stone-200 bg-white">
+      <ul className="mt-5 overflow-hidden rounded-3xl bg-surface">
         {visible.map((p) => (
-          <li key={p.slug}>
-            <Link href={`/sted/${p.slug}`} className="flex items-start justify-between gap-4 px-4 py-4 hover:bg-stone-50">
-              <div className="min-w-0">
-                <h2 className="font-semibold text-stone-900">{p.name}</h2>
-                <p className="mt-0.5 text-sm text-stone-600">{p.cuisines.join(" · ")}</p>
-                <p className="mt-0.5 truncate text-sm text-stone-500">{p.address}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <OpenBadge place={p} now={now} />
-                  {p.takeaway && <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-xs text-orange-800">Takeaway</span>}
-                  {p.dineIn && <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs text-sky-800">Spis her</span>}
-                </div>
+          <li key={p.slug} className="border-b border-line last:border-b-0">
+            <Link href={`/sted/${p.slug}`} className="group block px-5 py-4 active:bg-paper">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="font-display text-xl font-extrabold leading-tight tracking-tight group-hover:underline">{p.name}</h2>
+                {p.acceptsOrders && <span className="shrink-0 rounded-full bg-buoy-soft px-2.5 py-0.5 text-sm font-bold text-buoy-deep">Bestil her</span>}
               </div>
-              <span aria-hidden className="mt-1 text-stone-400">›</span>
+              <p className="mt-0.5 text-ink-soft">
+                {p.cuisines.join(", ")}
+                {p.takeaway && " · takeaway"}
+              </p>
+              <div className="mt-2.5">
+                <OpenSign place={p} now={now} />
+              </div>
             </Link>
           </li>
         ))}
-        {visible.length === 0 && <li className="px-4 py-10 text-center text-stone-500">Ingen spisesteder passer til din søgning.</li>}
+        {visible.length === 0 && (
+          <li className="px-5 py-10 text-center text-lg text-ink-soft">
+            Ingen steder passer.{" "}
+            <button
+              className="font-bold text-sea underline"
+              onClick={() => {
+                setQuery("");
+                setFilters(new Set());
+                setCuisine(null);
+              }}
+            >
+              Vis alle
+            </button>
+          </li>
+        )}
       </ul>
     </div>
   );

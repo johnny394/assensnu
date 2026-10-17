@@ -1,17 +1,16 @@
+import { AppShell } from "@/components/AppShell";
 import { PlaceBrowser } from "@/components/PlaceBrowser";
-import { getPlaces } from "@/lib/places";
+import { store } from "@/lib/store";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const places = await getPlaces();
+  const places = await store.getPlaces();
   return (
-    <main className="mx-auto max-w-2xl px-4 pb-16 pt-8">
-      <h1 className="text-3xl font-bold tracking-tight text-stone-900">Hvad skal vi spise i aften?</h1>
-      <p className="mt-2 text-stone-600">Alle spisesteder i Assens samlet ét sted. Se hvem der har åbent, find menuen og ring eller bestil.</p>
-      <div className="mt-6">
+    <AppShell>
+      <main className="mx-auto max-w-2xl px-5 pt-8">
         <PlaceBrowser places={places} />
-      </div>
-    </main>
+      </main>
+    </AppShell>
   );
 }

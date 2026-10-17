@@ -4,12 +4,16 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "AssensNu",
     short_name: "AssensNu",
-    description: "Mad, takeaway og bordbooking i Assens",
+    description: "Hvem har åbent i Assens? Mad, takeaway og bordbooking.",
     start_url: "/",
     display: "standalone",
-    background_color: "#fafaf9",
-    theme_color: "#fafaf9",
+    background_color: "#eef3f2",
+    theme_color: "#eef3f2",
     lang: "da",
-    icons: [{ src: "/favicon.ico", sizes: "any", type: "image/x-icon" }],
+    icons: [
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
   };
 }

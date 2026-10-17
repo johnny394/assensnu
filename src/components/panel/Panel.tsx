@@ -1,0 +1,298 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Wordmark } from "@/components/AppShell";
+import { usePolling } from "@/components/usePolling";
+import { kr, longDate, telLink } from "@/lib/format";
+import { copenhagenNow, toTime } from "@/lib/hours";
+import type { Booking, Order, Place } from "@/lib/types";
+import { useAlarm } from "./useAlarm";
+
+type Data = { place: Place; orders: Order[]; bookings: Booking[] };
+type Tab = "orders" | "bookings" | "settings";
+
+async function post(url: string, body: unknown) {
+  await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+}
+
+// Restaurantens skærm: nye ordrer og bordforespørgsler øverst, med lyd
+export function Panel({ initial }: { initial: Data }) {
+  const router = useRouter();
+  const [version, setVersion] = useState(0);
+  const data = usePolling<Data>(`/api/panel?v=${version}`, initial, 4000);
+  const refresh = () => setVersion((v) => v + 1);
+  const [tab, setTab] = useState<Tab>("orders");
+
+  const newOrders = data.orders.filter((o) => o.status === "new");
+  const newBookings = data.bookings.filter((b) => b.status === "requested");
+  const waiting = newOrders.length + newBookings.length;
+  const { armed, arm } = useAlarm(waiting > 0);
+
+  useEffect(() => {
+    document.title = waiting ? `(${waiting}) Nyt i AssensNu` : `${data.place.name} · AssensNu`;
+  }, [waiting, data.place.name]);
+
+  const tabs: { key: Tab; label: string; count?: number }[] = [
+    { key: "orders", label: "Ordrer", count: newOrders.length },
+    { key: "bookings", label: "Borde", count: newBookings.length },
+    { key: "settings", label: "Indstillinger" },
+  ];
+
+  return (
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-10 border-b border-line bg-paper/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
+          <div className="flex items-center gap-3">
+            <Wordmark />
+            <span className="text-lg font-bold">{data.place.name}</span>
+          </div>
+          {!data.place.acceptsOrders && <span className="rounded-full bg-signal-soft px-3 py-1 font-bold text-signal">Bestilling er slået fra</span>}
+        </div>
+        <nav className="mx-auto flex max-w-6xl gap-2 px-5 pb-3 lg:hidden">
+          {tabs.map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)} aria-pressed={tab === t.key} className={`rounded-full px-4 py-2 text-lg ${tab === t.key ? "bg-ink font-bold text-white" : "bg-surface"}`}>
+              {t.label}
+              {!!t.count && <span className="ml-2 rounded-full bg-buoy px-2 font-bold text-ink">{t.count}</span>}
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      {!armed && (
+        <div className="fixed inset-0 z-30 grid place-items-center bg-ink/80 px-6">
+          <div className="max-w-sm rounded-3xl bg-surface p-6 text-center">
+            <p className="font-display text-2xl font-extrabold tracking-tight">Klar til at tage imod?</p>
+            <p className="mt-2 text-lg">Tryk på knappen, så ringer panelet, når der kommer en ny ordre eller bordforespørgsel. Lad skærmen stå tændt.</p>
+            <button onClick={arm} className="mt-5 w-full rounded-2xl bg-buoy px-5 py-4 text-xl font-bold">Start vagten</button>
+          </div>
+        </div>
+      )}
+
+      <main className="mx-auto grid max-w-6xl gap-6 px-5 py-5 lg:grid-cols-[1fr_1fr_20rem]">
+        <section className={tab === "orders" ? "" : "hidden lg:block"}>
+          <h2 className="mb-3 hidden font-display text-2xl font-extrabold tracking-tight lg:block">Ordrer</h2>
+          <Orders orders={data.orders} onChange={refresh} />
+        </section>
+        <section className={tab === "bookings" ? "" : "hidden lg:block"}>
+          <h2 className="mb-3 hidden font-display text-2xl font-extrabold tracking-tight lg:block">Borde</h2>
+          <Bookings bookings={data.bookings} onChange={refresh} />
+        </section>
+        <section className={tab === "settings" ? "" : "hidden lg:block"}>
+          <h2 className="mb-3 hidden font-display text-2xl font-extrabold tracking-tight lg:block">Indstillinger</h2>
+          <Settings
+            place={data.place}
+            onChange={refresh}
+            onLogout={async () => {
+              await post("/api/panel/logout", {});
+              router.refresh();
+            }}
+          />
+        </section>
+      </main>
+    </div>
+  );
+}
+
+const big = "min-h-14 whitespace-nowrap rounded-2xl px-2 text-lg font-bold";
+
+function Orders({ orders, onChange }: { orders: Order[]; onChange: () => void }) {
+  const active = orders.filter((o) => o.status === "new" || o.status === "accepted" || o.status === "ready");
+  const done = orders.filter((o) => o.status === "picked_up" || o.status === "rejected");
+  const set = async (o: Order, status: Order["status"], readyInMinutes?: number) => {
+    await post(`/api/panel/orders/${o.id}`, { status, readyInMinutes });
+    onChange();
+  };
+
+  if (orders.length === 0) return <Empty text="Ingen ordrer endnu i dag. Panelet ringer, når der kommer en." />;
+
+  return (
+    <div className="space-y-3">
+      {active.map((o) => (
+        <article key={o.id} className={`rounded-3xl bg-surface p-5 ${o.status === "new" ? "border-4 border-buoy shadow-[0_0_24px_2px_rgba(255,200,69,0.5)]" : "border-2 border-line"}`}>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="font-display text-3xl font-extrabold tabular-nums">{o.number}</p>
+            <p className="text-lg font-bold">{o.pickup === "asap" ? "Hurtigst muligt" : `Hentes ${o.pickup}`}</p>
+          </div>
+          {o.status === "new" && <p className="font-bold text-buoy-deep">NY ORDRE · {toTime(copenhagenNow(new Date(o.createdAt)).minutes)}</p>}
+          <ul className="mt-2 text-xl">
+            {o.lines.map((l) => (
+              <li key={l.itemId}>
+                <strong>{l.quantity} ×</strong> {l.name}
+              </li>
+            ))}
+          </ul>
+          {o.note && <p className="mt-2 rounded-xl bg-buoy-soft px-3 py-2 text-lg">Besked: {o.note}</p>}
+          <p className="mt-2 text-lg text-ink-soft">
+            {o.customerName} · <a className="underline" href={telLink(o.customerPhone)}>{o.customerPhone}</a> · {kr(o.total)}
+          </p>
+
+          {o.status === "new" && (
+            <div className="mt-4">
+              <p className="mb-2 font-bold">Hvornår er den klar?</p>
+              <div className="grid grid-cols-4 gap-2">
+                {[15, 20, 30, 45].map((m) => (
+                  <button key={m} onClick={() => set(o, "accepted", m)} className={`${big} bg-go text-white`}>
+                    {m} min
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => confirm(`Afvis ordre ${o.number}?`) && set(o, "rejected")} className="mt-2 w-full py-2 text-lg text-signal underline">
+                Afvis ordren
+              </button>
+            </div>
+          )}
+          {o.status === "accepted" && (
+            <button onClick={() => set(o, "ready")} className={`${big} mt-4 w-full bg-buoy text-ink`}>
+              Maden er klar{o.readyAt && <span className="font-normal"> (lovet {o.readyAt})</span>}
+            </button>
+          )}
+          {o.status === "ready" && (
+            <button onClick={() => set(o, "picked_up")} className={`${big} mt-4 w-full border-2 border-ink`}>
+              Kunden har hentet
+            </button>
+          )}
+        </article>
+      ))}
+      {done.length > 0 && (
+        <details className="rounded-3xl bg-surface px-5 py-3 text-lg">
+          <summary className="cursor-pointer py-1 font-bold">Tidligere i dag ({done.length})</summary>
+          <ul className="mt-2 space-y-1 text-ink-soft">
+            {done.map((o) => (
+              <li key={o.id}>
+                {o.number} · {o.customerName} · {kr(o.total)} · {o.status === "rejected" ? "afvist" : "hentet"}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function Bookings({ bookings, onChange }: { bookings: Booking[]; onChange: () => void }) {
+  const [suggestFor, setSuggestFor] = useState<string | null>(null);
+  const answer = async (b: Booking, status: Booking["status"], suggestedTime?: string) => {
+    await post(`/api/panel/bookings/${b.id}`, { status, suggestedTime });
+    setSuggestFor(null);
+    onChange();
+  };
+  const shift = (time: string, minutes: number) => {
+    const [h, m] = time.split(":").map(Number);
+    return toTime(h * 60 + m + minutes);
+  };
+
+  if (bookings.length === 0) return <Empty text="Ingen bordforespørgsler endnu." />;
+
+  const label = { requested: "", confirmed: "Bekræftet", declined: "Sagt nej", suggested: "Foreslået anden tid" };
+
+  return (
+    <div className="space-y-3">
+      {bookings.map((b) => (
+        <article key={b.id} className={`rounded-3xl bg-surface p-5 ${b.status === "requested" ? "border-4 border-buoy" : "border-2 border-line"}`}>
+          {b.status === "requested" && <p className="font-bold text-buoy-deep">NY FORESPØRGSEL</p>}
+          <p className="font-display text-2xl font-extrabold tracking-tight first-letter:uppercase">
+            {longDate(b.date)} kl. {b.time}
+          </p>
+          <p className="text-xl">
+            <strong>{b.guests}</strong> {b.guests === 1 ? "person" : "personer"} · {b.customerName}
+          </p>
+          <p className="text-lg text-ink-soft">
+            <a className="underline" href={telLink(b.customerPhone)}>{b.customerPhone}</a>
+          </p>
+          {b.note && <p className="mt-2 rounded-xl bg-buoy-soft px-3 py-2 text-lg">{b.note}</p>}
+
+          {b.status === "requested" ? (
+            suggestFor === b.id ? (
+              <div className="mt-4">
+                <p className="mb-2 font-bold">Hvilket tidspunkt kan I tilbyde?</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {[-60, -30, 30, 60].map((m) => (
+                    <button key={m} onClick={() => answer(b, "suggested", shift(b.time, m))} className={`${big} border-2 border-ink tabular-nums`}>
+                      {shift(b.time, m)}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setSuggestFor(null)} className="mt-2 w-full py-2 text-lg underline">Fortryd</button>
+              </div>
+            ) : (
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <button onClick={() => answer(b, "confirmed")} className={`${big} bg-go text-white`}>Ja</button>
+                <button onClick={() => setSuggestFor(b.id)} className={`${big} border-2 border-ink`}>Andet tid</button>
+                <button onClick={() => answer(b, "declined")} className={`${big} bg-signal-soft text-signal`}>Nej</button>
+              </div>
+            )
+          ) : (
+            <p className="mt-2 font-bold">
+              {label[b.status]}
+              {b.status === "suggested" && ` (kl. ${b.suggestedTime})`}
+            </p>
+          )}
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function Settings({ place, onChange, onLogout }: { place: Place; onChange: () => void; onLogout: () => void }) {
+  const save = async (settings: object) => {
+    await post("/api/panel/settings", settings);
+    onChange();
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-3xl bg-surface px-5 py-2">
+        <Toggle label="Tag imod bestillinger" on={place.acceptsOrders} onClick={() => save({ acceptsOrders: !place.acceptsOrders })} />
+        <Toggle label="Lukket i dag" hint="Vises som lukket indtil i morgen" on={!!place.closedToday} onClick={() => save({ closedToday: !place.closedToday })} />
+      </div>
+
+      <div className="rounded-3xl bg-surface px-5 py-4">
+        <p className="text-lg font-bold">Travlt? Læg ekstra ventetid til</p>
+        <p className="text-ink-soft">Normal ventetid er {place.prepMinutes} min.</p>
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {[0, 15, 30, 45].map((m) => (
+            <button
+              key={m}
+              onClick={() => save({ extraWaitMinutes: m })}
+              aria-pressed={place.extraWaitMinutes === m}
+              className={`${big} ${place.extraWaitMinutes === m ? "bg-ink text-white" : "border-2 border-line"}`}
+            >
+              {m === 0 ? "Nej" : `+${m}`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {place.menu.length > 0 && (
+        <div className="rounded-3xl bg-surface px-5 py-2">
+          <p className="pt-2 text-lg font-bold">Udsolgt i dag</p>
+          {place.menu.flatMap((c) => c.items).map((item) => (
+            <Toggle key={item.id} label={item.name} on={!!item.soldOut} onClick={() => save({ soldOut: { itemId: item.id, soldOut: !item.soldOut } })} />
+          ))}
+        </div>
+      )}
+
+      <p className="px-2 text-ink-soft">Skal menu, priser eller åbningstider ændres? Ring til AssensNu, så retter vi det.</p>
+      <button onClick={onLogout} className="w-full py-3 text-lg text-ink-soft underline">Log ud</button>
+    </div>
+  );
+}
+
+function Toggle({ label, hint, on, onClick }: { label: string; hint?: string; on: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} role="switch" aria-checked={on} className="flex w-full items-center justify-between gap-4 border-b border-line py-3 text-left last:border-b-0">
+      <span>
+        <span className="block text-lg">{label}</span>
+        {hint && <span className="text-ink-soft">{hint}</span>}
+      </span>
+      <span className={`relative h-8 w-14 shrink-0 rounded-full transition-colors ${on ? "bg-go" : "bg-line"}`}>
+        <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? "left-7" : "left-1"}`} />
+      </span>
+    </button>
+  );
+}
+
+function Empty({ text }: { text: string }) {
+  return <p className="rounded-3xl border-2 border-dashed border-line px-5 py-8 text-center text-lg text-ink-soft">{text}</p>;
+}

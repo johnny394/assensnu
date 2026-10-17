@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeStatus, openStatus } from "./hours";
+import { describeStatus, openStatus, pickupOptions } from "./hours";
 import type { OpeningPeriod } from "./types";
 
 // Fredag 16. oktober 2026, sommertid (UTC+2)
@@ -37,5 +37,33 @@ describe("openStatus", () => {
     const status = openStatus({ hours: pizza, closedToday: true }, at("2026-10-16T15:30:00Z"));
     expect(status).toEqual({ state: "closed", opensAt: { day: 5, time: "16:00" } });
     expect(describeStatus(status, 4)).toBe("Lukket, åbner i morgen kl. 16:00");
+  });
+});
+
+describe("pickupOptions", () => {
+  const place = { hours: pizza, prepMinutes: 20, extraWaitMinutes: 0 };
+
+  it("giver hurtigst muligt og kvarterer frem til lukketid, når der er åbent", () => {
+    // Fredag 17:30
+    const o = pickupOptions(place, at("2026-10-16T15:30:00Z"));
+    expect(o.asapMinutes).toBe(20);
+    expect(o.slots[0]).toBe("18:00");
+    expect(o.slots.at(-1)).toBe("21:00");
+  });
+
+  it("lader en bestille til senere i dag, før der åbner", () => {
+    // Fredag 12:00
+    const o = pickupOptions(place, at("2026-10-16T10:00:00Z"));
+    expect(o.asapMinutes).toBeNull();
+    expect(o.slots[0]).toBe("16:30");
+  });
+
+  it("lægger travlt-tid til", () => {
+    const o = pickupOptions({ ...place, extraWaitMinutes: 15 }, at("2026-10-16T15:30:00Z"));
+    expect(o.asapMinutes).toBe(35);
+  });
+
+  it("kan ikke bestilles, når der er lukket i dag", () => {
+    expect(pickupOptions({ ...place, closedToday: true }, at("2026-10-16T15:30:00Z")).slots).toEqual([]);
   });
 });

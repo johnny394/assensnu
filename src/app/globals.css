@@ -1,10 +1,50 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
+/* AssensNu: havnebyens farver. Bæltblå blæk, fjordhvid baggrund og bøjegul til det,
+   der er åbent og det, man kan trykke på. */
+@theme {
+  --color-paper: #eef3f2;
+  --color-surface: #ffffff;
+  --color-ink: #10282f;
+  --color-ink-soft: #4b5f65;
+  --color-line: #d5dfde;
+  --color-sea: #1d5c68;
+  --color-buoy: #ffc845;
+  --color-buoy-deep: #b88600;
+  --color-buoy-soft: #fff4d1;
+  --color-signal: #c2412b;
+  --color-signal-soft: #fbe9e5;
+  --color-go: #1f7a4d;
+  --color-go-soft: #e3f3ea;
+
+  --font-display: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  font-size: 17px; /* lidt større end normalt, så alle kan læse med */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: #fafaf9;
-  color: #1c1917;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-sea);
+  outline-offset: 2px;
+}
+
+/* ÅBEN-skiltet: tændes en enkelt gang, når siden åbner */
+@keyframes sign-on {
+  0%, 18%, 30% { opacity: 0.35; box-shadow: none; }
+  12%, 24%, 100% { opacity: 1; }
+}
+.sign-lit {
+  animation: sign-on 900ms ease-out 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sign-lit { animation: none; }
 }
