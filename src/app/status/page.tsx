@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { supabaseOrigin } from "@/lib/store/url";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Opsætning · AssensNu", robots: { index: false } };
@@ -7,7 +8,7 @@ type Check = { ok: boolean; text: string; fix?: string };
 
 // Tjekker opsætningen og siger på almindeligt dansk, hvad der mangler. Viser aldrig selve nøglerne.
 async function runChecks(): Promise<Check[]> {
-  const url = process.env.SUPABASE_URL?.trim();
+  const url = supabaseOrigin(process.env.SUPABASE_URL);
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   const checks: Check[] = [];
 
@@ -23,7 +24,7 @@ async function runChecks(): Promise<Check[]> {
   if (!/^https:\/\/[a-z0-9]+\.supabase\.co\/?$/.test(url)) {
     checks.push({
       ok: false,
-      text: `SUPABASE_URL ser forkert ud. Den starter med "${url.slice(0, 30)}…".`,
+      text: `SUPABASE_URL ser forkert ud: "${url.replace(/^https:\/\/[a-z0-9]{6}[a-z0-9]*/, (m) => m.slice(0, 14) + "…")}".`,
       fix: "Den skal se præcis sådan ud: https://abcdefghij.supabase.co (dine egne bogstaver, intet efter .co).",
     });
     return checks;
