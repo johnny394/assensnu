@@ -14,7 +14,7 @@ export default async function PanelPage() {
 
   if (place) {
     const [orders, bookings] = await Promise.all([store.listOrders(place.slug), store.listBookings(place.slug)]);
-    return <Panel initial={{ place, orders, bookings }} />;
+    return <Panel initial={{ place, orders, bookings }} noDatabase={isDemo && !!process.env.VERCEL} />;
   }
 
   const places = (await store.getPlaces()).filter((p) => p.acceptsOrders || p.acceptsBookings);

@@ -11,6 +11,7 @@ export function usePolling<T>(url: string, initial: T, intervalMs = 5000): T {
       const res = await fetch(url, { cache: "no-store" }).catch(() => null);
       if (alive && res?.ok) setData(await res.json());
     };
+    load();
     const id = setInterval(load, intervalMs);
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
