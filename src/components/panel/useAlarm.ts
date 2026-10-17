@@ -8,14 +8,23 @@ export function useAlarm(ringing: boolean) {
   const ctx = useRef<AudioContext | null>(null);
   const [armed, setArmed] = useState(false);
 
-  const arm = useCallback(async () => {
-    ctx.current ??= new AudioContext();
-    await ctx.current.resume();
+  const arm = useCallback(() => {
+    // Panelet låses op med det samme, selv hvis telefonen driller med lyden
     setArmed(true);
-    // Hold skærmen tændt, mens vagten kører
     try {
-      await (navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<unknown> } }).wakeLock?.request("screen");
+      const AC = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AC) {
+        ctx.current ??= new AC();
+        // iPhone vil have en lyd startet direkte i trykket, før den spiller senere lyde
+        const silent = ctx.current.createBufferSource();
+        silent.buffer = ctx.current.createBuffer(1, 1, 22050);
+        silent.connect(ctx.current.destination);
+        silent.start(0);
+        void ctx.current.resume().catch(() => {});
+      }
     } catch {}
+    // Hold skærmen tændt, mens vagten kører
+    void (navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<unknown> } }).wakeLock?.request("screen").catch(() => {});
   }, []);
 
   useEffect(() => {
