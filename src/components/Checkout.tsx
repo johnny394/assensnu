@@ -11,7 +11,7 @@ import { useNow } from "./useNow";
 
 const CUSTOMER_KEY = "assensnu:kunde";
 
-export const field = "w-full rounded-2xl border-2 border-line bg-surface px-4 py-3.5 text-lg outline-none focus:border-ink";
+export const field = "w-full border-2 border-ink bg-surface px-4 py-3.5 text-lg outline-none focus:border-stamp";
 export const label = "mb-1.5 block text-lg font-bold";
 
 export function Checkout({ place }: { place: Place }) {
@@ -71,9 +71,9 @@ export function Checkout({ place }: { place: Place }) {
 
   if (lines.length === 0) {
     return (
-      <div className="mt-6 rounded-3xl bg-surface px-5 py-8 text-center text-lg">
+      <div className="mt-6 border-y-[3px] border-double border-ink px-5 py-8 text-center text-lg">
         <p>Kurven er tom.</p>
-        <Link href={`/sted/${place.slug}`} className="mt-3 inline-block font-bold text-sea underline">
+        <Link href={`/sted/${place.slug}`} className="mt-3 inline-block font-bold text-ink underline decoration-stamp decoration-2 underline-offset-4">
           Se menuen hos {place.name}
         </Link>
       </div>
@@ -83,10 +83,10 @@ export function Checkout({ place }: { place: Place }) {
   return (
     <form onSubmit={send} className="mt-6 space-y-8">
       <section>
-        <ul className="overflow-hidden rounded-3xl bg-surface">
+        <ul className="border-t-[3px] border-double border-ink">
           {lines.map((i) => (
-            <li key={i.id} className="flex items-center gap-3 border-b border-line px-5 py-3 last:border-b-0">
-              <div className="flex shrink-0 items-center gap-1 rounded-full border-2 border-line">
+            <li key={i.id} className="flex items-center gap-3 border-b border-line px-1 py-3">
+              <div className="flex shrink-0 items-center gap-1 rounded-full border-2 border-ink">
                 <button type="button" onClick={() => change(i.id, -1)} aria-label={`Fjern en ${i.name}`} className="h-10 w-10 text-xl">
                   −
                 </button>
@@ -99,7 +99,7 @@ export function Checkout({ place }: { place: Place }) {
               <span className="text-lg tabular-nums">{kr(i.price * cart[i.id])}</span>
             </li>
           ))}
-          <li className="flex justify-between bg-paper/60 px-5 py-3.5 text-xl font-bold">
+          <li className="flex justify-between border-t-2 border-ink px-1 py-3.5 text-xl font-bold">
             <span>I alt</span>
             <span className="tabular-nums">{kr(total)}</span>
           </li>
@@ -109,7 +109,7 @@ export function Checkout({ place }: { place: Place }) {
       <fieldset className="min-w-0">
         <legend className={label}>Hvornår vil du hente?</legend>
         {options && options.asapMinutes === null && options.slots.length === 0 ? (
-          <p className="rounded-2xl bg-signal-soft px-4 py-3 text-lg text-signal">{place.name} tager ikke imod flere bestillinger i dag.</p>
+          <p className="bg-stamp-soft px-4 py-3 text-lg text-stamp">{place.name} tager ikke imod flere bestillinger i dag.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {options?.asapMinutes != null && (
@@ -142,13 +142,13 @@ export function Checkout({ place }: { place: Place }) {
         </div>
       </div>
 
-      <p className="rounded-2xl bg-surface px-5 py-4 text-lg">
+      <p className="border-2 border-ink bg-surface px-5 py-4 text-lg">
         <strong>Du betaler, når du henter maden</strong> hos {place.name}, {place.address.replace(/, \d{4} .*/, "")}.
       </p>
 
-      {error && <p role="alert" className="rounded-2xl bg-signal-soft px-4 py-3 text-lg text-signal">{error}</p>}
+      {error && <p role="alert" className="bg-stamp-soft px-4 py-3 text-lg text-stamp">{error}</p>}
 
-      <button disabled={sending || !chosen} className="w-full rounded-2xl bg-buoy px-5 py-4.5 text-xl font-bold text-ink disabled:opacity-50">
+      <button disabled={sending || !chosen} className="w-full bg-stamp px-5 py-4.5 text-xl font-bold text-white disabled:opacity-50">
         {sending ? "Sender…" : `Send bestilling · ${kr(total)}`}
       </button>
     </form>
@@ -156,4 +156,4 @@ export function Checkout({ place }: { place: Place }) {
 }
 
 const choice = (on: boolean) =>
-  `rounded-full border-2 px-4 py-2.5 text-lg ${on ? "border-ink bg-ink font-bold text-white" : "border-line bg-surface"}`;
+  `border-2 border-ink px-4 py-2.5 text-lg ${on ? "bg-ink font-bold text-paper" : "bg-transparent"}`;

@@ -13,7 +13,7 @@ export default async function BookPage({ params }: { params: Promise<{ slug: str
       <Link href={`/sted/${place.slug}`} className="inline-block py-2 text-lg text-ink-soft">
         ‹ {place.name}
       </Link>
-      <h1 className="mt-2 font-display text-[2.3rem] font-extrabold leading-tight tracking-tight">Book et bord</h1>
+      <h1 className="mt-2 font-display text-[2.3rem] font-black leading-tight tracking-tight">Book et bord</h1>
       <p className="text-lg text-ink-soft">hos {place.name}</p>
       <BookingForm place={place} />
     </main>

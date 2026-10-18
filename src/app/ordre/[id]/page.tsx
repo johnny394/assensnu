@@ -14,7 +14,7 @@ export default async function OrderStatusPage({ params }: { params: Promise<{ id
   return (
     <AppShell>
       <main className="mx-auto max-w-2xl px-5 pb-10 pt-6">
-        <h1 className="mb-4 font-display text-[2.3rem] font-extrabold leading-tight tracking-tight">Tak for din bestilling</h1>
+        <h1 className="mb-4 font-display text-[2.3rem] font-black leading-tight tracking-tight">Tak for din bestilling</h1>
         <OrderStatusView initial={order} placePhone={place?.phone} />
       </main>
     </AppShell>

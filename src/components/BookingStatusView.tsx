@@ -13,21 +13,21 @@ export function BookingStatusView({ initial, placePhone }: { initial: Booking; p
     requested: { tone: "bg-surface", title: "Venter på svar", text: `Vi har sendt din forespørgsel til ${b.placeName}. Siden her opdaterer sig selv, når de svarer.` },
     confirmed: { tone: "bg-go-soft", title: "Bordet er bekræftet", text: `${b.placeName} glæder sig til at se jer.` },
     declined: { tone: "bg-signal-soft", title: "Der er desværre ikke plads", text: `${b.placeName} har ikke et bord på det tidspunkt. Prøv en anden dag eller tid.` },
-    suggested: { tone: "bg-buoy-soft", title: `De foreslår kl. ${b.suggestedTime}`, text: `${b.placeName} har ikke plads kl. ${b.time}, men gerne kl. ${b.suggestedTime}. Ring og sig ja, så er det på plads.` },
+    suggested: { tone: "bg-stamp-soft", title: `De foreslår kl. ${b.suggestedTime}`, text: `${b.placeName} har ikke plads kl. ${b.time}, men gerne kl. ${b.suggestedTime}. Ring og sig ja, så er det på plads.` },
   }[b.status];
 
   return (
     <div className="space-y-4">
-      <div className={`rounded-3xl px-5 py-6 ${box.tone}`}>
-        <p className="font-display text-3xl font-extrabold tracking-tight">{box.title}</p>
+      <div className={`border-2 border-ink px-5 py-6 ${box.tone}`}>
+        <p className="font-display text-3xl font-black tracking-tight">{box.title}</p>
         <p className="mt-2 text-lg">{box.text}</p>
         {(b.status === "suggested" || b.status === "declined") && placePhone && (
-          <a href={telLink(placePhone)} className="mt-4 block rounded-2xl bg-ink px-5 py-3.5 text-center text-lg font-bold text-white">
+          <a href={telLink(placePhone)} className="mt-4 block bg-ink px-5 py-3.5 text-center text-lg font-bold text-paper">
             Ring {placePhone}
           </a>
         )}
       </div>
-      <div className="rounded-3xl bg-surface px-5 py-4 text-lg">
+      <div className="border-2 border-ink bg-surface px-5 py-4 text-lg">
         <p className="font-bold first-letter:uppercase">{when}</p>
         <p>{people} · {b.customerName}, {b.customerPhone}</p>
         {b.note && <p className="text-ink-soft">{b.note}</p>}

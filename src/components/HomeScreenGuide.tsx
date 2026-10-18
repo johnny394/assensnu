@@ -28,7 +28,7 @@ export function HomeScreenGuide({ reason }: { reason: string }) {
 
   const askNotify =
     notify === "default" ? (
-      <button onClick={async () => setNotify(await Notification.requestPermission())} className="mt-3 w-full rounded-2xl bg-ink px-5 py-3.5 text-lg font-bold text-white">
+      <button onClick={async () => setNotify(await Notification.requestPermission())} className="mt-3 w-full bg-ink px-5 py-3.5 text-lg font-bold text-paper">
         Ja tak, giv mig besked
       </button>
     ) : notify === "granted" ? (
@@ -36,12 +36,12 @@ export function HomeScreenGuide({ reason }: { reason: string }) {
     ) : null;
 
   if (platform === "installed") {
-    return askNotify ? <div className="rounded-3xl bg-surface px-5 py-5 text-lg"><p>{reason}</p>{askNotify}</div> : null;
+    return askNotify ? <div className="border-2 border-ink bg-surface px-5 py-5 text-lg"><p>{reason}</p>{askNotify}</div> : null;
   }
 
   return (
-    <div className="rounded-3xl border-2 border-buoy bg-buoy-soft px-5 py-5 text-lg">
-      <p className="font-display text-xl font-extrabold tracking-tight">Læg AssensNu på din hjemmeskærm</p>
+    <div className="border-2 border-ink bg-surface px-5 py-5 text-lg">
+      <p className="font-display text-xl font-black tracking-tight">Læg AssensNu på din hjemmeskærm</p>
       <p className="mt-1">{reason} Så ligger AssensNu også klar, næste gang du er sulten.</p>
       {platform === "ios" ? (
         <ol className="mt-4 space-y-3">
@@ -49,7 +49,7 @@ export function HomeScreenGuide({ reason }: { reason: string }) {
             <Step n={1} />
             <span>
               Tryk på <strong>Del</strong>-knappen
-              <svg viewBox="0 0 24 24" className="mx-1 inline h-6 w-6 align-[-5px] text-sea" fill="none" stroke="currentColor" strokeWidth="2" aria-label="Del-knappen">
+              <svg viewBox="0 0 24 24" className="mx-1 inline h-6 w-6 align-[-5px] text-stamp" fill="none" stroke="currentColor" strokeWidth="2" aria-label="Del-knappen">
                 <path d="M12 3v12M8 7l4-4 4 4M5 11v9h14v-9" />
               </svg>
               nederst i Safari
@@ -69,7 +69,7 @@ export function HomeScreenGuide({ reason }: { reason: string }) {
           </li>
         </ol>
       ) : installPrompt ? (
-        <button onClick={() => installPrompt.prompt()} className="mt-3 w-full rounded-2xl bg-ink px-5 py-3.5 text-lg font-bold text-white">
+        <button onClick={() => installPrompt.prompt()} className="mt-3 w-full bg-ink px-5 py-3.5 text-lg font-bold text-paper">
           Læg på hjemmeskærmen
         </button>
       ) : (
