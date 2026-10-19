@@ -7,6 +7,7 @@ import { usePolling } from "@/components/usePolling";
 import { kr, longDate, telLink } from "@/lib/format";
 import { copenhagenNow, toTime } from "@/lib/hours";
 import type { Booking, Order, Place } from "@/lib/types";
+import { HoursEditor, MenuEditor } from "./DetailsEditors";
 import { useAlarm } from "./useAlarm";
 
 type Data = { place: Place; orders: Order[]; bookings: Booking[] };
@@ -274,6 +275,8 @@ function Bookings({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
 function Settings({ place: fromServer, onChange, onLogout }: { place: Place; onChange: () => void; onLogout: () => void }) {
   // Valget vises med det samme; serveren gemmer i baggrunden
   const [place, setPlace] = useState(fromServer);
+  const [editing, setEditing] = useState<"hours" | "menu" | null>(null);
+  const [saved, setSaved] = useState(false);
   const saving = useRef(0);
   useEffect(() => {
     if (saving.current === 0) setPlace(fromServer);
@@ -289,6 +292,30 @@ function Settings({ place: fromServer, onChange, onLogout }: { place: Place; onC
 
   return (
     <div className="space-y-3">
+      <div className="rounded-3xl bg-surface px-5 py-4">
+        <p className="text-lg font-bold">Det, kunderne ser</p>
+        {saved && <p role="status" className="mt-1 font-bold text-go">Gemt. Kunderne kan se det nu.</p>}
+        <div className="mt-3 space-y-2">
+          <EditButton label="Telefon og åbningstider" missing={!place.phone || place.hours.length === 0} onClick={() => setEditing("hours")} />
+          <EditButton label="Menukort" missing={place.menu.length === 0} onClick={() => setEditing("menu")} />
+        </div>
+      </div>
+      {editing && (() => {
+        const Editor = editing === "hours" ? HoursEditor : MenuEditor;
+        return (
+          <Editor
+            place={fromServer}
+            onClose={() => setEditing(null)}
+            onSaved={() => {
+              setEditing(null);
+              setSaved(true);
+              setTimeout(() => setSaved(false), 6000);
+              onChange();
+            }}
+          />
+        );
+      })()}
+
       <div className="rounded-3xl bg-surface px-5 py-2">
         <Toggle label="Tag imod bestillinger" on={place.acceptsOrders} onClick={() => save({ acceptsOrders: !place.acceptsOrders }, (p) => ({ ...p, acceptsOrders: !p.acceptsOrders }))} />
         <Toggle label="Lukket i dag" hint="Vises som lukket indtil i morgen" on={!!place.closedToday} onClick={() => save({ closedToday: !place.closedToday }, (p) => ({ ...p, closedToday: !p.closedToday }))} />
@@ -325,9 +352,18 @@ function Settings({ place: fromServer, onChange, onLogout }: { place: Place; onC
         </div>
       )}
 
-      <p className="px-2 text-ink-soft">Skal menu, priser eller åbningstider ændres? Ring til AssensNu, så retter vi det.</p>
+      <p className="px-2 text-ink-soft">Brug for hjælp? Ring til AssensNu, så hjælper vi.</p>
       <button onClick={onLogout} className="w-full py-3 text-lg text-ink-soft underline">Log ud</button>
     </div>
+  );
+}
+
+function EditButton({ label, missing, onClick }: { label: string; missing: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border-2 border-ink px-4 text-left text-lg font-bold">
+      <span>{label}</span>
+      <span className={`shrink-0 text-base ${missing ? "rounded-full bg-buoy px-3 py-0.5 text-ink" : "font-normal text-ink-soft"}`}>{missing ? "Mangler" : "Ret ›"}</span>
+    </button>
   );
 }
 

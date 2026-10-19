@@ -161,6 +161,33 @@ export function supabaseStore(url: string, serviceKey: string): Store {
         }
       }
     },
+    async updatePlaceDetails(slug, d) {
+      if (d.phone !== undefined) check(await db.from("places").update({ phone: d.phone }).eq("slug", slug));
+      if (d.hours) {
+        check(await db.from("opening_hours").delete().eq("place_slug", slug));
+        if (d.hours.length) check(await db.from("opening_hours").insert(d.hours.map((h) => ({ place_slug: slug, ...h }))));
+      }
+      if (d.menu) {
+        // Udsolgt-markeringer følger retten, også når menuen gemmes forfra
+        const current = await this.getPlace(slug);
+        const soldOut = new Set(current?.menu.flatMap((c) => c.items).filter((i) => i.soldOut).map((i) => i.id));
+        check(await db.from("menu_categories").delete().eq("place_slug", slug));
+        for (const [position, c] of d.menu.entries()) {
+          const category = check(await db.from("menu_categories").insert({ place_slug: slug, name: c.name, position }).select("id").single()) as { id: number };
+          if (!c.items.length) continue;
+          const items = c.items.map((i, p) => ({
+            id: i.id,
+            category_id: category.id,
+            name: i.name,
+            description: i.description ?? null,
+            price_kr: i.price,
+            sold_out: soldOut.has(i.id),
+            position: p,
+          }));
+          check(await db.from("menu_items").insert(items));
+        }
+      }
+    },
     async checkPanelPin(slug, pin) {
       const row = check(await db.from("places").select("panel_pin_hash").eq("slug", slug).maybeSingle()) as { panel_pin_hash: string | null } | null;
       return Boolean(row?.panel_pin_hash) && row!.panel_pin_hash === sha256(pin);

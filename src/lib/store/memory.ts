@@ -46,6 +46,16 @@ export const memoryStore: Store = {
       }
     }
   },
+  async updatePlaceDetails(slug, d) {
+    const place = state.places.find((p) => p.slug === slug);
+    if (!place) return;
+    if (d.phone !== undefined) place.phone = d.phone ?? undefined;
+    if (d.hours) place.hours = d.hours;
+    if (d.menu) {
+      const soldOut = new Set(place.menu.flatMap((c) => c.items).filter((i) => i.soldOut).map((i) => i.id));
+      place.menu = d.menu.map((c) => ({ ...c, items: c.items.map((i) => ({ ...i, soldOut: soldOut.has(i.id) })) }));
+    }
+  },
   async checkPanelPin(slug, pin) {
     const place = state.places.find((p) => p.slug === slug);
     return Boolean(place?.demo) && pin === DEMO_PIN;
