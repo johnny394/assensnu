@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Atkinson_Hyperlegible, Schibsted_Grotesk } from "next/font/google";
+import { Atkinson_Hyperlegible, Fraunces } from "next/font/google";
 import "./globals.css";
 
 // Atkinson Hyperlegible er lavet til at være let at læse for alle, også med dårligt syn
 const atkinson = Atkinson_Hyperlegible({ variable: "--font-atkinson", subsets: ["latin"], weight: ["400", "700"] });
-const schibsted = Schibsted_Grotesk({ variable: "--font-schibsted", subsets: ["latin"], weight: ["600", "800"] });
+// Fraunces giver overskrifterne et præg af lokalavis. Skrifterne sættes på <html>, så temaets variabler kan finde dem
+const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], axes: ["opsz"] });
 
 export const metadata: Metadata = {
   title: "AssensNu · Hvem har åbent i Assens?",
@@ -13,14 +14,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#eef3f2",
+  themeColor: "#f3eee2",
   viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="da">
-      <body className={`${atkinson.variable} ${schibsted.variable} antialiased`}>{children}</body>
+    <html lang="da" className={`${atkinson.variable} ${fraunces.variable}`}>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

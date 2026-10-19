@@ -10,7 +10,7 @@ export function FavoriteButton({ slug, name }: { slug: string; name: string }) {
       onClick={() => toggle(slug)}
       aria-pressed={on}
       aria-label={on ? `Fjern ${name} fra favoritter` : `Gem ${name} som favorit`}
-      className="grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 border-line bg-surface text-signal"
+      className={`grid h-12 w-12 shrink-0 place-items-center border-2 ${on ? "border-stamp text-stamp" : "border-ink text-ink"}`}
     >
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill={on ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden>
         <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />

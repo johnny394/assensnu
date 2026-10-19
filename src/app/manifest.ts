@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Hvem har åbent i Assens? Mad, takeaway og bordbooking.",
     start_url: "/",
     display: "standalone",
-    background_color: "#eef3f2",
-    theme_color: "#eef3f2",
+    background_color: "#f3eee2",
+    theme_color: "#f3eee2",
     lang: "da",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

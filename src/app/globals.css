@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
-/* AssensNu: havnebyens farver. Bæltblå blæk, fjordhvid baggrund og bøjegul til det,
-   der er åbent og det, man kan trykke på. */
+/* AssensNu som en lokalavis: avispapir, sort tryksværte og et rødt stempel til det,
+   der er åbent. Bøjegul bruges stadig i restaurantpanelet. */
 @theme {
-  --color-paper: #eef3f2;
-  --color-surface: #ffffff;
-  --color-ink: #10282f;
-  --color-ink-soft: #4b5f65;
-  --color-line: #d5dfde;
-  --color-sea: #1d5c68;
+  --color-paper: #f3eee2;
+  --color-surface: #fbf8f1;
+  --color-ink: #1b1a17;
+  --color-ink-soft: #4a463e;
+  --color-line: #d3cab8;
+  --color-sea: #8f2118;
+  --color-stamp: #b3261e;
+  --color-stamp-soft: #f7e3de;
   --color-buoy: #ffc845;
   --color-buoy-deep: #b88600;
   --color-buoy-soft: #fff4d1;
@@ -17,7 +19,7 @@
   --color-go: #1f7a4d;
   --color-go-soft: #e3f3ea;
 
-  --font-display: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
   --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -33,18 +35,22 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-sea);
+  outline: 3px solid var(--color-stamp);
   outline-offset: 2px;
 }
 
-/* ÅBEN-skiltet: tændes en enkelt gang, når siden åbner */
-@keyframes sign-on {
-  0%, 18%, 30% { opacity: 0.35; box-shadow: none; }
-  12%, 24%, 100% { opacity: 1; }
+/* ÅBEN-stemplet: trykkes ned en enkelt gang, når siden åbner */
+.stamp {
+  transform: rotate(var(--tilt, -3deg));
 }
-.sign-lit {
-  animation: sign-on 900ms ease-out 1;
+@keyframes stamp-in {
+  0% { opacity: 0; transform: scale(1.7) rotate(var(--tilt, -3deg)); }
+  60% { opacity: 1; transform: scale(0.94) rotate(var(--tilt, -3deg)); }
+  100% { transform: scale(1) rotate(var(--tilt, -3deg)); }
+}
+.stamp-in {
+  animation: stamp-in 380ms cubic-bezier(0.3, 0.7, 0.4, 1) 1 both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .sign-lit { animation: none; }
+  .stamp-in { animation: none; }
 }

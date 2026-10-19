@@ -92,13 +92,13 @@ export function BookingForm({ place }: { place: Place }) {
       <fieldset className="min-w-0">
         <legend className={label}>Hvor mange er I?</legend>
         <div className="flex items-center gap-4">
-          <button type="button" onClick={() => setGuests(Math.max(1, guests - 1))} aria-label="Én færre" className="h-14 w-14 rounded-full border-2 border-line bg-surface text-2xl">
+          <button type="button" onClick={() => setGuests(Math.max(1, guests - 1))} aria-label="Én færre" className="h-14 w-14 rounded-full border-2 border-ink text-2xl">
             −
           </button>
-          <span className="w-24 text-center font-display text-3xl font-extrabold" aria-live="polite">
+          <span className="w-24 text-center font-display text-3xl font-black" aria-live="polite">
             {guests} <span className="text-lg font-semibold">{guests === 1 ? "person" : "personer"}</span>
           </span>
-          <button type="button" onClick={() => setGuests(Math.min(20, guests + 1))} aria-label="Én mere" className="h-14 w-14 rounded-full border-2 border-line bg-surface text-2xl">
+          <button type="button" onClick={() => setGuests(Math.min(20, guests + 1))} aria-label="Én mere" className="h-14 w-14 rounded-full border-2 border-ink text-2xl">
             +
           </button>
         </div>
@@ -116,7 +116,7 @@ export function BookingForm({ place }: { place: Place }) {
                 setTime(null);
               }}
               aria-pressed={date === d}
-              className={`shrink-0 rounded-2xl border-2 px-4 py-2.5 text-left ${date === d ? "border-ink bg-ink text-white" : "border-line bg-surface"}`}
+              className={`shrink-0 border-2 border-ink px-4 py-2.5 text-left ${date === d ? "bg-ink text-paper" : "bg-transparent"}`}
             >
               <span className="block text-lg font-bold first-letter:uppercase">{dayName(d, i)}</span>
               <span className="text-sm">{Number(d.slice(8))}/{Number(d.slice(5, 7))}</span>
@@ -129,7 +129,7 @@ export function BookingForm({ place }: { place: Place }) {
       <fieldset className="min-w-0">
         <legend className={label}>Hvad tid?</legend>
         {times.length === 0 ? (
-          <p className="rounded-2xl bg-surface px-4 py-3 text-lg text-ink-soft">Der er lukket den dag. Vælg en anden dag.</p>
+          <p className="border-2 border-dashed border-ink-soft/50 px-4 py-3 text-lg text-ink-soft">Der er lukket den dag. Vælg en anden dag.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {times.map((t) => (
@@ -138,7 +138,7 @@ export function BookingForm({ place }: { place: Place }) {
                 key={t}
                 onClick={() => setTime(t)}
                 aria-pressed={time === t}
-                className={`rounded-full border-2 px-4 py-2.5 text-lg tabular-nums ${time === t ? "border-ink bg-ink font-bold text-white" : "border-line bg-surface"}`}
+                className={`border-2 border-ink px-4 py-2.5 text-lg tabular-nums ${time === t ? "bg-ink font-bold text-paper" : "bg-transparent"}`}
               >
                 {t}
               </button>
@@ -162,13 +162,13 @@ export function BookingForm({ place }: { place: Place }) {
         </div>
       </div>
 
-      <p className="rounded-2xl bg-surface px-5 py-4 text-lg">
+      <p className="border-2 border-ink bg-surface px-5 py-4 text-lg">
         Det er en <strong>forespørgsel</strong>. {place.name} svarer så hurtigt som muligt, og du kan følge svaret på næste side.
       </p>
 
-      {error && <p role="alert" className="rounded-2xl bg-signal-soft px-4 py-3 text-lg text-signal">{error}</p>}
+      {error && <p role="alert" className="bg-stamp-soft px-4 py-3 text-lg text-stamp">{error}</p>}
 
-      <button disabled={sending} className="w-full rounded-2xl bg-buoy px-5 py-4.5 text-xl font-bold text-ink disabled:opacity-50">
+      <button disabled={sending} className="w-full bg-stamp px-5 py-4.5 text-xl font-bold text-white disabled:opacity-50">
         {sending ? "Sender…" : "Send forespørgsel"}
       </button>
       <Link href={`/sted/${place.slug}`} className="block text-center text-lg text-ink-soft underline">

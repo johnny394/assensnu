@@ -13,7 +13,7 @@ export default async function OrderPage({ params }: { params: Promise<{ slug: st
       <Link href={`/sted/${place.slug}`} className="inline-block py-2 text-lg text-ink-soft">
         ‹ Tilbage til menuen
       </Link>
-      <h1 className="mt-2 font-display text-[2.3rem] font-extrabold leading-tight tracking-tight">Din bestilling</h1>
+      <h1 className="mt-2 font-display text-[2.3rem] font-black leading-tight tracking-tight">Din bestilling</h1>
       <p className="text-lg text-ink-soft">Takeaway fra {place.name}</p>
       <Checkout place={place} />
     </main>
