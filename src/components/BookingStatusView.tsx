@@ -2,9 +2,10 @@
 
 import { longDate, telLink } from "@/lib/format";
 import type { Booking } from "@/lib/types";
+import { HomeScreenGuide } from "./HomeScreenGuide";
 import { usePolling } from "./usePolling";
 
-export function BookingStatusView({ initial, placePhone }: { initial: Booking; placePhone?: string }) {
+export function BookingStatusView({ initial, placePhone, pushKey }: { initial: Booking; placePhone?: string; pushKey: string | null }) {
   const b = usePolling<Booking>(`/api/bookings/${initial.id}`, initial);
   const when = `${longDate(b.date)} kl. ${b.time}`;
   const people = `${b.guests} ${b.guests === 1 ? "person" : "personer"}`;
@@ -27,6 +28,7 @@ export function BookingStatusView({ initial, placePhone }: { initial: Booking; p
           </a>
         )}
       </div>
+      {b.status === "requested" && <HomeScreenGuide reason="Vil du have besked, når de svarer?" push={{ kind: "booking", id: b.id, publicKey: pushKey }} />}
       <div className="border-2 border-ink bg-surface px-5 py-4 text-lg">
         <p className="font-bold first-letter:uppercase">{when}</p>
         <p>{people} · {b.customerName}, {b.customerPhone}</p>

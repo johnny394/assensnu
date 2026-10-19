@@ -3,13 +3,13 @@
 import { useEffect, useRef } from "react";
 import { kr, telLink } from "@/lib/format";
 import type { Order } from "@/lib/types";
-import { HomeScreenGuide } from "./HomeScreenGuide";
+import { HomeScreenGuide, type PushFor } from "./HomeScreenGuide";
 import { useNow } from "./useNow";
 import { usePolling } from "./usePolling";
 
 const NO_ANSWER_MINUTES = 5;
 
-export function OrderStatusView({ initial, placePhone }: { initial: Order; placePhone?: string }) {
+export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Order; placePhone?: string; pushKey: string | null }) {
   const order = usePolling<Order>(`/api/orders/${initial.id}`, initial);
   const now = useNow(15_000);
   const previous = useRef(order.status);
@@ -20,14 +20,14 @@ export function OrderStatusView({ initial, placePhone }: { initial: Order; place
       navigator.vibrate?.([300, 100, 300]);
       if ("Notification" in window && Notification.permission === "granted") {
         navigator.serviceWorker?.getRegistration().then((reg) => {
-          const text = { body: `Ordre ${order.number} kan hentes nu.`, icon: "/icon-192.png" };
+          const text = { body: `Ordre ${order.number} kan hentes nu.`, icon: "/icon-192.png", tag: `order-${order.id}` };
           if (reg) reg.showNotification(`${order.placeName}: maden er klar`, text);
           else new Notification(`${order.placeName}: maden er klar`, text);
         });
       }
     }
     previous.current = order.status;
-  }, [order.status, order.number, order.placeName]);
+  }, [order.status, order.number, order.placeName, order.id]);
 
   const waitedMinutes = now ? (now.getTime() - Date.parse(order.createdAt)) / 60000 : 0;
   const noAnswer = order.status === "new" && waitedMinutes > NO_ANSWER_MINUTES;
@@ -83,7 +83,7 @@ export function OrderStatusView({ initial, placePhone }: { initial: Order; place
       </div>
 
       {order.status !== "rejected" && order.status !== "picked_up" && (
-        <HomeScreenGuide reason="Vil du have besked, når maden er klar?" />
+        <HomeScreenGuide reason="Vil du have besked, når maden er klar?" push={{ kind: "order", id: order.id, publicKey: pushKey } satisfies PushFor} />
       )}
 
       <div className="border-2 border-ink bg-surface px-5 py-4 text-lg">

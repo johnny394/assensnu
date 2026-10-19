@@ -1,12 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
+import webpush from "web-push";
 import { supabaseOrigin } from "@/lib/store/url";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Opsætning · AssensNu", robots: { index: false } };
 
-type Check = { ok: boolean; text: string; fix?: string };
+type Check = { ok: boolean; text: string; fix?: string; copy?: { name: string; value: string }[] };
 
-// Tjekker opsætningen og siger på almindeligt dansk, hvad der mangler. Viser aldrig selve nøglerne.
+// Tjekker opsætningen og siger på almindeligt dansk, hvad der mangler. Viser aldrig de nøgler, der er i brug.
 async function runChecks(): Promise<Check[]> {
   const url = supabaseOrigin(process.env.SUPABASE_URL);
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -84,6 +85,30 @@ async function runChecks(): Promise<Check[]> {
       ? { ok: true, text: "PANEL_SECRET er sat." }
       : { ok: false, text: "PANEL_SECRET mangler.", fix: "Tilføj en lang tilfældig tekst som PANEL_SECRET på Vercel." },
   );
+
+  // Kolonnen til beskeder kom til efter første udgave af databasen
+  const { error } = await createClient(url, key, { auth: { persistSession: false } }).from("orders").select("push").limit(1);
+  checks.push(
+    error
+      ? { ok: false, text: "Databasen kan ikke gemme beskeder til kunderne endnu.", fix: "Kør tilfoej-beskeder.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan gemme beskeder til kunderne." },
+  );
+
+  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    checks.push({ ok: true, text: "Nøglerne til beskeder er sat." });
+  } else {
+    // Et nyt, tilfældigt par hver gang siden vises. Det bruges først, når det står på Vercel.
+    const fresh = webpush.generateVAPIDKeys();
+    checks.push({
+      ok: false,
+      text: "Kunderne får ikke besked, når telefonen er låst.",
+      fix: "Tilføj de to nøgler herunder på Vercel under Settings og Environment Variables, og tryk Redeploy. Kopiér begge fra samme visning af siden.",
+      copy: [
+        { name: "VAPID_PUBLIC_KEY", value: fresh.publicKey },
+        { name: "VAPID_PRIVATE_KEY", value: fresh.privateKey },
+      ],
+    });
+  }
   return checks;
 }
 
@@ -110,6 +135,12 @@ export default async function StatusPage() {
               {c.ok ? "✓" : "✗"} {c.text}
             </p>
             {c.fix && <p className="mt-1">{c.fix}</p>}
+            {c.copy?.map((k) => (
+              <div key={k.name} className="mt-3">
+                <p className="font-bold">{k.name}</p>
+                <p className="select-all break-all bg-surface px-3 py-2 font-mono text-base">{k.value}</p>
+              </div>
+            ))}
           </li>
         ))}
       </ul>

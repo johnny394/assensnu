@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { panelSlug } from "@/lib/panel-auth";
+import { notify } from "@/lib/push";
 import { store } from "@/lib/store";
 import type { BookingStatus } from "@/lib/types";
 
@@ -14,5 +15,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Vælg det tidspunkt, I foreslår." }, { status: 400 });
   }
   await store.setBookingStatus(booking.id, status, status === "suggested" ? suggestedTime : undefined);
+
+  const name = booking.placeName;
+  const message = {
+    confirmed: { title: `${name}: bordet er bekræftet`, body: `I er ventet kl. ${booking.time}.` },
+    declined: { title: `${name} har desværre ikke plads`, body: "Prøv en anden dag eller tid." },
+    suggested: { title: `${name} foreslår kl. ${suggestedTime}`, body: "Ring og sig ja, så er det på plads." },
+  }[status as "confirmed" | "declined" | "suggested"];
+  after(() => notify({ kind: "booking", id: booking.id }, { ...message, url: `/booking/${booking.id}` }));
   return NextResponse.json({ ok: true });
 }
