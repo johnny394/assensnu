@@ -17,7 +17,8 @@ export default async function PanelPage() {
     return <Panel initial={{ place, orders, bookings }} noDatabase={isDemo && !!process.env.VERCEL} />;
   }
 
-  const places = (await store.getPlaces()).filter((p) => p.acceptsOrders || p.acceptsBookings);
+  // Alle steder kan logge ind og rette deres oplysninger, når AssensNu har givet dem en kode
+  const places = await store.getPlaces();
   return (
     <main className="mx-auto max-w-2xl px-5 py-8">
       <Wordmark />
