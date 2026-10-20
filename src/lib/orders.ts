@@ -4,7 +4,7 @@ import type { NewBooking, NewOrder } from "./store/types";
 import type { Place } from "./types";
 
 export type OrderInput = {
-  items: { itemId: string; quantity: number; size?: string; extras?: string[] }[];
+  items: { itemId: string; quantity: number; size?: string; extras?: string[]; person?: string }[];
   name: string;
   phone: string;
   pickup: string;
@@ -28,7 +28,7 @@ export function buildOrder(place: Place, input: OrderInput, now = new Date()): R
   if (!phone) return { ok: false, error: "Skriv dit telefonnummer med 8 cifre." };
 
   const lines = [];
-  for (const { itemId, quantity, size, extras } of (input.items ?? []).slice(0, 50)) {
+  for (const { itemId, quantity, size, extras, person } of (input.items ?? []).slice(0, 200)) {
     const priced = priceChoice(place, {
       itemId: String(itemId),
       size: typeof size === "string" ? size : undefined,
@@ -38,7 +38,8 @@ export function buildOrder(place: Place, input: OrderInput, now = new Date()): R
     const { item, ...line } = priced.value;
     if (item.soldOut) return { ok: false, error: `${item.name} er desværre udsolgt.` };
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) return { ok: false, error: "Antal skal være mellem 1 og 20." };
-    lines.push({ ...line, quantity });
+    const who = typeof person === "string" ? person.trim().slice(0, 40) : "";
+    lines.push({ ...line, quantity, ...(who && { person: who }) });
   }
   if (lines.length === 0) return { ok: false, error: "Kurven er tom." };
 

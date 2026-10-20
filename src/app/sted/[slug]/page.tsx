@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { FollowButton } from "@/components/FollowButton";
+import { GroupLink } from "@/components/GroupLink";
 import { Menu } from "@/components/Menu";
 import { LiveOpenSign } from "@/components/OpenSign";
 import { TakeawayWait } from "@/components/TakeawayWait";
@@ -102,6 +103,7 @@ export default async function PlacePage({ params }: Props) {
         ) : (
           <>
             {!place.acceptsOrders && <p className="mt-1 text-ink-soft">Bestilling her kommer snart. Indtil da kan du ringe.</p>}
+            {place.acceptsOrders && !preview && <GroupLink slug={place.slug} />}
             <Menu place={place} />
           </>
         )}

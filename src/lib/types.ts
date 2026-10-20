@@ -72,6 +72,7 @@ export type OrderLine = {
   quantity: number;
   size?: string;
   extras?: string[];
+  person?: string; // ved fællesbestilling: hvem retten er til
 };
 
 export type Order = {
@@ -109,3 +110,9 @@ export type Booking = {
   suggestedTime?: string; // når restauranten foreslår et andet tidspunkt
   createdAt: string;
 };
+
+// Fællesbestilling: én starter den og deler et link. Alle lægger selv deres mad i,
+// og den, der startede, sender det hele som én ordre.
+export type CartItem = { itemId: string; quantity: number; size?: string; extras?: string[] };
+export type GroupEntry = { id: string; name: string; items: CartItem[]; createdAt: string };
+export type GroupOrder = { id: string; placeSlug: string; hostName: string; entries: GroupEntry[]; orderId?: string; createdAt: string };

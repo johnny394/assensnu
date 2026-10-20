@@ -1,5 +1,5 @@
 import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
-import type { Booking, BookingStatus, DeliverySettings, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
+import type { Booking, BookingStatus, CartItem, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
 
 export type NewOrder = Omit<Order, "id" | "number" | "status" | "createdAt" | "readyAt">;
 export type NewBooking = Omit<Booking, "id" | "status" | "createdAt" | "suggestedTime">;
@@ -54,6 +54,15 @@ export type Store = {
   follow(slug: string, subscription: PushSubscription): Promise<void>;
   unfollow(slug: string, endpoint: string): Promise<void>;
   listFollowers(slug: string): Promise<PushSubscription[]>;
+
+  /** Fællesbestilling. Koderne (hostKey, entryKey) gemmes kun som fingeraftryk. */
+  createGroup(slug: string, hostName: string, hostKey: string): Promise<GroupOrder>;
+  getGroup(id: string): Promise<GroupOrder | null>;
+  isGroupHost(id: string, hostKey: string): Promise<boolean>;
+  addGroupEntry(id: string, name: string, items: CartItem[], entryKey: string): Promise<GroupEntry>;
+  /** Fjerner en persons mad, hvis koden passer til personen eller til den, der startede */
+  removeGroupEntry(id: string, entryId: string, key: string): Promise<boolean>;
+  closeGroup(id: string, orderId: string): Promise<void>;
 
   savePush(target: PushTarget, subscription: PushSubscription | null): Promise<void>;
   getPush(target: PushTarget): Promise<PushSubscription | null>;

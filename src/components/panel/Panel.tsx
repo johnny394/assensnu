@@ -162,6 +162,8 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
       <ul className="mt-2 text-xl">
         {o.lines.map((l, i) => (
           <li key={i}>
+            {/* Fællesbestilling: navnet står over hver persons mad, så den kan pakkes for sig */}
+            {l.person && l.person !== o.lines[i - 1]?.person && <p className="mt-2 border-b border-line text-lg font-bold uppercase tracking-[0.08em] text-ink-soft">{l.person}</p>}
             <strong>{l.quantity} ×</strong> {l.name}
             {choiceText(l) && <span className="block pl-8 text-lg font-bold text-ink-soft">{choiceText(l)}</span>}
           </li>
