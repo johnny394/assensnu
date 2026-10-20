@@ -49,8 +49,8 @@ export type Store = {
   /** Sletter stedet for altid, også tider, menu og gamle bestillinger */
   deletePlace(slug: string): Promise<void>;
 
-  /** Dagens ret eller tilbud. Erstatter dagens tidligere tekst. */
-  postNews(slug: string, text: string, price: number | null): Promise<void>;
+  /** Dagens tilbud. Erstatter dagens tidligere tekst. */
+  postNews(slug: string, text: string, price: number | null, wasPrice: number | null): Promise<void>;
   follow(slug: string, subscription: PushSubscription): Promise<void>;
   unfollow(slug: string, endpoint: string): Promise<void>;
   listFollowers(slug: string): Promise<PushSubscription[]>;

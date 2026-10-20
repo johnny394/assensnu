@@ -25,6 +25,7 @@ type PlaceRow = {
   news?: string | null;
   news_at?: string | null;
   news_price?: number | null;
+  news_was_price?: number | null;
   closed_on: string | null;
   panel_pin_hash: string | null;
   opening_hours: { day: number; open: string; close: string }[];
@@ -37,14 +38,14 @@ type PlaceRow = {
 };
 
 const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, description, takeaway, dine_in,
-  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, closed_on, panel_pin_hash,
+  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, closed_on, panel_pin_hash,
   opening_hours (day, open, close),
   menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))`;
 
 // Indtil tilfoej-levering.sql, tilfoej-tilvalg.sql, tilfoej-folg.sql og tilfoej-dagens-ret.sql er kørt, findes de nyere kolonner ikke.
-// Så spørger vi uden dem, så siden virker som før, bare uden levering, tilvalg, dagens ret og travlt-tid.
+// Så spørger vi uden dem, så siden virker som før, bare uden levering, tilvalg, dagens tilbud og travlt-tid.
 type Res = { data: unknown; error: unknown };
-const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"]];
+const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"]];
 const mentions = (error: unknown, column: string) => new RegExp(`\\b${column}\\b`).test(String((error as { message?: string } | null)?.message));
 async function withFallback(select: string, run: (select: string) => PromiseLike<Res>): Promise<Res> {
   let res = await run(select);
@@ -75,7 +76,7 @@ function toPlace(r: PlaceRow): Place {
     delivery: r.delivery ?? null,
     prepMinutes: r.prep_minutes,
     ...activeWait(r.extra_wait_minutes, r.busy_until ?? null),
-    news: todaysNews(r.news, r.news_at, r.news_price),
+    news: todaysNews(r.news, r.news_at, { price: r.news_price, wasPrice: r.news_was_price }),
     closedToday: r.closed_on === todayInCopenhagen(),
     demo: r.slug === "proevepizza" || undefined,
     // Kun ja/nej sendes videre, aldrig selve fingeraftrykket af koden
@@ -373,11 +374,16 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       check(await db.from("places").delete().eq("slug", slug));
     },
 
-    async postNews(slug, text, price) {
-      const patch = { news: text, news_at: new Date().toISOString() };
-      let res = await db.from("places").update({ ...patch, news_price: price }).eq("slug", slug);
-      // Uden tilfoej-dagens-ret.sql kan teksten stadig lægges ud, bare uden pris
-      if (mentions(res.error, "news_price") && !price) res = await db.from("places").update(patch).eq("slug", slug);
+    async postNews(slug, text, price, wasPrice) {
+      const patch: Record<string, unknown> = { news: text, news_at: new Date().toISOString(), news_price: price, news_was_price: wasPrice };
+      let res = await db.from("places").update(patch).eq("slug", slug);
+      // Uden tilfoej-tilbud.sql virker tilbuddet stadig, bare uden normalpris.
+      // Uden tilfoej-dagens-ret.sql kan teksten lægges ud, bare uden pris.
+      for (const column of ["news_was_price", "news_price"]) {
+        if (!mentions(res.error, column) || (column === "news_price" && price)) continue;
+        delete patch[column];
+        res = await db.from("places").update(patch).eq("slug", slug);
+      }
       check(res);
     },
     async follow(slug, subscription) {

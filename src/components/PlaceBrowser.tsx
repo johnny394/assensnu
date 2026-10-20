@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { kr } from "@/lib/format";
 import { copenhagenNow, openStatus, pickupOptions } from "@/lib/hours";
 import type { Place } from "@/lib/types";
 import { OpenSign } from "./OpenSign";
+import { offerPrice } from "./TodaysOffer";
 import { useNow } from "./useNow";
 
 type Filter = "open" | "takeaway" | "dineIn";
@@ -65,6 +65,8 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
       <h1 className="font-display text-[2.6rem] font-black leading-[1.02] tracking-tight">{title ?? headline(now)}</h1>
       <p className="mt-2 min-h-7 text-lg text-ink-soft">{openCount !== null && openLine(openCount)}</p>
 
+      <OfferStrip places={places.filter((p) => p.member && p.news)} />
+
       <label className="mt-5 flex items-center gap-3 border-b-2 border-ink px-1">
         <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
           <circle cx="11" cy="11" r="7" />
@@ -109,9 +111,9 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
                   </p>
                   {p.news && (
                     <p className="mt-1 line-clamp-2 text-base">
-                      <span className="font-bold text-stamp">I dag: </span>
+                      <span className="mr-1.5 bg-buoy px-1.5 py-0.5 text-sm font-black uppercase tracking-[0.08em]">Tilbud</span>
                       {p.news.text}
-                      {p.news.price && <span className="whitespace-nowrap font-bold"> · {kr(p.news.price)}</span>}
+                      {p.news.price && <span className="whitespace-nowrap font-bold text-stamp"> · {offerPrice(p.news.price)}</span>}
                     </p>
                   )}
                 </div>
@@ -154,6 +156,34 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
         )}
       </ul>
     </div>
+  );
+}
+
+// Dagens tilbud fra alle steder samlet øverst, som forsiden af en tilbudsavis
+function OfferStrip({ places }: { places: Place[] }) {
+  if (places.length === 0) return null;
+  return (
+    <section className="mt-5" aria-label="Dagens tilbud">
+      <h2 className="font-display text-2xl font-black tracking-tight">Dagens tilbud</h2>
+      <div className="-mx-5 mt-2 flex snap-x gap-3 overflow-x-auto px-5 pb-3 pt-1 [scrollbar-width:none]">
+        {places.map((p) => (
+          <Link
+            key={p.slug}
+            href={`/sted/${p.slug}#dagens-tilbud`}
+            className={`flex shrink-0 snap-start flex-col border-[3px] border-ink bg-buoy px-3 py-2.5 shadow-[4px_4px_0_var(--color-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${places.length === 1 ? "w-full" : "w-64"}`}
+          >
+            <span className="text-sm font-bold uppercase tracking-[0.12em]">{p.name}</span>
+            <span className="mt-0.5 line-clamp-2 font-display text-lg font-bold leading-snug">{p.news!.text}</span>
+            {p.news!.price && (
+              <span className="mt-auto pt-1">
+                <span className="font-display text-3xl font-black tabular-nums text-stamp">{offerPrice(p.news!.price)}</span>
+                {p.news!.wasPrice && <span className="ml-2 line-through">før {offerPrice(p.news!.wasPrice)}</span>}
+              </span>
+            )}
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 

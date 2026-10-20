@@ -48,7 +48,7 @@ export async function notify(target: PushTarget, message: PushMessage) {
   }
 }
 
-// Dagens ret eller tilbud til alle, der følger stedet. Telefoner, der har sagt nej tak, glemmes.
+// Dagens tilbud til alle, der følger stedet. Telefoner, der har sagt nej tak, glemmes.
 export async function notifyFollowers(slug: string, message: PushMessage) {
   if (!setup()) return;
   const followers = await store.listFollowers(slug);
