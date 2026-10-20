@@ -262,12 +262,12 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       const rows = check(
         await db
           .from("places")
-          .select("slug, name, address, cuisines, phone, takeaway, dine_in, published, accepts_orders, accepts_bookings, panel_pin_hash, opening_hours (count), menu_categories (count)")
+          .select("slug, name, address, cuisines, phone, takeaway, dine_in, published, accepts_orders, accepts_bookings, panel_pin_hash, opening_hours (day, open, close), menu_categories (count)")
           .order("name"),
       ) as unknown as (Pick<PlaceRow, "slug" | "name" | "address" | "cuisines" | "phone" | "takeaway" | "dine_in" | "accepts_orders" | "accepts_bookings"> & {
         published: boolean;
         panel_pin_hash: string | null;
-        opening_hours: { count: number }[];
+        opening_hours: { day: number; open: string; close: string }[];
         menu_categories: { count: number }[];
       })[];
       return rows.map((r) => ({
@@ -282,7 +282,9 @@ export function supabaseStore(url: string, serviceKey: string): Store {
         acceptsOrders: r.accepts_orders,
         acceptsBookings: r.accepts_bookings,
         hasCode: Boolean(r.panel_pin_hash),
-        hasHours: (r.opening_hours[0]?.count ?? 0) > 0,
+        hours: r.opening_hours
+          .map((h) => ({ day: h.day as Weekday, open: h.open.slice(0, 5), close: h.close.slice(0, 5) }))
+          .sort((a, b) => a.day - b.day || a.open.localeCompare(b.open)),
         hasMenu: (r.menu_categories[0]?.count ?? 0) > 0,
       }));
     },

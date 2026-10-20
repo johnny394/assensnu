@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Wordmark } from "@/components/AppShell";
-import { Sheet } from "@/components/panel/DetailsEditors";
+import { HoursEditor, Sheet } from "@/components/panel/DetailsEditors";
 import { Toggle } from "@/components/panel/Panel";
 import type { AdminPlace } from "@/lib/admin";
+import { WEEKDAYS } from "@/lib/hours";
 
 async function post(url: string, body: unknown): Promise<{ ok: boolean; error?: string; pin?: string; slug?: string }> {
   const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
@@ -88,7 +89,7 @@ export function AdminPanel({ places }: { places: AdminPlace[] }) {
                 {p.acceptsOrders && <Badge tone="go">Bestilling</Badge>}
                 {p.acceptsBookings && <Badge tone="go">Bordbooking</Badge>}
                 {!p.hasMenu && <Badge tone="soft">Ingen menu</Badge>}
-                {!p.hasHours && <Badge tone="soft">Ingen åbningstider</Badge>}
+                {p.hours.length === 0 && <Badge tone="soft">Ingen åbningstider</Badge>}
               </span>
             </button>
           </li>
@@ -204,6 +205,8 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
   const [error, setError] = useState<string | null>(null);
   const [pin, setPin] = useState<string | null>(null);
   const [confirmNew, setConfirmNew] = useState(false);
+  const [editHours, setEditHours] = useState(false);
+  const [hoursSaved, setHoursSaved] = useState(false);
   const url = `/api/admin/places/${place.slug}`;
 
   async function save() {
@@ -265,17 +268,50 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
         <Toggle label="Tag imod bordforespørgsler" on={place.acceptsBookings} onClick={() => toggle("acceptsBookings")} />
         <Toggle label="Vis på AssensNu" hint="Slået fra er stedet skjult for kunderne" on={place.published} onClick={() => toggle("published")} />
       </section>
-      {(!place.hasMenu || !place.hasHours) && (
-        <p className="mt-3 px-1 text-ink-soft">
-          {[!place.hasHours && "åbningstider", !place.hasMenu && "menukort"].filter(Boolean).join(" og ")} mangler. Det skriver restauranten selv ind i deres panel.
-        </p>
-      )}
+      <section className="mt-5 rounded-3xl border-2 border-line px-5 py-4">
+        <h3 className="font-display text-xl font-black tracking-tight">Åbningstider</h3>
+        {hoursSaved && <p role="status" className="mt-1 font-bold text-go">Gemt. Kunderne kan se det nu.</p>}
+        {place.hours.length === 0 ? (
+          <p className="mt-2 text-lg">Ingen åbningstider endnu. Kunderne ser ikke, om stedet har åbent.</p>
+        ) : (
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 text-lg tabular-nums">
+            {WEEKDAYS.map((name, d) => {
+              const periods = place.hours.filter((h) => h.day === d);
+              return (
+                <div key={name} className="contents">
+                  <dt className="font-bold">{name}</dt>
+                  <dd className={periods.length ? "" : "text-ink-soft"}>
+                    {periods.length ? periods.map((h) => `${h.open}–${h.close}`).join(" og ") : "Lukket"}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+        )}
+        <button onClick={() => setEditHours(true)} className="mt-3 min-h-12 w-full rounded-2xl border-2 border-ink px-5 text-lg font-bold">
+          {place.hours.length ? "Ret åbningstider" : "Skriv åbningstider"}
+        </button>
+      </section>
+      {!place.hasMenu && <p className="mt-3 px-1 text-ink-soft">Menukort mangler. Det skriver restauranten selv ind i deres panel.</p>}
 
       <h3 className="mb-3 mt-8 font-display text-xl font-black tracking-tight">Oplysninger</h3>
       <BasicsFields form={form} setForm={setForm} />
       <Link href={`/sted/${place.slug}`} target="_blank" className="mt-6 block text-lg underline">
         Se stedets side
       </Link>
+      {editHours && (
+        <HoursEditor
+          place={place}
+          withPhone={false}
+          saveUrl={`${url}/details`}
+          onClose={() => setEditHours(false)}
+          onSaved={() => {
+            setEditHours(false);
+            setHoursSaved(true);
+            router.refresh();
+          }}
+        />
+      )}
     </Sheet>
   );
 }
