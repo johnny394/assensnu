@@ -121,7 +121,7 @@ export const memoryStore: Store = {
         acceptsOrders: p.acceptsOrders,
         acceptsBookings: p.acceptsBookings,
         hasCode: state.pins.has(p.slug) || Boolean(p.demo),
-        hasHours: p.hours.length > 0,
+        hours: p.hours,
         hasMenu: p.menu.length > 0,
       }));
   },

@@ -7,8 +7,8 @@ import type { MenuCategory, OpeningPeriod, Place, Weekday } from "@/lib/types";
 // Restauranten retter selv telefon, åbningstider og menukort. Hver del åbner som en
 // hel side ovenpå panelet med en stor Gem-knap i bunden.
 
-async function saveDetails(body: object): Promise<string | null> {
-  const res = await fetch("/api/panel/details", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+async function saveDetails(body: object, url = "/api/panel/details"): Promise<string | null> {
+  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
   if (res?.ok) return null;
   return (await res?.json().catch(() => null))?.error ?? "Ingen forbindelse. Prøv igen.";
 }
@@ -47,7 +47,14 @@ export function Sheet({ title, onClose, onSave, saving, error, children }: {
 
 type Period = { open: string; close: string };
 
-export function HoursEditor({ place, onClose, onSaved }: { place: Place; onClose: () => void; onSaved: () => void }) {
+// Johnny bruger samme skærm i sit eget panel, men uden telefon (den retter han under Oplysninger)
+export function HoursEditor({ place, onClose, onSaved, saveUrl, withPhone = true }: {
+  place: Pick<Place, "phone" | "hours">;
+  onClose: () => void;
+  onSaved: () => void;
+  saveUrl?: string;
+  withPhone?: boolean;
+}) {
   const [phone, setPhone] = useState(place.phone ?? "");
   const [days, setDays] = useState<Period[][]>(() => WEEKDAYS.map((_, d) => place.hours.filter((h) => h.day === d).map(({ open, close }) => ({ open, close }))));
   const [saving, setSaving] = useState(false);
@@ -64,19 +71,23 @@ export function HoursEditor({ place, onClose, onSaved }: { place: Place; onClose
     const hours: OpeningPeriod[] = days.flatMap((periods, day) => periods.map((p) => ({ day: day as Weekday, ...p })));
     setSaving(true);
     setError(null);
-    const problem = await saveDetails({ phone, hours });
+    const problem = await saveDetails(withPhone ? { phone, hours } : { hours }, saveUrl);
     setSaving(false);
     if (problem) setError(problem);
     else onSaved();
   }
 
   return (
-    <Sheet title="Telefon og åbningstider" onClose={onClose} onSave={save} saving={saving} error={error}>
-      <label htmlFor="phone" className="mb-1.5 block text-lg font-bold">Telefonnummer</label>
-      <input id="phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Fx 64 71 23 45" className={field} />
-      <p className="mt-1 text-ink-soft">Det nummer, kunderne ringer til.</p>
+    <Sheet title={withPhone ? "Telefon og åbningstider" : "Åbningstider"} onClose={onClose} onSave={save} saving={saving} error={error}>
+      {withPhone && (
+        <>
+          <label htmlFor="phone" className="mb-1.5 block text-lg font-bold">Telefonnummer</label>
+          <input id="phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Fx 64 71 23 45" className={field} />
+          <p className="mt-1 text-ink-soft">Det nummer, kunderne ringer til.</p>
+        </>
+      )}
 
-      <h3 className="mt-8 text-lg font-bold">Åbningstider</h3>
+      {withPhone && <h3 className="mt-8 text-lg font-bold">Åbningstider</h3>}
       <p className="text-ink-soft">Lukker I efter midnat, så skriv bare fx 02:00.</p>
       <ul className="mt-3 space-y-2">
         {WEEKDAYS.map((name, d) => (
