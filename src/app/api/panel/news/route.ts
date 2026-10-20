@@ -4,6 +4,7 @@ import { cleanNews, cleanNewsPrice, cleanWasPrice, NEWS_MAX } from "@/lib/live";
 import { panelSlug } from "@/lib/panel-auth";
 import { notifyFollowers } from "@/lib/push";
 import { store } from "@/lib/store";
+import { warmTranslations } from "@/lib/translate";
 
 // Dagens tilbud. Første gang om dagen får følgerne en besked. Rettes teksten senere
 // samme dag, ændres den bare på siden, så ingen får to beskeder på én dag.
@@ -33,5 +34,6 @@ export async function POST(request: Request) {
         body: price ? `${text} · ${wasPrice ? `Nu ${kr(price)} (før ${kr(wasPrice)})` : kr(price)}${place.acceptsOrders ? " · Bestil i AssensNu" : ""}` : text,
         url: `/sted/${place.slug}#dagens-tilbud`,
       }));
+  after(() => warmTranslations(place.slug));
   return NextResponse.json({ ok: true, notified: firstToday });
 }

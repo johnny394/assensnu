@@ -7,7 +7,7 @@ import type { Booking, GroupOrder, Order, Place, PlaceNews } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -24,6 +24,7 @@ const state: State = (g.__assensnu ??= {
   followers: new Map(),
   groups: new Map(),
   lastChance: new Map(),
+  translations: new Map(),
 });
 // Tilstand fra før en genstart af udviklingsserveren mangler måske de nyeste felter
 state.busyUntil ??= new Map();
@@ -31,6 +32,7 @@ state.news ??= new Map();
 state.followers ??= new Map();
 state.groups ??= new Map();
 state.lastChance ??= new Map();
+state.translations ??= new Map();
 const pushKey = (t: PushTarget) => `${t.kind}:${t.id}`;
 
 const DEMO_PIN = "1234";
@@ -241,6 +243,13 @@ export const memoryStore: Store = {
   async closeGroup(id, orderId) {
     const hit = state.groups.get(id);
     if (hit) hit.group.orderId = orderId;
+  },
+
+  async getTranslations(lang, sources) {
+    return Object.fromEntries(sources.flatMap((s) => (state.translations.has(`${lang}:${s}`) ? [[s, state.translations.get(`${lang}:${s}`)!]] : [])));
+  },
+  async saveTranslations(lang, translations) {
+    for (const [source, text] of Object.entries(translations)) state.translations.set(`${lang}:${source}`, text);
   },
 
   async savePush(target, subscription) {

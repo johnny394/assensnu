@@ -1,3 +1,4 @@
+import { translator, type T } from "./i18n";
 import type { OpeningPeriod, Place, Weekday } from "./types";
 
 export const WEEKDAYS = [
@@ -72,18 +73,21 @@ function nextOpening(
   return undefined;
 }
 
-export function describeStatus(status: OpenStatus, today: Weekday): string {
+// t oversætter til engelsk eller tysk på stedets side. Uden t er det dansk.
+export function describeStatus(status: OpenStatus, today: Weekday, t: T = translator("da")): string {
   switch (status.state) {
     case "unknown":
-      return "Åbningstider mangler";
+      return t("Åbningstider mangler");
     case "open":
-      return `Åben til ${status.closesAt}`;
+      return t("Åben til {tid}", { tid: status.closesAt });
     case "closed": {
-      if (!status.opensAt) return "Lukket";
+      if (!status.opensAt) return t("Lukket");
       const { day, time } = status.opensAt;
-      if (day === today) return `Lukket, åbner kl. ${time}`;
-      if (day === (today + 1) % 7) return `Lukket, åbner i morgen kl. ${time}`;
-      return `Lukket, åbner ${WEEKDAYS[day].toLowerCase()} kl. ${time}`;
+      if (day === today) return t("Lukket, åbner kl. {tid}", { tid: time });
+      if (day === (today + 1) % 7) return t("Lukket, åbner i morgen kl. {tid}", { tid: time });
+      // Ugedage skrives med lille på dansk, men med stort på engelsk og tysk
+      const name = t(WEEKDAYS[day]);
+      return t("Lukket, åbner {dag} kl. {tid}", { dag: name === WEEKDAYS[day] ? name.toLowerCase() : name, tid: time });
     }
   }
 }

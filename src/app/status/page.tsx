@@ -152,6 +152,22 @@ async function runChecks(): Promise<Check[]> {
       : { ok: true, text: "Databasen kan gemme fællesbestillinger." },
   );
 
+  const oversat = await createClient(url, key, { auth: { persistSession: false } }).from("translations").select("key").limit(1);
+  checks.push(
+    oversat.error
+      ? { ok: false, text: "Databasen kan ikke gemme menuen på engelsk og tysk endnu.", fix: "Kør tilfoej-oversaettelser.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan gemme menuen på engelsk og tysk." },
+  );
+  checks.push(
+    process.env.ANTHROPIC_API_KEY?.trim()
+      ? { ok: true, text: "ANTHROPIC_API_KEY er sat, så menuen kan oversættes til engelsk og tysk." }
+      : {
+          ok: false,
+          text: "Menuen kan ikke oversættes til engelsk og tysk, fordi ANTHROPIC_API_KEY mangler.",
+          fix: "Lav en nøgle på console.anthropic.com under API Keys, og tilføj den som ANTHROPIC_API_KEY på Vercel. Tryk Redeploy bagefter.",
+        },
+  );
+
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     checks.push({ ok: true, text: "Nøglerne til beskeder er sat." });
   } else {

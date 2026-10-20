@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-auth";
 import { cleanDetails } from "@/lib/place-details";
 import { store } from "@/lib/store";
+import { warmTranslations } from "@/lib/translate";
 
 // Åbningstider, menukort og levering, som Johnny retter i sit eget panel. Samme tjek som i restaurantpanelet.
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -19,5 +20,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   } catch {
     return NextResponse.json({ error: "Det blev ikke gemt helt. Tryk Gem igen." }, { status: 500 });
   }
+  if (menu) after(() => warmTranslations(slug));
   return NextResponse.json({ ok: true });
 }

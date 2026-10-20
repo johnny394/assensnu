@@ -66,6 +66,10 @@ export type Store = {
   removeGroupEntry(id: string, entryId: string, key: string): Promise<boolean>;
   closeGroup(id: string, orderId: string): Promise<void>;
 
+  /** Menuen på engelsk og tysk: de oversættelser, der allerede er lavet, som dansk tekst → oversat */
+  getTranslations(lang: string, sources: string[]): Promise<Record<string, string>>;
+  saveTranslations(lang: string, translations: Record<string, string>): Promise<void>;
+
   savePush(target: PushTarget, subscription: PushSubscription | null): Promise<void>;
   getPush(target: PushTarget): Promise<PushSubscription | null>;
 };
