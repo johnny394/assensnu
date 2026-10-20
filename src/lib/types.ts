@@ -60,7 +60,7 @@ export type Place = {
 };
 
 // Restauranten skriver det i panelet, og følgerne får det som besked på telefonen
-export type PlaceNews = { text: string; sentAt: string }; // sentAt er ISO
+export type PlaceNews = { text: string; sentAt: string; price?: number }; // sentAt er ISO. Med pris kan den bestilles.
 
 export type OrderStatus = "new" | "accepted" | "ready" | "picked_up" | "rejected";
 

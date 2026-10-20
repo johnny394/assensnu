@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { activeWait, busyUntilFrom, cleanNews, clockTime, todaysNews } from "./live";
+import { activeWait, busyUntilFrom, cleanNews, cleanNewsPrice, clockTime, orderableMenu, todaysDish, todaysNews } from "./live";
+import { priceChoice } from "./menu-options";
+import type { Place } from "./types";
 
 const at = (iso: string) => new Date(iso);
 
@@ -34,8 +36,32 @@ describe("dagens ret", () => {
 
   it("gælder kun den dag, den er skrevet, i dansk tid", () => {
     const sent = "2026-10-20T22:30:00Z"; // 00:30 den 21. i Assens
-    expect(todaysNews("Tilbud", sent, at("2026-10-21T10:00:00Z"))).toEqual({ text: "Tilbud", sentAt: sent });
-    expect(todaysNews("Tilbud", sent, at("2026-10-22T10:00:00Z"))).toBeUndefined();
+    expect(todaysNews("Tilbud", sent, null, at("2026-10-21T10:00:00Z"))).toEqual({ text: "Tilbud", sentAt: sent });
+    expect(todaysNews("Tilbud", sent, null, at("2026-10-22T10:00:00Z"))).toBeUndefined();
     expect(todaysNews(null, sent)).toBeUndefined();
+  });
+});
+
+describe("dagens ret kan bestilles", () => {
+  const news = { text: "Dagens ret: Stegt flæsk med persillesovs", sentAt: "2026-10-20T09:00:00Z", price: 109 };
+
+  it("bliver en ret med pris og et id for dagen", () => {
+    expect(todaysDish(news)).toEqual({ id: "dagens-ret-2026-10-20", name: "Stegt flæsk med persillesovs", price: 109 });
+    expect(todaysDish({ ...news, price: undefined })).toBeNull();
+  });
+
+  it("står øverst i det, man kan bestille, og prissættes af serveren", () => {
+    const place = { menu: [{ name: "Pizza", items: [{ id: "p1", name: "Margherita", price: 75 }] }], news } as unknown as Place;
+    expect(orderableMenu(place).map((c) => c.name)).toEqual(["Dagens ret", "Pizza"]);
+    const line = priceChoice(place, { itemId: "dagens-ret-2026-10-20" });
+    expect(line.ok && line.value.price).toBe(109);
+    expect(priceChoice({ ...place, news: undefined }, { itemId: "dagens-ret-2026-10-20" }).ok).toBe(false);
+  });
+
+  it("tager kun hele kroner", () => {
+    expect(cleanNewsPrice("109")).toBe(109);
+    expect(cleanNewsPrice("")).toBeNull();
+    expect(cleanNewsPrice("9,50")).toBeUndefined();
+    expect(cleanNewsPrice(0)).toBeUndefined();
   });
 });

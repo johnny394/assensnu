@@ -7,10 +7,12 @@ import { FollowButton } from "@/components/FollowButton";
 import { Menu } from "@/components/Menu";
 import { LiveOpenSign } from "@/components/OpenSign";
 import { TakeawayWait } from "@/components/TakeawayWait";
+import { TodaysDishButton } from "@/components/TodaysDishButton";
 import { isAdmin } from "@/lib/admin-auth";
 import { telLink } from "@/lib/format";
 import { WEEKDAYS } from "@/lib/hours";
-import { clockTime } from "@/lib/live";
+import { kr } from "@/lib/format";
+import { clockTime, todaysDish } from "@/lib/live";
 import { pushPublicKey } from "@/lib/push";
 import { store } from "@/lib/store";
 
@@ -34,6 +36,7 @@ export default async function PlacePage({ params }: Props) {
   if (preview && !(await isAdmin())) redirect("/");
 
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, ${place.address}`)}`;
+  const dish = todaysDish(place.news);
   const street = place.address.replace(/, \d{4} .*/, "");
 
   return (
@@ -55,9 +58,10 @@ export default async function PlacePage({ params }: Props) {
         </div>
 
         {place.news && (
-          <div className="mt-5 border-[3px] border-double border-stamp px-4 py-3">
+          <div id="dagens-ret" className="mt-5 border-[3px] border-double border-stamp px-4 py-3">
             <p className="text-sm font-bold uppercase tracking-[0.15em] text-stamp">Nyt i dag · kl. {clockTime(place.news.sentAt)}</p>
             <p className="mt-1 font-display text-xl font-semibold leading-snug">{place.news.text}</p>
+            {dish && (place.acceptsOrders ? <TodaysDishButton slug={place.slug} dish={dish} /> : <p className="mt-1 text-lg font-bold tabular-nums">{kr(dish.price)}</p>)}
           </div>
         )}
 
@@ -97,7 +101,11 @@ export default async function PlacePage({ params }: Props) {
 
         <h2 className={heading}>Menukortet</h2>
         {place.menu.length === 0 ? (
-          <p className="mt-2 text-lg text-ink-soft">Menuen er ikke lagt ind endnu.{place.phone && " Ring og hør, hvad de har i dag."}</p>
+          <>
+            <p className="mt-2 text-lg text-ink-soft">Menuen er ikke lagt ind endnu.{place.phone && " Ring og hør, hvad de har i dag."}</p>
+            {/* Kurven nederst, så dagens ret kan bestilles, selv om resten af menuen mangler */}
+            {dish && <Menu place={place} />}
+          </>
         ) : (
           <>
             {!place.acceptsOrders && <p className="mt-1 text-ink-soft">Bestilling her kommer snart. Indtil da kan du ringe.</p>}

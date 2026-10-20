@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { kr } from "@/lib/format";
 import { clockTime, NEWS_MAX, WAIT_STEPS } from "@/lib/live";
 import type { Place } from "@/lib/types";
 
@@ -55,6 +56,7 @@ export function WaitBar({ place, onChange }: { place: Place; onChange: () => voi
 // Dagens ret eller tilbud: står på stedets side i dag, og følgerne får en besked på telefonen
 export function NewsBox({ place, followers, onChange }: { place: Place; followers: number | null; onChange: () => void }) {
   const [text, setText] = useState(place.news?.text ?? "");
+  const [price, setPrice] = useState(place.news?.price ? String(place.news.price) : "");
   const [editing, setEditing] = useState(!place.news);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
   const send = async () => {
     setBusy(true);
     setError(null);
-    const res = await post("/api/panel/news", { text });
+    const res = await post("/api/panel/news", { text, price: price.trim() });
     setBusy(false);
     if (!res?.ok) {
       const body = (await res?.json().catch(() => null)) as { error?: string } | null;
@@ -86,7 +88,10 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
 
       {place.news && !editing ? (
         <>
-          <p className="mt-3 rounded-2xl border-2 border-ink px-4 py-3 text-lg">{place.news.text}</p>
+          <p className="mt-3 rounded-2xl border-2 border-ink px-4 py-3 text-lg">
+            {place.news.text}
+            {place.news.price && <strong className="block">{kr(place.news.price)} · kan bestilles</strong>}
+          </p>
           <p className="mt-2 font-bold text-go">Sendt kl. {clockTime(place.news.sentAt)}. Det står på jeres side resten af dagen.</p>
           <button onClick={() => setEditing(true)} className="mt-2 w-full py-2 text-lg underline">
             Ret teksten
@@ -99,13 +104,27 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
             onChange={(e) => setText(e.target.value)}
             maxLength={NEWS_MAX}
             rows={3}
-            placeholder="Fx Dagens ret: Stegt flæsk med persillesovs, 109 kr."
+            placeholder="Fx Dagens ret: Stegt flæsk med persillesovs"
             className="mt-3 w-full rounded-2xl border-2 border-line bg-paper px-4 py-3 text-lg"
           />
           <p className="text-right text-ink-soft tabular-nums">
             {text.length}/{NEWS_MAX}
           </p>
-          {place.news && <p className="text-ink-soft">Følgerne har allerede fået dagens besked, så rettelsen kommer kun på jeres side.</p>}
+          <label className="mt-1 flex items-center gap-3 text-lg">
+            <span className="flex-1">
+              Pris i kr.
+              <span className="block text-base text-ink-soft">Så kan kunderne bestille den. Lad stå tom for kun en besked.</span>
+            </span>
+            <input
+              value={price}
+              onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))}
+              inputMode="numeric"
+              placeholder="109"
+              aria-label="Pris i kroner"
+              className="w-24 rounded-2xl border-2 border-line bg-paper px-3 py-3 text-right text-lg tabular-nums"
+            />
+          </label>
+          {place.news && <p className="mt-2 text-ink-soft">Følgerne har allerede fået dagens besked, så rettelsen kommer kun på jeres side.</p>}
           {error && <p className="mt-1 font-bold text-signal">{error}</p>}
           <button onClick={send} disabled={busy || !text.trim()} className="mt-3 min-h-14 w-full rounded-2xl bg-buoy px-4 text-lg font-bold disabled:opacity-50">
             {busy ? "Sender …" : sendLabel}
