@@ -6,32 +6,44 @@ type InstallPrompt = Event & { prompt: () => Promise<void> };
 
 export type PushFor = { kind: "order" | "booking"; id: string; publicKey: string | null };
 
+type PushState = "pending" | "ok" | "no-key" | "unsupported" | "failed";
+
 // Melder telefonen til beskeder om netop denne bestilling, så de kommer, selv om siden er lukket
-async function subscribe(push: PushFor) {
-  if (!push.publicKey || !("PushManager" in window)) return;
+async function subscribe(push: PushFor): Promise<PushState> {
+  if (!push.publicKey) return "no-key";
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return "unsupported";
   try {
     const reg = await navigator.serviceWorker.ready;
-    const subscription =
-      (await reg.pushManager.getSubscription()) ??
-      (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(push.publicKey) }));
-    await fetch("/api/push", {
+    const key = base64UrlToBytes(push.publicKey);
+    let subscription = await reg.pushManager.getSubscription();
+    // En gammel tilmelding med en anden nøgle virker ikke længere
+    const oldKey = subscription?.options.applicationServerKey;
+    if (subscription && oldKey && !sameBytes(new Uint8Array(oldKey), key)) {
+      await subscription.unsubscribe();
+      subscription = null;
+    }
+    subscription ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    const res = await fetch("/api/push", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ kind: push.kind, id: push.id, subscription }),
     });
+    return res.ok ? "ok" : "failed";
   } catch {
-    // Så får de stadig besked, mens siden er åben
+    return "failed";
   }
 }
+
+const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
 
 function base64UrlToBytes(value: string) {
   const raw = atob((value + "=".repeat((4 - (value.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/"));
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
-// Beder folk lægge AssensNu på hjemmeskærmen, så de kan få besked, når maden er klar.
-// På iPhone virker beskeder fra en hjemmeside kun derfra.
-export function HomeScreenGuide({ reason, push }: { reason: string; push?: PushFor }) {
+// Beder om lov til at give besked, når restauranten svarer. Skal ses med det samme.
+// På iPhone virker beskeder fra en hjemmeside kun fra hjemmeskærmen, så der vises vejen dertil.
+export function HomeScreenGuide({ title, text, push }: { title: string; text: string; push?: PushFor }) {
   const [platform, setPlatform] = useState<"ios" | "other" | "installed" | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
   const [notify, setNotify] = useState<NotificationPermission | "unsupported">("unsupported");
@@ -49,65 +61,90 @@ export function HomeScreenGuide({ reason, push }: { reason: string; push?: PushF
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
   }, []);
 
+  const [pushState, setPushState] = useState<PushState>("pending");
   const pushKind = push?.kind;
   const pushId = push?.id;
   const pushKey = push?.publicKey ?? null;
   useEffect(() => {
-    if (notify === "granted" && pushKind && pushId) subscribe({ kind: pushKind, id: pushId, publicKey: pushKey });
+    if (notify === "granted" && pushKind && pushId) subscribe({ kind: pushKind, id: pushId, publicKey: pushKey }).then(setPushState);
   }, [notify, pushKind, pushId, pushKey]);
 
   if (!platform) return null;
 
-  const askNotify =
-    notify === "default" ? (
-      <button onClick={async () => setNotify(await Notification.requestPermission())} className="mt-3 w-full bg-ink px-5 py-3.5 text-lg font-bold text-paper">
-        Ja tak, giv mig besked
-      </button>
-    ) : notify === "granted" ? (
-      <p className="mt-2 font-bold text-go">Du får besked på denne telefon.</p>
+  const ask = notify === "default";
+  const status =
+    notify === "granted" ? (
+      !push || pushState === "ok" ? (
+        <p className="font-bold text-go">✓ Du får besked på denne telefon, også når den er låst.</p>
+      ) : pushState === "pending" ? (
+        <p className="text-ink-soft">Slår beskeder til …</p>
+      ) : (
+        <p className="font-bold text-stamp">
+          {pushState === "no-key"
+            ? "Beskeder er ikke sat op på AssensNu endnu. Hold siden her åben, så siger den til."
+            : pushState === "unsupported"
+              ? "Telefonen kan ikke få beskeder herfra. Hold siden her åben, så siger den til."
+              : "Beskeder kunne ikke slås til. Hold siden her åben, så siger den til."}
+        </p>
+      )
+    ) : notify === "denied" ? (
+      <p className="font-bold text-stamp">Du har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.</p>
     ) : null;
 
-  if (platform === "installed") {
-    return askNotify ? <div className="border-2 border-ink bg-surface px-5 py-5 text-lg"><p>{reason}</p>{askNotify}</div> : null;
-  }
+  // Har kunden allerede svaret, er en enkelt linje nok
+  if (!ask && (platform === "installed" || platform === "other")) return status;
 
   return (
-    <div className="border-2 border-ink bg-surface px-5 py-5 text-lg">
-      <p className="font-display text-xl font-black tracking-tight">Læg AssensNu på din hjemmeskærm</p>
-      <p className="mt-1">{reason} Så ligger AssensNu også klar, næste gang du er sulten.</p>
+    <div className="border-[3px] border-stamp bg-stamp-soft px-5 py-5 text-lg">
+      <p className="flex items-center gap-2 font-display text-2xl font-black leading-tight tracking-tight text-stamp">
+        <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+          <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2ZM10 20a2 2 0 0 0 4 0" />
+        </svg>
+        {title}
+      </p>
       {platform === "ios" ? (
-        <ol className="mt-4 space-y-3">
-          <li className="flex items-center gap-3">
-            <Step n={1} />
-            <span>
-              Tryk på <strong>Del</strong>-knappen
-              <svg viewBox="0 0 24 24" className="mx-1 inline h-6 w-6 align-[-5px] text-stamp" fill="none" stroke="currentColor" strokeWidth="2" aria-label="Del-knappen">
-                <path d="M12 3v12M8 7l4-4 4 4M5 11v9h14v-9" />
-              </svg>
-              nederst i Safari
-            </span>
-          </li>
-          <li className="flex items-center gap-3">
-            <Step n={2} />
-            <span>
-              Vælg <strong>Føj til hjemmeskærm</strong>
-            </span>
-          </li>
-          <li className="flex items-center gap-3">
-            <Step n={3} />
-            <span>
-              Tryk <strong>Tilføj</strong> øverst til højre
-            </span>
-          </li>
-        </ol>
-      ) : installPrompt ? (
-        <button onClick={() => installPrompt.prompt()} className="mt-3 w-full bg-ink px-5 py-3.5 text-lg font-bold text-paper">
-          Læg på hjemmeskærmen
-        </button>
+        <>
+          <p className="mt-2">På iPhone skal AssensNu ligge på hjemmeskærmen, før den kan give besked:</p>
+          <ol className="mt-4 space-y-3">
+            <li className="flex items-center gap-3">
+              <Step n={1} />
+              <span>
+                Tryk på <strong>Del</strong>-knappen
+                <svg viewBox="0 0 24 24" className="mx-1 inline h-6 w-6 align-[-5px] text-stamp" fill="none" stroke="currentColor" strokeWidth="2" aria-label="Del-knappen">
+                  <path d="M12 3v12M8 7l4-4 4 4M5 11v9h14v-9" />
+                </svg>
+                nederst i Safari
+              </span>
+            </li>
+            <li className="flex items-center gap-3">
+              <Step n={2} />
+              <span>
+                Vælg <strong>Føj til hjemmeskærm</strong> og tryk <strong>Tilføj</strong>
+              </span>
+            </li>
+            <li className="flex items-center gap-3">
+              <Step n={3} />
+              <span>Bestil fremover fra det nye ikon, så får du besked</span>
+            </li>
+          </ol>
+          <p className="mt-4 text-ink-soft">Denne gang siger siden her til, når maden er klar, hvis du holder den åben.</p>
+        </>
       ) : (
-        <p className="mt-2 text-ink-soft">Åbn browserens menu (de tre prikker) og vælg &quot;Føj til startskærm&quot;.</p>
+        <>
+          <p className="mt-1">{text}</p>
+          <button
+            onClick={async () => setNotify(await Notification.requestPermission())}
+            className="mt-4 w-full bg-stamp px-5 py-4 text-xl font-bold text-paper"
+          >
+            Ja tak, giv mig besked
+          </button>
+          {platform === "other" && installPrompt && (
+            <button onClick={() => installPrompt.prompt()} className="mt-3 w-full border-2 border-ink px-5 py-3 text-lg font-bold">
+              Læg AssensNu på hjemmeskærmen
+            </button>
+          )}
+        </>
       )}
-      {platform === "other" && askNotify}
     </div>
   );
 }
