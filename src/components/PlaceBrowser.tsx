@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { kr } from "@/lib/format";
 import { copenhagenNow, openStatus, pickupOptions } from "@/lib/hours";
 import type { Place } from "@/lib/types";
 import { OpenSign } from "./OpenSign";
@@ -110,6 +111,7 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
                     <p className="mt-1 line-clamp-2 text-base">
                       <span className="font-bold text-stamp">I dag: </span>
                       {p.news.text}
+                      {p.news.price && <span className="whitespace-nowrap font-bold"> · {kr(p.news.price)}</span>}
                     </p>
                   )}
                 </div>

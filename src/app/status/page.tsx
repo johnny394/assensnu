@@ -124,6 +124,13 @@ async function runChecks(): Promise<Check[]> {
       : { ok: true, text: "Databasen kan gemme følgere, dagens ret og travlt-tid." },
   );
 
+  const dagensRet = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("news_price").limit(1);
+  checks.push(
+    dagensRet.error
+      ? { ok: false, text: "Dagens ret kan ikke få en pris endnu.", fix: "Kør tilfoej-dagens-ret.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Dagens ret kan få en pris og bestilles." },
+  );
+
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     checks.push({ ok: true, text: "Nøglerne til beskeder er sat." });
   } else {

@@ -1,3 +1,4 @@
+import { orderableMenu } from "./live";
 import type { Result } from "./orders";
 import type { MenuCategory, MenuItem, MenuOptions, OrderLine, Place } from "./types";
 
@@ -26,7 +27,7 @@ export function parseKey(key: string): Choice {
 // Finder retten og regner prisen ud. Bruges både i kurven og på serveren, så prisen altid passer.
 export function priceChoice(place: Place, c: Choice): Result<Omit<OrderLine, "quantity"> & { item: MenuItem }> {
   let found: { item: MenuItem; category: MenuCategory } | undefined;
-  for (const category of place.menu) {
+  for (const category of orderableMenu(place)) {
     const item = category.items.find((i) => i.id === c.itemId);
     if (item) found = { item, category };
   }

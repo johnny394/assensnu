@@ -1,5 +1,5 @@
 import { todayInCopenhagen } from "./hours";
-import type { PlaceNews } from "./types";
+import type { MenuCategory, MenuItem, Place, PlaceNews } from "./types";
 
 // Det, restauranten ændrer fra time til time: hvor travlt de har, og dagens ret eller tilbud.
 
@@ -34,8 +34,30 @@ export function cleanNews(input: unknown): string | null {
   return text && text.length <= NEWS_MAX ? text : null;
 }
 
+// Pris på dagens ret i hele kroner. Tom betyder, at den ikke kan bestilles.
+export function cleanNewsPrice(input: unknown): number | null | undefined {
+  if (input === null || input === undefined || input === "") return null;
+  const n = Number(input);
+  return Number.isInteger(n) && n > 0 && n <= 5000 ? n : undefined;
+}
+
 // Dagens ret og tilbud gælder kun den dag, de er skrevet
-export function todaysNews(text: string | null | undefined, sentAt: string | null | undefined, now = new Date()): PlaceNews | undefined {
+export function todaysNews(text: string | null | undefined, sentAt: string | null | undefined, price?: number | null, now = new Date()): PlaceNews | undefined {
   if (!text || !sentAt) return undefined;
-  return todayInCopenhagen(new Date(sentAt)) === todayInCopenhagen(now) ? { text, sentAt } : undefined;
+  if (todayInCopenhagen(new Date(sentAt)) !== todayInCopenhagen(now)) return undefined;
+  return { text, sentAt, ...(price && { price }) };
+}
+
+// Dagens ret med pris som en ret, der kan lægges i kurven. Id'et skifter hver dag,
+// så en kurv fra i går ikke kan bestille gårsdagens ret.
+export function todaysDish(news: PlaceNews | undefined): MenuItem | null {
+  if (!news?.price) return null;
+  const name = news.text.replace(/^dagens ret\s*[:\-–]\s*/i, "") || news.text;
+  return { id: `dagens-ret-${todayInCopenhagen(new Date(news.sentAt))}`, name, price: news.price };
+}
+
+// Menukortet, som kunden kan bestille fra: dagens ret øverst, hvis der er en
+export function orderableMenu(place: Pick<Place, "menu" | "news">): MenuCategory[] {
+  const dish = todaysDish(place.news);
+  return dish ? [{ name: "Dagens ret", items: [dish] }, ...place.menu] : place.menu;
 }
