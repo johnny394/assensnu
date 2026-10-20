@@ -6,23 +6,35 @@ type InstallPrompt = Event & { prompt: () => Promise<void> };
 
 export type PushFor = { kind: "order" | "booking"; id: string; publicKey: string | null };
 
+type PushState = "pending" | "ok" | "no-key" | "unsupported" | "failed";
+
 // Melder telefonen til beskeder om netop denne bestilling, så de kommer, selv om siden er lukket
-async function subscribe(push: PushFor) {
-  if (!push.publicKey || !("PushManager" in window)) return;
+async function subscribe(push: PushFor): Promise<PushState> {
+  if (!push.publicKey) return "no-key";
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return "unsupported";
   try {
     const reg = await navigator.serviceWorker.ready;
-    const subscription =
-      (await reg.pushManager.getSubscription()) ??
-      (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(push.publicKey) }));
-    await fetch("/api/push", {
+    const key = base64UrlToBytes(push.publicKey);
+    let subscription = await reg.pushManager.getSubscription();
+    // En gammel tilmelding med en anden nøgle virker ikke længere
+    const oldKey = subscription?.options.applicationServerKey;
+    if (subscription && oldKey && !sameBytes(new Uint8Array(oldKey), key)) {
+      await subscription.unsubscribe();
+      subscription = null;
+    }
+    subscription ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    const res = await fetch("/api/push", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ kind: push.kind, id: push.id, subscription }),
     });
+    return res.ok ? "ok" : "failed";
   } catch {
-    // Så får de stadig besked, mens siden er åben
+    return "failed";
   }
 }
+
+const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
 
 function base64UrlToBytes(value: string) {
   const raw = atob((value + "=".repeat((4 - (value.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/"));
@@ -49,11 +61,12 @@ export function HomeScreenGuide({ reason, push }: { reason: string; push?: PushF
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
   }, []);
 
+  const [pushState, setPushState] = useState<PushState>("pending");
   const pushKind = push?.kind;
   const pushId = push?.id;
   const pushKey = push?.publicKey ?? null;
   useEffect(() => {
-    if (notify === "granted" && pushKind && pushId) subscribe({ kind: pushKind, id: pushId, publicKey: pushKey });
+    if (notify === "granted" && pushKind && pushId) subscribe({ kind: pushKind, id: pushId, publicKey: pushKey }).then(setPushState);
   }, [notify, pushKind, pushId, pushKey]);
 
   if (!platform) return null;
@@ -64,7 +77,21 @@ export function HomeScreenGuide({ reason, push }: { reason: string; push?: PushF
         Ja tak, giv mig besked
       </button>
     ) : notify === "granted" ? (
-      <p className="mt-2 font-bold text-go">Du får besked på denne telefon.</p>
+      !push || pushState === "ok" ? (
+        <p className="mt-2 font-bold text-go">Du får besked på denne telefon, også når den er låst.</p>
+      ) : pushState === "pending" ? (
+        <p className="mt-2 text-ink-soft">Slår beskeder til …</p>
+      ) : (
+        <p className="mt-2 font-bold text-stamp">
+          {pushState === "no-key"
+            ? "Beskeder er ikke sat op på AssensNu endnu. Du får kun besked, mens siden her er åben."
+            : pushState === "unsupported"
+              ? "Telefonen kan ikke få beskeder herfra. Du får kun besked, mens siden her er åben."
+              : "Beskeder kunne ikke slås til. Du får kun besked, mens siden her er åben."}
+        </p>
+      )
+    ) : notify === "denied" ? (
+      <p className="mt-2 font-bold text-stamp">Du har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.</p>
     ) : null;
 
   if (platform === "installed") {
