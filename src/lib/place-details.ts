@@ -1,6 +1,6 @@
 import { cleanPhone, type Result } from "./orders";
 import type { PlaceDetails } from "./store/types";
-import type { MenuCategory, OpeningPeriod, Weekday } from "./types";
+import type { DeliverySettings, MenuCategory, OpeningPeriod, Weekday } from "./types";
 
 // Det, restauranterne selv kan rette i panelet: telefon, åbningstider og menukort.
 // Alt tjekkes her på serveren, så panelet ikke kan gemme noget, siden ikke kan vise.
@@ -12,7 +12,10 @@ type Raw = {
   phone?: unknown;
   hours?: { day?: unknown; open?: unknown; close?: unknown }[];
   menu?: { name?: unknown; items?: { id?: unknown; name?: unknown; description?: unknown; price?: unknown }[] }[];
+  delivery?: { fee?: unknown; minimum?: unknown; postcodes?: unknown } | null;
 };
+
+const kroner = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 10000 ? Math.round(v * 100) / 100 : null);
 
 const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
@@ -74,6 +77,21 @@ export function cleanDetails(input: unknown): Result<PlaceDetails> {
       menu.push(category);
     }
     details.menu = menu;
+  }
+
+  if (raw.delivery !== undefined) {
+    if (raw.delivery === null) details.delivery = null;
+    else {
+      const fee = kroner(raw.delivery?.fee);
+      const minimum = kroner(raw.delivery?.minimum ?? 0);
+      if (fee === null) return { ok: false, error: "Skriv hvad levering koster, fx 39. Skriv 0, hvis det er gratis." };
+      if (minimum === null) return { ok: false, error: "Mindste beløb skal være et tal, fx 150." };
+      const list = Array.isArray(raw.delivery?.postcodes) ? raw.delivery.postcodes : [];
+      const postcodes = [...new Set(list.map((p) => text(p)))];
+      if (postcodes.length === 0) return { ok: false, error: "Skriv mindst ét postnummer, I kører ud til, fx 5610." };
+      if (postcodes.length > 40 || postcodes.some((p) => !/^\d{4}$/.test(p))) return { ok: false, error: "Et postnummer skal have 4 cifre, fx 5610." };
+      details.delivery = { fee, minimum, postcodes: postcodes.sort() } satisfies DeliverySettings;
+    }
   }
 
   return { ok: true, value: details };

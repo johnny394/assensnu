@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Wordmark } from "@/components/AppShell";
-import { HoursEditor, MenuEditor, Sheet } from "@/components/panel/DetailsEditors";
+import { DeliveryEditor, HoursEditor, MenuEditor, Sheet } from "@/components/panel/DetailsEditors";
 import { Toggle } from "@/components/panel/Panel";
 import type { AdminPlace } from "@/lib/admin";
 import { WEEKDAYS } from "@/lib/hours";
@@ -209,6 +209,8 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
   const [hoursSaved, setHoursSaved] = useState(false);
   const [editMenu, setEditMenu] = useState(false);
   const [menuSaved, setMenuSaved] = useState(false);
+  const [editDelivery, setEditDelivery] = useState(false);
+  const [deliverySaved, setDeliverySaved] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const url = `/api/admin/places/${place.slug}`;
 
@@ -316,6 +318,19 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
         </button>
       </section>
 
+      <section className="mt-5 rounded-3xl border-2 border-line px-5 py-4">
+        <h3 className="font-display text-xl font-black tracking-tight">Levering</h3>
+        {deliverySaved && <p role="status" className="mt-1 font-bold text-go">Gemt. Kunderne kan se det nu.</p>}
+        <p className="mt-2 text-lg">
+          {place.delivery
+            ? `${place.delivery.fee} kr. · mindst ${place.delivery.minimum} kr. · ${place.delivery.postcodes.join(", ")}`
+            : "Leverer ikke."}
+        </p>
+        <button onClick={() => setEditDelivery(true)} className="mt-3 min-h-12 w-full rounded-2xl border-2 border-ink px-5 text-lg font-bold">
+          Ret levering
+        </button>
+      </section>
+
       <h3 className="mb-3 mt-8 font-display text-xl font-black tracking-tight">Oplysninger</h3>
       <BasicsFields form={form} setForm={setForm} />
       <Link href={`/sted/${place.slug}`} target="_blank" className="mt-6 block text-lg underline">
@@ -343,6 +358,18 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
           </>
         )}
       </section>
+      {editDelivery && (
+        <DeliveryEditor
+          place={place}
+          saveUrl={`${url}/details`}
+          onClose={() => setEditDelivery(false)}
+          onSaved={() => {
+            setEditDelivery(false);
+            setDeliverySaved(true);
+            router.refresh();
+          }}
+        />
+      )}
       {editMenu && (
         <MenuEditor
           place={place}

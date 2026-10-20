@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 import { cleanDetails } from "./place-details";
 
 describe("cleanDetails", () => {
+  it("gemmer levering med sorterede postnumre og kan slå den fra", () => {
+    expect(cleanDetails({ delivery: { fee: 39, postcodes: ["5620", "5610", "5610"] } })).toEqual({
+      ok: true,
+      value: { delivery: { fee: 39, minimum: 0, postcodes: ["5610", "5620"] } },
+    });
+    expect(cleanDetails({ delivery: null })).toEqual({ ok: true, value: { delivery: null } });
+    expect(cleanDetails({ delivery: { fee: 39, postcodes: ["Assens"] } }).ok).toBe(false);
+  });
+
   it("gemmer telefon pænt og tomt som intet nummer", () => {
     expect(cleanDetails({ phone: "+45 64742006" })).toEqual({ ok: true, value: { phone: "64 74 20 06" } });
     expect(cleanDetails({ phone: "  " })).toEqual({ ok: true, value: { phone: null } });

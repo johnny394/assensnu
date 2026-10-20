@@ -20,6 +20,13 @@ export type MenuCategory = {
   items: MenuItem[];
 };
 
+// Restauranten kører selv ud. Kunden betaler ved døren.
+export type DeliverySettings = {
+  fee: number; // kroner for at køre ud
+  minimum: number; // mindste beløb for maden, før der kan bestilles levering
+  postcodes: string[]; // fx ["5610", "5620"]
+};
+
 export type Place = {
   slug: string;
   name: string;
@@ -36,6 +43,7 @@ export type Place = {
   menu: MenuCategory[];
   acceptsOrders: boolean; // kan bestilles gennem AssensNu
   acceptsBookings: boolean;
+  delivery?: DeliverySettings | null; // null = leverer ikke
   prepMinutes: number; // normal ventetid på takeaway
   extraWaitMinutes: number; // "travlt"-knappen i panelet
   demo?: boolean;
@@ -54,6 +62,7 @@ export type Order = {
   customerName: string;
   customerPhone: string;
   pickup: "asap" | string; // "asap" eller "HH:MM"
+  delivery?: OrderDelivery; // mangler = kunden henter selv
   note?: string;
   lines: OrderLine[];
   total: number;
@@ -61,6 +70,8 @@ export type Order = {
   readyAt?: string; // "HH:MM", sat når restauranten accepterer
   createdAt: string; // ISO
 };
+
+export type OrderDelivery = { address: string; postcode: string; fee: number };
 
 export type BookingStatus = "requested" | "confirmed" | "declined" | "suggested";
 

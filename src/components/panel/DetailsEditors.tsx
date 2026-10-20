@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { WEEKDAYS } from "@/lib/hours";
+import { townName } from "@/lib/postcodes";
 import type { MenuCategory, OpeningPeriod, Place, Weekday } from "@/lib/types";
 
 // Restauranten retter selv telefon, åbningstider og menukort. Hver del åbner som en
@@ -122,6 +123,68 @@ export function HoursEditor({ place, onClose, onSaved, saveUrl, withPhone = true
         <button onClick={() => setDays((all) => all.map(() => all[0].map((p) => ({ ...p }))))} className="mt-3 min-h-12 w-full rounded-2xl border-2 border-ink text-lg font-bold">
           Brug mandagens tider alle dage
         </button>
+      )}
+    </Sheet>
+  );
+}
+
+const toNumber = (v: string) => (v.trim() === "" ? NaN : Number(v.replace(/\s|kr\.?/g, "").replace(",", ".")));
+
+export function DeliveryEditor({ place, onClose, onSaved, saveUrl }: {
+  place: Pick<Place, "delivery">;
+  onClose: () => void;
+  onSaved: () => void;
+  saveUrl?: string;
+}) {
+  const [on, setOn] = useState(Boolean(place.delivery));
+  const [fee, setFee] = useState(place.delivery ? String(place.delivery.fee) : "");
+  const [minimum, setMinimum] = useState(place.delivery ? String(place.delivery.minimum) : "");
+  const [postcodes, setPostcodes] = useState(place.delivery?.postcodes.join(", ") ?? "5610");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const list = postcodes.split(/[\s,]+/).filter(Boolean);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const delivery = on ? { fee: toNumber(fee), minimum: minimum.trim() ? toNumber(minimum) : 0, postcodes: list } : null;
+    const problem = await saveDetails({ delivery }, saveUrl);
+    setSaving(false);
+    if (problem) setError(problem);
+    else onSaved();
+  }
+
+  return (
+    <Sheet title="Levering" onClose={onClose} onSave={save} saving={saving} error={error}>
+      <p className="text-lg">I kører selv maden ud, og kunden betaler ved døren.</p>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button onClick={() => setOn(true)} aria-pressed={on} className={`min-h-14 rounded-2xl border-2 text-lg font-bold ${on ? "border-ink bg-ink text-paper" : "border-line"}`}>Vi leverer</button>
+        <button onClick={() => setOn(false)} aria-pressed={!on} className={`min-h-14 rounded-2xl border-2 text-lg font-bold ${!on ? "border-ink bg-ink text-paper" : "border-line"}`}>Vi leverer ikke</button>
+      </div>
+      {on && (
+        <div className="mt-6 space-y-5">
+          <div>
+            <label htmlFor="fee" className="mb-1.5 block text-lg font-bold">Hvad koster levering?</label>
+            <div className="flex items-center gap-2">
+              <input id="fee" inputMode="decimal" value={fee} onChange={(e) => setFee(e.target.value)} placeholder="Fx 39" className={`${field} tabular-nums`} />
+              <span className="text-lg">kr.</span>
+            </div>
+            <p className="mt-1 text-ink-soft">Skriv 0, hvis det er gratis.</p>
+          </div>
+          <div>
+            <label htmlFor="minimum" className="mb-1.5 block text-lg font-bold">Mindste bestilling</label>
+            <div className="flex items-center gap-2">
+              <input id="minimum" inputMode="decimal" value={minimum} onChange={(e) => setMinimum(e.target.value)} placeholder="Fx 150" className={`${field} tabular-nums`} />
+              <span className="text-lg">kr.</span>
+            </div>
+            <p className="mt-1 text-ink-soft">Maden skal mindst koste så meget, før kunden kan vælge levering. Lad feltet stå tomt, hvis der ikke er noget minimum.</p>
+          </div>
+          <div>
+            <label htmlFor="postcodes" className="mb-1.5 block text-lg font-bold">Postnumre I kører ud til</label>
+            <input id="postcodes" inputMode="numeric" value={postcodes} onChange={(e) => setPostcodes(e.target.value)} placeholder="Fx 5610, 5620" className={field} />
+            <p className="mt-1 text-ink-soft">{list.length ? list.map(townName).join(" · ") : "Skriv komma imellem."}</p>
+          </div>
+        </div>
       )}
     </Sheet>
   );

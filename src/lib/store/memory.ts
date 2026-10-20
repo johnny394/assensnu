@@ -62,6 +62,7 @@ export const memoryStore: Store = {
     if (!place) return;
     if (d.phone !== undefined) place.phone = d.phone ?? undefined;
     if (d.hours) place.hours = d.hours;
+    if (d.delivery !== undefined) place.delivery = d.delivery;
     if (d.menu) {
       const soldOut = new Set(place.menu.flatMap((c) => c.items).filter((i) => i.soldOut).map((i) => i.id));
       place.menu = d.menu.map((c) => ({ ...c, items: c.items.map((i) => ({ ...i, soldOut: soldOut.has(i.id) })) }));
@@ -127,6 +128,7 @@ export const memoryStore: Store = {
         hasCode: state.pins.has(p.slug) || Boolean(p.demo),
         hours: p.hours,
         menu: p.menu,
+        delivery: p.delivery ?? null,
       }));
   },
   async adminUpdatePlace(slug, patch) {

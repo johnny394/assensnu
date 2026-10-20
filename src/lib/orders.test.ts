@@ -26,6 +26,16 @@ describe("buildOrder", () => {
   it("afviser et tidspunkt, der ikke kan vælges", () => {
     expect(buildOrder(demoPlace, { ...input, pickup: "03:00" }, friday).ok).toBe(false);
   });
+
+  it("lægger leveringsgebyret oven i og tjekker by og minimum", () => {
+    const place = { ...demoPlace, delivery: { fee: 39, minimum: 200, postcodes: ["5610"] } };
+    const r = buildOrder(place, { ...input, delivery: { address: "Østergade 12", postcode: "5610" } }, friday);
+    expect(r.ok && r.value.total).toBe(2 * 75 + 70 + 39);
+    expect(r.ok && r.value.delivery).toEqual({ address: "Østergade 12", postcode: "5610", fee: 39 });
+    expect(buildOrder(place, { ...input, delivery: { address: "Vestergade 1", postcode: "5620" } }, friday).ok).toBe(false);
+    expect(buildOrder(place, { ...input, items: [{ itemId: "d1", quantity: 1 }], delivery: { address: "Østergade 12", postcode: "5610" } }, friday).ok).toBe(false);
+    expect(buildOrder(demoPlace, { ...input, delivery: { address: "Østergade 12", postcode: "5610" } }, friday).ok).toBe(false);
+  });
 });
 
 describe("cleanPhone", () => {

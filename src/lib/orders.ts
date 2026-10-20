@@ -8,6 +8,7 @@ export type OrderInput = {
   phone: string;
   pickup: string;
   note?: string;
+  delivery?: { address?: string; postcode?: string } | null;
 };
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -36,6 +37,19 @@ export function buildOrder(place: Place, input: OrderInput, now = new Date()): R
   }
   if (lines.length === 0) return { ok: false, error: "Kurven er tom." };
 
+  const food = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
+  let delivery: NewOrder["delivery"];
+  if (input.delivery) {
+    const d = place.delivery;
+    if (!d) return { ok: false, error: `${place.name} leverer ikke. Vælg at hente maden.` };
+    const address = input.delivery.address?.trim().slice(0, 120) ?? "";
+    const postcode = input.delivery.postcode?.trim() ?? "";
+    if (!address) return { ok: false, error: "Skriv din adresse, så de ved, hvor de skal køre hen." };
+    if (!d.postcodes.includes(postcode)) return { ok: false, error: `${place.name} kører kun ud til ${d.postcodes.join(", ")}.` };
+    if (food < d.minimum) return { ok: false, error: `Levering kræver, at du bestiller for mindst ${d.minimum} kr.` };
+    delivery = { address, postcode, fee: d.fee };
+  }
+
   const options = pickupOptions(place, now);
   const pickupOk = input.pickup === "asap" ? options.asapMinutes !== null : options.slots.includes(input.pickup);
   if (!pickupOk) return { ok: false, error: "Det tidspunkt kan ikke vælges længere. Vælg et nyt." };
@@ -50,7 +64,8 @@ export function buildOrder(place: Place, input: OrderInput, now = new Date()): R
       pickup: input.pickup,
       note: input.note?.trim().slice(0, 300) || undefined,
       lines,
-      total: lines.reduce((sum, l) => sum + l.price * l.quantity, 0),
+      ...(delivery && { delivery }),
+      total: food + (delivery?.fee ?? 0),
     },
   };
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { kr, telLink } from "@/lib/format";
+import { townName } from "@/lib/postcodes";
 import type { Order } from "@/lib/types";
 import { HomeScreenGuide, type PushFor } from "./HomeScreenGuide";
 import { useNow } from "./useNow";
@@ -13,6 +14,7 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
   const order = usePolling<Order>(`/api/orders/${initial.id}`, initial);
   const now = useNow(15_000);
   const previous = useRef(order.status);
+  const delivery = order.delivery;
 
   // Giv besked, når maden er klar
   useEffect(() => {
@@ -20,14 +22,15 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
       navigator.vibrate?.([300, 100, 300]);
       if ("Notification" in window && Notification.permission === "granted") {
         navigator.serviceWorker?.getRegistration().then((reg) => {
-          const text = { body: `Ordre ${order.number} kan hentes nu.`, icon: "/icon-192.png", tag: `order-${order.id}` };
-          if (reg) reg.showNotification(`${order.placeName}: maden er klar`, text);
-          else new Notification(`${order.placeName}: maden er klar`, text);
+          const title = `${order.placeName}: ${delivery ? "maden er på vej" : "maden er klar"}`;
+          const text = { body: delivery ? `Ordre ${order.number} kører ud til dig nu.` : `Ordre ${order.number} kan hentes nu.`, icon: "/icon-192.png", tag: `order-${order.id}` };
+          if (reg) reg.showNotification(title, text);
+          else new Notification(title, text);
         });
       }
     }
     previous.current = order.status;
-  }, [order.status, order.number, order.placeName, order.id]);
+  }, [order.status, order.number, order.placeName, order.id, delivery]);
 
   const waitedMinutes = now ? (now.getTime() - Date.parse(order.createdAt)) / 60000 : 0;
   const noAnswer = order.status === "new" && waitedMinutes > NO_ANSWER_MINUTES;
@@ -36,7 +39,7 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
   const steps = [
     { done: true, text: "Sendt til restauranten" },
     { done: ["accepted", "ready", "picked_up"].includes(order.status), text: order.readyAt ? `Modtaget. Klar ca. kl. ${order.readyAt}` : "Restauranten har set den" },
-    { done: ["ready", "picked_up"].includes(order.status), text: "Klar til afhentning" },
+    { done: ["ready", "picked_up"].includes(order.status), text: delivery ? "Maden kører ud til dig" : "Klar til afhentning" },
   ];
 
   return (
@@ -44,13 +47,15 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
       <div className="border-y-[3px] border-double border-ink px-1 py-6">
         <p className="text-lg text-ink-soft">Ordre</p>
         <p className="font-display text-6xl font-black tracking-tight tabular-nums">{order.number}</p>
-        <p className="mt-1 text-lg">Sig nummeret, når du henter hos {order.placeName}.</p>
+        <p className="mt-1 text-lg">
+          {delivery ? `${order.placeName} kører maden ud til ${delivery.address}, ${townName(delivery.postcode)}.` : `Sig nummeret, når du henter hos ${order.placeName}.`}
+        </p>
 
         {(order.status === "new" || order.status === "accepted") && (
           <div className="mt-5">
             <HomeScreenGuide
-              title="Få besked, når maden er klar"
-              text="Så kan du lægge telefonen væk og gå, når den bipper."
+              title={delivery ? "Få besked, når maden kører" : "Få besked, når maden er klar"}
+              text={delivery ? "Så kan du lægge telefonen væk, til den bipper." : "Så kan du lægge telefonen væk og gå, når den bipper."}
               push={{ kind: "order", id: order.id, publicKey: pushKey } satisfies PushFor}
             />
           </div>
@@ -64,9 +69,9 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
         ) : order.status === "ready" || order.status === "picked_up" ? (
           <div className="mt-5 bg-stamp-soft px-4 py-5">
             <p style={{ "--tilt": "-3deg" } as React.CSSProperties} className="stamp stamp-in inline-block border-[3px] border-stamp px-3 py-1 font-display text-2xl font-black tracking-wide text-stamp">
-              Maden er klar!
+              {delivery ? (order.status === "picked_up" ? "Maden er leveret" : "Maden er på vej!") : "Maden er klar!"}
             </p>
-            <p className="mt-3 text-lg">Hent den hos {order.placeName}.</p>
+            <p className="mt-3 text-lg">{delivery ? `${order.placeName} kører ud til ${delivery.address}.` : `Hent den hos ${order.placeName}.`}</p>
           </div>
         ) : (
           <ol className="mt-5 space-y-3">
@@ -102,11 +107,19 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
             </li>
           ))}
         </ul>
+        {delivery && (
+          <p className="flex justify-between">
+            <span>Levering</span>
+            <span className="tabular-nums">{kr(delivery.fee)}</span>
+          </p>
+        )}
         <p className="mt-2 flex justify-between border-t border-line pt-2 font-bold">
-          <span>Betales ved afhentning</span>
+          <span>{delivery ? "Betales, når maden kommer" : "Betales ved afhentning"}</span>
           <span className="tabular-nums">{kr(order.total)}</span>
         </p>
-        <p className="mt-2 text-ink-soft">Afhentning {pickupText} · {order.customerName}, {order.customerPhone}</p>
+        <p className="mt-2 text-ink-soft">
+          {delivery ? `Levering ${pickupText}` : `Afhentning ${pickupText}`} · {order.customerName}, {order.customerPhone}
+        </p>
         {order.note && <p className="text-ink-soft">Besked: {order.note}</p>}
       </div>
     </div>

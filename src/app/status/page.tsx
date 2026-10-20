@@ -102,6 +102,13 @@ async function runChecks(): Promise<Check[]> {
       : { ok: true, text: "Databasen kan gemme beskeder til kunderne." },
   );
 
+  const levering = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("delivery").limit(1);
+  checks.push(
+    levering.error
+      ? { ok: false, text: "Databasen kan ikke gemme levering endnu.", fix: "Kør tilfoej-levering.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan gemme levering." },
+  );
+
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     checks.push({ ok: true, text: "Nøglerne til beskeder er sat." });
   } else {

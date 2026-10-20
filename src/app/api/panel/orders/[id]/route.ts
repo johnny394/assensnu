@@ -21,7 +21,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const message =
     status === "ready"
-      ? { title: `${order.placeName}: maden er klar`, body: `Ordre ${order.number} kan hentes nu.` }
+      ? order.delivery
+        ? { title: `${order.placeName}: maden er på vej`, body: `Ordre ${order.number} kører ud til dig nu.` }
+        : { title: `${order.placeName}: maden er klar`, body: `Ordre ${order.number} kan hentes nu.` }
       : status === "accepted"
         ? { title: `${order.placeName} har fået din bestilling`, body: readyAt ? `Den er klar ca. kl. ${readyAt}.` : "Du får besked, når den er klar." }
         : status === "rejected"
