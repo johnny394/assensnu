@@ -50,6 +50,11 @@ export default async function PlacePage({ params }: Props) {
             Det her er et prøvested. Prøv at bestille, og se det dukke op i restaurantpanelet med koden 1234.
           </p>
         )}
+        {!place.member && (
+          <p className="mt-5 border-2 border-dashed border-ink-soft px-4 py-3 text-ink">
+            <span className="font-bold">{place.name} er ikke med på AssensNu endnu.</span> Oplysningerne har vi selv fundet, så ring gerne og tjek, før du går derhen.
+          </p>
+        )}
         {place.description && !place.demo && <p className="mt-4 text-lg">{place.description}</p>}
 
         <div className="mt-5 grid grid-cols-3 gap-2">
@@ -58,14 +63,14 @@ export default async function PlacePage({ params }: Props) {
               Ring
             </a>
           ) : (
-            <span className={`${button} border-2 border-dashed border-ink-soft/50 text-base font-normal text-ink-soft`}>Intet nummer endnu</span>
+            <span className={`${button} border-2 border-dashed border-ink-soft/50 whitespace-normal! text-base font-normal leading-tight text-ink-soft`}>Intet nummer endnu</span>
           )}
           {place.acceptsBookings ? (
             <Link href={`/sted/${place.slug}/book`} className={`${button} border-2 border-ink`}>
               Book bord
             </Link>
           ) : (
-            <span className={`${button} border-2 border-ink-soft/40 text-base font-normal text-ink-soft`}>{place.dineIn ? "Ring og book" : "Kun takeaway"}</span>
+            <span className={`${button} whitespace-normal! border-2 border-ink-soft/40 text-base font-normal leading-tight text-ink-soft`}>{place.dineIn ? "Ring og book" : "Kun takeaway"}</span>
           )}
           <a href={mapUrl} target="_blank" rel="noopener" className={`${button} border-2 border-ink`}>
             Kort

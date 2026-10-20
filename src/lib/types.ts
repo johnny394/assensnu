@@ -39,6 +39,7 @@ export type Place = {
   prepMinutes: number; // normal ventetid på takeaway
   extraWaitMinutes: number; // "travlt"-knappen i panelet
   demo?: boolean;
+  member?: boolean; // stedet har sagt ja til AssensNu og har en kode til panelet
 };
 
 export type OrderStatus = "new" | "accepted" | "ready" | "picked_up" | "rejected";

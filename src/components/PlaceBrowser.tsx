@@ -103,6 +103,11 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
                   {[...p.cuisines, p.takeaway && "Takeaway"].filter(Boolean).join(" · ")}
                   {p.acceptsOrders && <span className="font-bold text-stamp"> · Bestil her</span>}
                 </p>
+                {!p.member && (
+                  <p className="mt-1.5 inline-block border border-dashed border-ink-soft px-1.5 py-0.5 text-xs font-bold uppercase tracking-[0.12em] text-ink-soft">
+                    Ikke med endnu
+                  </p>
+                )}
               </div>
               <OpenSign place={p} now={now} tilt={TILTS[i % TILTS.length]} />
             </Link>
