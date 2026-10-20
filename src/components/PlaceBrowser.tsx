@@ -30,7 +30,7 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
   }, [places]);
 
   const state = (p: Place) => (now ? openStatus(p, now).state : "unknown");
-  const openCount = now ? places.filter((p) => state(p) === "open").length : null;
+  const openCount = now ? places.filter((p) => p.member && state(p) === "open").length : null;
 
   const q = query.trim().toLowerCase();
   const visible = places
@@ -45,7 +45,8 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
       if (filters.has("open") && state(p) !== "open") return false;
       return true;
     })
-    .sort((a, b) => RANK[state(a)] - RANK[state(b)] || a.name.localeCompare(b.name, "da"));
+    // Steder, der er med, først. Dem, der ikke er med endnu, står låst nederst.
+    .sort((a, b) => Number(!a.member) - Number(!b.member) || RANK[state(a)] - RANK[state(b)] || a.name.localeCompare(b.name, "da"));
 
   const toggle = (f: Filter) =>
     setFilters((prev) => {
@@ -92,27 +93,41 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
       </div>
 
       <ul className="mt-5 border-t-[3px] border-double border-ink">
-        {visible.map((p, i) => (
-          <li key={p.slug} className="border-b border-ink">
-            <Link href={`/sted/${p.slug}`} className="group flex items-center justify-between gap-3 py-4 active:bg-surface">
-              <div className="min-w-0">
-                <h2 className={`font-display text-[1.55rem] font-semibold leading-tight group-hover:underline ${state(p) === "open" ? "" : "text-ink-soft"}`}>
-                  {p.name}
-                </h2>
-                <p className="mt-1 text-sm uppercase tracking-[0.1em] text-ink-soft">
-                  {[...p.cuisines, p.takeaway && "Takeaway"].filter(Boolean).join(" · ")}
-                  {p.acceptsOrders && <span className="font-bold text-stamp"> · Bestil her</span>}
-                </p>
-                {!p.member && (
-                  <p className="mt-1.5 inline-block border border-dashed border-ink-soft px-1.5 py-0.5 text-xs font-bold uppercase tracking-[0.12em] text-ink-soft">
-                    Ikke med endnu
+        {visible.map((p, i) =>
+          p.member ? (
+            <li key={p.slug} className="border-b border-ink">
+              <Link href={`/sted/${p.slug}`} className="group flex items-center justify-between gap-3 py-4 active:bg-surface">
+                <div className="min-w-0">
+                  <h2 className={`font-display text-[1.55rem] font-semibold leading-tight group-hover:underline ${state(p) === "open" ? "" : "text-ink-soft"}`}>
+                    {p.name}
+                  </h2>
+                  <p className="mt-1 text-sm uppercase tracking-[0.1em] text-ink-soft">
+                    {[...p.cuisines, p.takeaway && "Takeaway"].filter(Boolean).join(" · ")}
+                    {p.acceptsOrders && <span className="font-bold text-stamp"> · Bestil her</span>}
                   </p>
-                )}
+                </div>
+                <OpenSign place={p} now={now} tilt={TILTS[i % TILTS.length]} />
+              </Link>
+            </li>
+          ) : (
+            // Låst, til stedet har sagt ja til AssensNu. Kan ikke åbnes.
+            <li key={p.slug} className="border-b border-ink">
+              <div className="flex items-center justify-between gap-3 py-4" aria-label={`${p.name}, kommer snart`}>
+                <div className="min-w-0 opacity-55">
+                  <h2 className="font-display text-[1.55rem] font-semibold leading-tight text-ink-soft">{p.name}</h2>
+                  <p className="mt-1 text-sm uppercase tracking-[0.1em] text-ink-soft">{p.cuisines.join(" · ")}</p>
+                </div>
+                <span className="flex shrink-0 items-center gap-1.5 border-2 border-dashed border-ink-soft px-2.5 py-1.5 text-sm font-bold uppercase leading-tight tracking-[0.08em] text-ink-soft">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                    <rect x="5" y="11" width="14" height="10" rx="1.5" />
+                    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                  </svg>
+                  Kommer snart
+                </span>
               </div>
-              <OpenSign place={p} now={now} tilt={TILTS[i % TILTS.length]} />
-            </Link>
-          </li>
-        ))}
+            </li>
+          ),
+        )}
         {visible.length === 0 && (
           <li className="border-b border-ink py-10 text-center text-lg text-ink-soft">
             Ingen steder passer.{" "}
