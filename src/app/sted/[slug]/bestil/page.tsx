@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function OrderPage({ params }: { params: Promise<{ slug: string }> }) {
   const place = await store.getPlace((await params).slug);
-  if (!place || !place.acceptsOrders) notFound();
+  if (!place || !place.member || !place.acceptsOrders) notFound();
   return (
     <main className="mx-auto max-w-2xl px-5 pb-16 pt-5">
       <Link href={`/sted/${place.slug}`} className="inline-block py-2 text-lg text-ink-soft">

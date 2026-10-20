@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { Menu } from "@/components/Menu";
 import { LiveOpenSign } from "@/components/OpenSign";
+import { isAdmin } from "@/lib/admin-auth";
 import { telLink } from "@/lib/format";
 import { WEEKDAYS } from "@/lib/hours";
 import { store } from "@/lib/store";
@@ -24,6 +25,9 @@ const heading = "mt-10 border-t-[3px] border-double border-ink pt-2.5 font-displ
 export default async function PlacePage({ params }: Props) {
   const place = await store.getPlace((await params).slug);
   if (!place) notFound();
+  // Steder, der ikke er med endnu, er låst for kunderne. Johnny kan stadig se siden fra sit panel.
+  const preview = !place.member;
+  if (preview && !(await isAdmin())) redirect("/");
 
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, ${place.address}`)}`;
   const street = place.address.replace(/, \d{4} .*/, "");
@@ -50,9 +54,9 @@ export default async function PlacePage({ params }: Props) {
             Det her er et prøvested. Prøv at bestille, og se det dukke op i restaurantpanelet med koden 1234.
           </p>
         )}
-        {!place.member && (
-          <p className="mt-5 border-2 border-dashed border-ink-soft px-4 py-3 text-ink">
-            <span className="font-bold">{place.name} er ikke med på AssensNu endnu.</span> Oplysningerne har vi selv fundet, så ring gerne og tjek, før du går derhen.
+        {preview && (
+          <p className="mt-5 border-2 border-dashed border-stamp bg-stamp-soft px-4 py-3 text-ink">
+            <span className="font-bold">Kun du kan se denne side.</span> Kunderne ser {place.name} som låst med &quot;Kommer snart&quot;, til stedet får en kode i dit panel.
           </p>
         )}
         {place.description && !place.demo && <p className="mt-4 text-lg">{place.description}</p>}
