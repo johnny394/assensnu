@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { Wordmark } from "@/components/AppShell";
 import { usePolling } from "@/components/usePolling";
 import { kr, longDate, telLink } from "@/lib/format";
+import { townName } from "@/lib/postcodes";
 import { copenhagenNow, toTime } from "@/lib/hours";
 import type { Booking, Order, Place } from "@/lib/types";
-import { HoursEditor, MenuEditor } from "./DetailsEditors";
+import { DeliveryEditor, HoursEditor, MenuEditor } from "./DetailsEditors";
 import { useAlarm } from "./useAlarm";
 
 type Data = { place: Place; orders: Order[]; bookings: Booking[] };
@@ -139,8 +140,13 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
         <article key={o.id} className={`rounded-3xl bg-surface p-5 ${o.status === "new" ? "border-4 border-buoy shadow-[0_0_24px_2px_rgba(255,200,69,0.5)]" : "border-2 border-line"}`}>
           <div className="flex items-baseline justify-between gap-3">
             <p className="font-display text-3xl font-extrabold tabular-nums">{o.number}</p>
-            <p className="text-lg font-bold">{o.pickup === "asap" ? "Hurtigst muligt" : `Hentes ${o.pickup}`}</p>
+            <p className="text-lg font-bold">{o.pickup === "asap" ? "Hurtigst muligt" : `${o.delivery ? "Leveres" : "Hentes"} ${o.pickup}`}</p>
           </div>
+          {o.delivery && (
+            <p className="mt-2 rounded-xl bg-ink px-3 py-2 text-lg text-paper">
+              <strong>LEVERING</strong> til {o.delivery.address}, {townName(o.delivery.postcode)}
+            </p>
+          )}
           {o.status === "new" && <p className="font-bold text-buoy-deep">NY ORDRE · {toTime(copenhagenNow(new Date(o.createdAt)).minutes)}</p>}
           <ul className="mt-2 text-xl">
             {o.lines.map((l) => (
@@ -152,6 +158,7 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
           {o.note && <p className="mt-2 rounded-xl bg-buoy-soft px-3 py-2 text-lg">Besked: {o.note}</p>}
           <p className="mt-2 text-lg text-ink-soft">
             {o.customerName} · <a className="underline" href={telLink(o.customerPhone)}>{o.customerPhone}</a> · {kr(o.total)}
+            {o.delivery && ` (heraf levering ${kr(o.delivery.fee)})`}
           </p>
 
           {o.status === "new" && (
@@ -182,12 +189,12 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
           )}
           {o.status === "accepted" && (
             <button onClick={() => set(o, "ready")} className={`${big} mt-4 w-full bg-buoy text-ink`}>
-              Maden er klar{o.readyAt && <span className="font-normal"> (lovet {o.readyAt})</span>}
+              {o.delivery ? "Maden kører ud nu" : "Maden er klar"}{o.readyAt && <span className="font-normal"> (lovet {o.readyAt})</span>}
             </button>
           )}
           {o.status === "ready" && (
             <button onClick={() => set(o, "picked_up")} className={`${big} mt-4 w-full border-2 border-ink`}>
-              Kunden har hentet
+              {o.delivery ? "Maden er leveret" : "Kunden har hentet"}
             </button>
           )}
         </article>
@@ -198,7 +205,7 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
           <ul className="mt-2 space-y-1 text-ink-soft">
             {done.map((o) => (
               <li key={o.id}>
-                {o.number} · {o.customerName} · {kr(o.total)} · {o.status === "rejected" ? "afvist" : "hentet"}
+                {o.number} · {o.customerName} · {kr(o.total)} · {o.status === "rejected" ? "afvist" : o.delivery ? "leveret" : "hentet"}
               </li>
             ))}
           </ul>
@@ -275,7 +282,7 @@ function Bookings({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
 function Settings({ place: fromServer, onChange, onLogout }: { place: Place; onChange: () => void; onLogout: () => void }) {
   // Valget vises med det samme; serveren gemmer i baggrunden
   const [place, setPlace] = useState(fromServer);
-  const [editing, setEditing] = useState<"hours" | "menu" | null>(null);
+  const [editing, setEditing] = useState<"hours" | "menu" | "delivery" | null>(null);
   const [saved, setSaved] = useState(false);
   const saving = useRef(0);
   useEffect(() => {
@@ -298,10 +305,11 @@ function Settings({ place: fromServer, onChange, onLogout }: { place: Place; onC
         <div className="mt-3 space-y-2">
           <EditButton label="Telefon og åbningstider" missing={!place.phone || place.hours.length === 0} onClick={() => setEditing("hours")} />
           <EditButton label="Menukort" missing={place.menu.length === 0} onClick={() => setEditing("menu")} />
+          <EditButton label={place.delivery ? `Levering · ${kr(place.delivery.fee)}` : "Levering · slået fra"} missing={false} onClick={() => setEditing("delivery")} />
         </div>
       </div>
       {editing && (() => {
-        const Editor = editing === "hours" ? HoursEditor : MenuEditor;
+        const Editor = editing === "hours" ? HoursEditor : editing === "menu" ? MenuEditor : DeliveryEditor;
         return (
           <Editor
             place={fromServer}

@@ -1,5 +1,5 @@
 import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
-import type { Booking, BookingStatus, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
+import type { Booking, BookingStatus, DeliverySettings, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
 
 export type NewOrder = Omit<Order, "id" | "number" | "status" | "createdAt" | "readyAt">;
 export type NewBooking = Omit<Booking, "id" | "status" | "createdAt" | "suggestedTime">;
@@ -16,6 +16,7 @@ export type PlaceDetails = {
   phone?: string | null;
   hours?: OpeningPeriod[];
   menu?: MenuCategory[];
+  delivery?: DeliverySettings | null;
 };
 
 // En kundes telefon, som vi kan sende en besked til, når restauranten svarer
