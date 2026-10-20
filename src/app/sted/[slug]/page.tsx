@@ -1,25 +1,30 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { FollowButton } from "@/components/FollowButton";
 import { GroupLink } from "@/components/GroupLink";
+import { LangSwitch, RefreshWhileTranslating } from "@/components/LangSwitch";
 import { Menu } from "@/components/Menu";
 import { LastChanceOffer } from "@/components/LastChanceOffer";
 import { LiveOpenSign } from "@/components/OpenSign";
 import { TakeawayWait } from "@/components/TakeawayWait";
 import { TodaysOffer } from "@/components/TodaysOffer";
+import { LangProvider } from "@/components/useLang";
 import { isAdmin } from "@/lib/admin-auth";
 import { telLink } from "@/lib/format";
 import { WEEKDAYS } from "@/lib/hours";
+import { langFromHeader, parseLang, translator, type Lang } from "@/lib/i18n";
 import { todaysDish } from "@/lib/live";
 import { pushPublicKey } from "@/lib/push";
 import { store } from "@/lib/store";
+import { translatePlace } from "@/lib/translate";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ sprog?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const place = await store.getPlace((await params).slug);
@@ -29,7 +34,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 const button = "flex min-h-14 items-center justify-center gap-2 whitespace-nowrap px-2 text-center text-lg font-bold";
 const heading = "mt-10 border-t-[3px] border-double border-ink pt-2.5 font-display text-[1.7rem] font-black tracking-tight";
 
-export default async function PlacePage({ params }: Props) {
+// Sproget: det, man har trykket på, ellers det man valgte sidst, ellers telefonens sprog
+async function chooseLang(asked: string | undefined): Promise<Lang> {
+  return parseLang(asked) ?? parseLang((await cookies()).get("sprog")?.value) ?? langFromHeader((await headers()).get("accept-language"));
+}
+
+export default async function PlacePage({ params, searchParams }: Props) {
   const place = await store.getPlace((await params).slug);
   if (!place) notFound();
   // Steder, der ikke er med endnu, er låst for kunderne. Johnny kan stadig se siden fra sit panel.
@@ -39,26 +49,32 @@ export default async function PlacePage({ params }: Props) {
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, ${place.address}`)}`;
   const dish = todaysDish(place.news);
   const street = place.address.replace(/, \d{4} .*/, "");
+  const lang = await chooseLang((await searchParams).sprog);
+  const translation = await translatePlace(place, lang);
+  const t = translator(lang, translation.texts);
+  const tourist = lang !== "da";
 
   return (
     <AppShell>
-      <main className="mx-auto max-w-2xl px-5 pt-3">
+      <LangProvider lang={lang} texts={translation.texts}>
+      <main lang={lang} className="mx-auto max-w-2xl px-5 pt-3">
         <Link href="/" className="inline-block py-2 text-lg text-ink-soft">
-          ‹ Alle steder
+          {t("‹ Alle steder")}
         </Link>
 
         <div className="mt-2 flex items-start justify-between gap-4">
           <h1 className="font-display text-[2.6rem] font-black leading-none tracking-tight">{place.name}</h1>
           <FavoriteButton slug={place.slug} name={place.name} />
         </div>
-        <p className="mt-2 text-sm uppercase tracking-[0.1em] text-ink-soft">{[...place.cuisines, street].join(" · ")}</p>
+        <p className="mt-2 text-sm uppercase tracking-[0.1em] text-ink-soft">{[...place.cuisines.map((c) => t(c)), street].join(" · ")}</p>
 
         <div className="mt-4">
           <LiveOpenSign place={place} large />
           <TakeawayWait place={place} />
         </div>
+        <LangSwitch slug={place.slug} />
 
-        <TodaysOffer place={place} />
+        <TodaysOffer place={place} t={t} />
         <LastChanceOffer place={place} />
 
         {place.demo && (
@@ -71,48 +87,64 @@ export default async function PlacePage({ params }: Props) {
             <span className="font-bold">Kun du kan se denne side.</span> Kunderne ser {place.name} som låst med &quot;Kommer snart&quot;, til stedet får en kode i dit panel.
           </p>
         )}
-        {place.description && !place.demo && <p className="mt-4 text-lg">{place.description}</p>}
+        {place.description && !place.demo && <p className="mt-4 text-lg">{t(place.description)}</p>}
 
         <div className="mt-5 grid grid-cols-3 gap-2">
           {place.phone ? (
             <a href={telLink(place.phone)} className={`${button} bg-ink text-paper`}>
-              Ring
+              {t("Ring")}
             </a>
           ) : (
-            <span className={`${button} border-2 border-dashed border-ink-soft/50 whitespace-normal! text-base font-normal leading-tight text-ink-soft`}>Intet nummer endnu</span>
+            <span className={`${button} border-2 border-dashed border-ink-soft/50 whitespace-normal! text-base font-normal leading-tight text-ink-soft`}>{t("Intet nummer endnu")}</span>
           )}
           {place.acceptsBookings ? (
             <Link href={`/sted/${place.slug}/book`} className={`${button} border-2 border-ink`}>
-              Book bord
+              {t("Book bord")}
             </Link>
           ) : (
-            <span className={`${button} whitespace-normal! border-2 border-ink-soft/40 text-base font-normal leading-tight text-ink-soft`}>{place.dineIn ? "Ring og book" : "Kun takeaway"}</span>
+            <span className={`${button} whitespace-normal! border-2 border-ink-soft/40 text-base font-normal leading-tight text-ink-soft`}>{t(place.dineIn ? "Ring og book" : "Kun takeaway")}</span>
           )}
           <a href={mapUrl} target="_blank" rel="noopener" className={`${button} border-2 border-ink`}>
-            Kort
+            {t("Kort")}
           </a>
         </div>
-        {place.phone && <p className="mt-2 text-center text-ink-soft">Telefon {place.phone}</p>}
-        {!preview && <FollowButton slug={place.slug} name={place.name} publicKey={pushPublicKey()} />}
+        {place.phone && <p className="mt-2 text-center text-ink-soft">{t("Telefon {phone}", { phone: place.phone })}</p>}
+        {!preview && !tourist && <FollowButton slug={place.slug} name={place.name} publicKey={pushPublicKey()} />}
 
-        <h2 className={heading}>Menukortet</h2>
+        <h2 className={heading}>{t("Menukortet")}</h2>
+        {tourist && place.menu.length > 0 && (
+          <div className="mt-2 border-2 border-dashed border-ink-soft/60 px-4 py-3 text-ink-soft">
+            {translation.state === "done" && <p>{t("Menuen er oversat automatisk. Navnet på dansk står under, så du kan sige det til restauranten.")}</p>}
+            {translation.state === "working" && (
+              <p className="font-bold text-ink">
+                {t("Menuen bliver oversat lige nu. Om lidt står den på engelsk.")}
+                <RefreshWhileTranslating lang={lang} />
+              </p>
+            )}
+            {translation.state === "off" && <p>{t("Menuen kan ikke oversættes lige nu, så den står på dansk.")}</p>}
+            {place.acceptsOrders && <p className="mt-1">{t("Bestilling og betaling foregår på dansk. Spørg gerne restauranten, hvis du er i tvivl.")}</p>}
+          </div>
+        )}
         {place.menu.length === 0 ? (
           <>
-            <p className="mt-2 text-lg text-ink-soft">Menuen er ikke lagt ind endnu.{place.phone && " Ring og hør, hvad de har i dag."}</p>
+            <p className="mt-2 text-lg text-ink-soft">
+              {t("Menuen er ikke lagt ind endnu.")}
+              {place.phone && t(" Ring og hør, hvad de har i dag.")}
+            </p>
             {/* Kurven nederst, så dagens tilbud kan bestilles, selv om resten af menuen mangler */}
             {dish && <Menu place={place} />}
           </>
         ) : (
           <>
-            {!place.acceptsOrders && <p className="mt-1 text-ink-soft">Bestilling her kommer snart. Indtil da kan du ringe.</p>}
-            {place.acceptsOrders && !preview && <GroupLink slug={place.slug} />}
+            {!place.acceptsOrders && <p className="mt-1 text-ink-soft">{t("Bestilling her kommer snart. Indtil da kan du ringe.")}</p>}
+            {place.acceptsOrders && !preview && !tourist && <GroupLink slug={place.slug} />}
             <Menu place={place} />
           </>
         )}
 
-        <h2 className={heading}>Åbningstider</h2>
+        <h2 className={heading}>{t("Åbningstider")}</h2>
         {place.hours.length === 0 ? (
-          <p className="mt-2 text-lg text-ink-soft">Vi mangler stadig åbningstiderne.</p>
+          <p className="mt-2 text-lg text-ink-soft">{t("Vi mangler stadig åbningstiderne.")}</p>
         ) : (
           <table className="mt-2 w-full text-lg">
             <tbody>
@@ -120,8 +152,8 @@ export default async function PlacePage({ params }: Props) {
                 const periods = place.hours.filter((h) => h.day === day);
                 return (
                   <tr key={name} className="border-b border-line last:border-b-0">
-                    <td className="py-2 text-ink-soft">{name}</td>
-                    <td className="py-2 text-right tabular-nums">{periods.length ? periods.map((p) => `${p.open}–${p.close}`).join(", ") : "Lukket"}</td>
+                    <td className="py-2 text-ink-soft">{t(name)}</td>
+                    <td className="py-2 text-right tabular-nums">{periods.length ? periods.map((p) => `${p.open}–${p.close}`).join(", ") : t("Lukket")}</td>
                   </tr>
                 );
               })}
@@ -129,22 +161,23 @@ export default async function PlacePage({ params }: Props) {
           </table>
         )}
 
-        <h2 className={heading}>Find vej</h2>
+        <h2 className={heading}>{t("Find vej")}</h2>
         <div className="mt-2 text-lg">
           <p>{place.address}</p>
           {place.website && (
             <a className="mt-1 block font-bold text-sea underline" href={place.website}>
-              Stedets egen hjemmeside
+              {t("Stedets egen hjemmeside")}
             </a>
           )}
           {place.facebook && (
             <a className="mt-1 block font-bold text-sea underline" href={place.facebook}>
-              Stedet på Facebook
+              {t("Stedet på Facebook")}
             </a>
           )}
         </div>
         <div className="h-24" />
       </main>
+      </LangProvider>
     </AppShell>
   );
 }

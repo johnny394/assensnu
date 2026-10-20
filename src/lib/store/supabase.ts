@@ -189,6 +189,7 @@ const toGroup = (r: GroupRow): GroupOrder => ({
 
 const isUuid = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
 
+const translationKey = (lang: string, source: string) => sha256(`${lang}\n${source}`).slice(0, 24);
 export const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 
 export function supabaseStore(url: string, serviceKey: string): Store {
@@ -458,6 +459,22 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     },
     async closeGroup(id, orderId) {
       check(await db.from("group_orders").update({ order_id: orderId }).eq("id", id));
+    },
+
+    async getTranslations(lang, sources) {
+      const keys = new Map(sources.map((s) => [translationKey(lang, s), s]));
+      const found: Record<string, string> = {};
+      // I bidder, så adressen til databasen ikke bliver for lang
+      const all = [...keys.keys()];
+      for (let i = 0; i < all.length; i += 100) {
+        const rows = check(await db.from("translations").select("key, text").in("key", all.slice(i, i + 100))) as { key: string; text: string }[];
+        for (const r of rows) found[keys.get(r.key)!] = r.text;
+      }
+      return found;
+    },
+    async saveTranslations(lang, translations) {
+      const rows = Object.entries(translations).map(([source, text]) => ({ key: translationKey(lang, source), lang, source, text }));
+      if (rows.length) check(await db.from("translations").upsert(rows));
     },
 
     async savePush({ kind, id }, subscription) {
