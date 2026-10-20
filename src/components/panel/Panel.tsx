@@ -8,6 +8,7 @@ import { kr, longDate, telLink } from "@/lib/format";
 import { choiceText } from "@/lib/menu-options";
 import { townName } from "@/lib/postcodes";
 import { copenhagenNow, toTime } from "@/lib/hours";
+import { startLater } from "@/lib/later";
 import type { Booking, Order, Place } from "@/lib/types";
 import { DeliveryEditor, HoursEditor, MenuEditor } from "./DetailsEditors";
 import { NewsBox, WaitBar } from "./LiveBoxes";
@@ -124,6 +125,11 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
     for (const o of fromServer) if (pending[o.id]?.status === o.status) forget(o.id);
   }, [fromServer, pending]);
   const active = orders.filter((o) => o.status === "new" || o.status === "accepted" || o.status === "ready");
+  // Accepterede ordrer til senere i dag ligger for sig selv, til det er tid at gå i gang
+  const nowMinutes = copenhagenNow().minutes;
+  const startAt = (o: Order) => startLater(o.pickup, waitMinutes, nowMinutes);
+  const later = active.filter((o) => o.status === "accepted" && startAt(o)).sort((a, b) => a.pickup.localeCompare(b.pickup));
+  const current = active.filter((o) => !later.includes(o));
   const done = orders.filter((o) => o.status === "picked_up" || o.status === "rejected");
   const set = async (o: Order, status: Order["status"], readyInMinutes?: number) => {
     const readyAt = status !== "accepted" ? o.readyAt : o.pickup !== "asap" ? o.pickup : toTime(copenhagenNow().minutes + (readyInMinutes ?? 0));
@@ -136,74 +142,87 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
     onChange();
   };
 
+  const card = (o: Order) => (
+    <article key={o.id} className={`rounded-3xl bg-surface p-5 ${o.status === "new" ? "border-4 border-buoy shadow-[0_0_24px_2px_rgba(255,200,69,0.5)]" : "border-2 border-line"}`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="font-display text-3xl font-extrabold tabular-nums">{o.number}</p>
+        <p className="text-lg font-bold">{o.pickup === "asap" ? "Hurtigst muligt" : `${o.delivery ? "Leveres" : "Hentes"} ${o.pickup}`}</p>
+      </div>
+      {startAt(o) && (
+        <p className="mt-2 rounded-xl bg-buoy-soft px-3 py-2 text-lg">
+          <strong>TIL SENERE.</strong> Gå i gang kl. {startAt(o)}
+        </p>
+      )}
+      {o.delivery && (
+        <p className="mt-2 rounded-xl bg-ink px-3 py-2 text-lg text-paper">
+          <strong>LEVERING</strong> til {o.delivery.address}, {townName(o.delivery.postcode)}
+        </p>
+      )}
+      {o.status === "new" && <p className="font-bold text-buoy-deep">NY ORDRE · {toTime(copenhagenNow(new Date(o.createdAt)).minutes)}</p>}
+      <ul className="mt-2 text-xl">
+        {o.lines.map((l, i) => (
+          <li key={i}>
+            <strong>{l.quantity} ×</strong> {l.name}
+            {choiceText(l) && <span className="block pl-8 text-lg font-bold text-ink-soft">{choiceText(l)}</span>}
+          </li>
+        ))}
+      </ul>
+      {o.note && <p className="mt-2 rounded-xl bg-buoy-soft px-3 py-2 text-lg">Besked: {o.note}</p>}
+      <p className="mt-2 text-lg text-ink-soft">
+        {o.customerName} · <a className="underline" href={telLink(o.customerPhone)}>{o.customerPhone}</a> · {kr(o.total)}
+        {o.delivery && ` (heraf levering ${kr(o.delivery.fee)})`}
+      </p>
+
+      {o.status === "new" && (
+        <div className="mt-4">
+          {o.pickup === "asap" ? (
+            <>
+              <button onClick={() => set(o, "accepted", waitMinutes)} className={`${big} w-full bg-go text-white`}>
+                Accepter · klar om {waitMinutes} min
+              </button>
+              <p className="mb-2 mt-3 text-ink-soft">Eller vælg en anden tid:</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[15, 20, 30, 45].map((m) => (
+                  <button key={m} onClick={() => set(o, "accepted", m)} className={`${big} border-2 border-go text-go`}>
+                    {m} min
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <button onClick={() => set(o, "accepted")} className={`${big} w-full bg-go text-white`}>
+              Accepter · klar kl. {o.pickup}
+            </button>
+          )}
+          <button onClick={() => confirm(`Afvis ordre ${o.number}?`) && set(o, "rejected")} className="mt-2 w-full py-2 text-lg text-signal underline">
+            Afvis ordren
+          </button>
+        </div>
+      )}
+      {o.status === "accepted" && (
+        <button onClick={() => set(o, "ready")} className={`${big} mt-4 w-full bg-buoy text-ink`}>
+          {o.delivery ? "Maden kører ud nu" : "Maden er klar"}{o.readyAt && <span className="font-normal"> (lovet {o.readyAt})</span>}
+        </button>
+      )}
+      {o.status === "ready" && (
+        <button onClick={() => set(o, "picked_up")} className={`${big} mt-4 w-full border-2 border-ink`}>
+          {o.delivery ? "Maden er leveret" : "Kunden har hentet"}
+        </button>
+      )}
+        </article>
+  );
+
   if (orders.length === 0) return <Empty text="Ingen ordrer endnu i dag. Panelet ringer, når der kommer en." />;
 
   return (
     <div className="space-y-3">
-      {active.map((o) => (
-        <article key={o.id} className={`rounded-3xl bg-surface p-5 ${o.status === "new" ? "border-4 border-buoy shadow-[0_0_24px_2px_rgba(255,200,69,0.5)]" : "border-2 border-line"}`}>
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="font-display text-3xl font-extrabold tabular-nums">{o.number}</p>
-            <p className="text-lg font-bold">{o.pickup === "asap" ? "Hurtigst muligt" : `${o.delivery ? "Leveres" : "Hentes"} ${o.pickup}`}</p>
-          </div>
-          {o.delivery && (
-            <p className="mt-2 rounded-xl bg-ink px-3 py-2 text-lg text-paper">
-              <strong>LEVERING</strong> til {o.delivery.address}, {townName(o.delivery.postcode)}
-            </p>
-          )}
-          {o.status === "new" && <p className="font-bold text-buoy-deep">NY ORDRE · {toTime(copenhagenNow(new Date(o.createdAt)).minutes)}</p>}
-          <ul className="mt-2 text-xl">
-            {o.lines.map((l, i) => (
-              <li key={i}>
-                <strong>{l.quantity} ×</strong> {l.name}
-                {choiceText(l) && <span className="block pl-8 text-lg font-bold text-ink-soft">{choiceText(l)}</span>}
-              </li>
-            ))}
-          </ul>
-          {o.note && <p className="mt-2 rounded-xl bg-buoy-soft px-3 py-2 text-lg">Besked: {o.note}</p>}
-          <p className="mt-2 text-lg text-ink-soft">
-            {o.customerName} · <a className="underline" href={telLink(o.customerPhone)}>{o.customerPhone}</a> · {kr(o.total)}
-            {o.delivery && ` (heraf levering ${kr(o.delivery.fee)})`}
-          </p>
-
-          {o.status === "new" && (
-            <div className="mt-4">
-              {o.pickup === "asap" ? (
-                <>
-                  <button onClick={() => set(o, "accepted", waitMinutes)} className={`${big} w-full bg-go text-white`}>
-                    Accepter · klar om {waitMinutes} min
-                  </button>
-                  <p className="mb-2 mt-3 text-ink-soft">Eller vælg en anden tid:</p>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {[15, 20, 30, 45].map((m) => (
-                      <button key={m} onClick={() => set(o, "accepted", m)} className={`${big} border-2 border-go text-go`}>
-                        {m} min
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <button onClick={() => set(o, "accepted")} className={`${big} w-full bg-go text-white`}>
-                  Accepter · klar kl. {o.pickup}
-                </button>
-              )}
-              <button onClick={() => confirm(`Afvis ordre ${o.number}?`) && set(o, "rejected")} className="mt-2 w-full py-2 text-lg text-signal underline">
-                Afvis ordren
-              </button>
-            </div>
-          )}
-          {o.status === "accepted" && (
-            <button onClick={() => set(o, "ready")} className={`${big} mt-4 w-full bg-buoy text-ink`}>
-              {o.delivery ? "Maden kører ud nu" : "Maden er klar"}{o.readyAt && <span className="font-normal"> (lovet {o.readyAt})</span>}
-            </button>
-          )}
-          {o.status === "ready" && (
-            <button onClick={() => set(o, "picked_up")} className={`${big} mt-4 w-full border-2 border-ink`}>
-              {o.delivery ? "Maden er leveret" : "Kunden har hentet"}
-            </button>
-          )}
-        </article>
-      ))}
+      {current.map(card)}
+      {later.length > 0 && (
+        <>
+          <h3 className="pt-3 font-display text-xl font-extrabold tracking-tight">Til senere i dag ({later.length})</h3>
+          {later.map(card)}
+        </>
+      )}
       {done.length > 0 && (
         <details className="rounded-3xl bg-surface px-5 py-3 text-lg">
           <summary className="cursor-pointer py-1 font-bold">Tidligere i dag ({done.length})</summary>
