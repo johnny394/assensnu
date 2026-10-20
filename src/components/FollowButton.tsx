@@ -23,7 +23,7 @@ function writeFollowing(list: string[]) {
 
 type State = "loading" | "idle" | "working" | "following" | "ios" | "denied" | "failed";
 
-// Følg et sted og få besked på telefonen, når de lægger dagens ret eller et tilbud ud.
+// Følg et sted og få besked på telefonen, når de lægger dagens tilbud ud.
 // Ingen profil: telefonen husker selv, hvem man følger.
 export function FollowButton({ slug, name, publicKey }: { slug: string; name: string; publicKey: string | null }) {
   const [state, setState] = useState<State>("loading");
@@ -102,7 +102,7 @@ export function FollowButton({ slug, name, publicKey }: { slug: string; name: st
         </svg>
         <span>
           <span className="block text-lg font-bold text-stamp">{state === "working" ? "Et øjeblik …" : `Følg ${name}`}</span>
-          <span className="block text-ink-soft">Få besked om dagens ret og tilbud. Højst én om dagen.</span>
+          <span className="block text-ink-soft">Få besked om dagens tilbud. Højst én om dagen.</span>
         </span>
       </button>
       {state === "denied" && <p className="mt-2 font-bold text-stamp">Telefonen har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.</p>}

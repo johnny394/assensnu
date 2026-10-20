@@ -35,7 +35,7 @@ function withToday(place: Place): Place {
   return {
     ...place,
     ...activeWait(place.extraWaitMinutes, state.busyUntil.get(place.slug) ?? null),
-    news: todaysNews(news?.text, news?.sentAt, news?.price),
+    news: todaysNews(news?.text, news?.sentAt, news),
     closedToday: state.closedOn.get(place.slug) === todayInCopenhagen(),
     member: state.pins.has(place.slug) || Boolean(place.demo),
   };
@@ -186,8 +186,8 @@ export const memoryStore: Store = {
     });
   },
 
-  async postNews(slug, text, price) {
-    state.news.set(slug, { text, sentAt: new Date().toISOString(), ...(price && { price }) });
+  async postNews(slug, text, price, wasPrice) {
+    state.news.set(slug, { text, sentAt: new Date().toISOString(), ...(price && { price }), ...(wasPrice && { wasPrice }) });
   },
   async follow(slug, subscription) {
     if (!state.followers.has(slug)) state.followers.set(slug, new Map());

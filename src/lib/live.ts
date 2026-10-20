@@ -1,7 +1,7 @@
 import { todayInCopenhagen } from "./hours";
 import type { MenuCategory, MenuItem, Place, PlaceNews } from "./types";
 
-// Det, restauranten ændrer fra time til time: hvor travlt de har, og dagens ret eller tilbud.
+// Det, restauranten ændrer fra time til time: hvor travlt de har, og dagens tilbud.
 
 // "Travlt"-knappen slukker af sig selv efter to timer, så et glemt tryk ikke hænger ved til i morgen
 export const BUSY_HOURS = 2;
@@ -34,30 +34,39 @@ export function cleanNews(input: unknown): string | null {
   return text && text.length <= NEWS_MAX ? text : null;
 }
 
-// Pris på dagens ret i hele kroner. Tom betyder, at den ikke kan bestilles.
+// Pris på dagens tilbud i hele kroner. Tom betyder, at den ikke kan bestilles.
 export function cleanNewsPrice(input: unknown): number | null | undefined {
   if (input === null || input === undefined || input === "") return null;
   const n = Number(input);
   return Number.isInteger(n) && n > 0 && n <= 5000 ? n : undefined;
 }
 
-// Dagens ret og tilbud gælder kun den dag, de er skrevet
-export function todaysNews(text: string | null | undefined, sentAt: string | null | undefined, price?: number | null, now = new Date()): PlaceNews | undefined {
+// Normalprisen vises kun, når den er højere end tilbudsprisen
+export const cleanWasPrice = (was: number | null | undefined, price: number | null | undefined) => (was && price && was > price ? was : null);
+
+// Dagens tilbud gælder kun den dag, det er skrevet
+export function todaysNews(
+  text: string | null | undefined,
+  sentAt: string | null | undefined,
+  prices: { price?: number | null; wasPrice?: number | null } = {},
+  now = new Date(),
+): PlaceNews | undefined {
   if (!text || !sentAt) return undefined;
   if (todayInCopenhagen(new Date(sentAt)) !== todayInCopenhagen(now)) return undefined;
-  return { text, sentAt, ...(price && { price }) };
+  const wasPrice = cleanWasPrice(prices.wasPrice, prices.price);
+  return { text, sentAt, ...(prices.price && { price: prices.price }), ...(wasPrice && { wasPrice }) };
 }
 
-// Dagens ret med pris som en ret, der kan lægges i kurven. Id'et skifter hver dag,
-// så en kurv fra i går ikke kan bestille gårsdagens ret.
+// Dagens tilbud med pris som en ret, der kan lægges i kurven. Id'et skifter hver dag,
+// så en kurv fra i går ikke kan bestille gårsdagens tilbud.
 export function todaysDish(news: PlaceNews | undefined): MenuItem | null {
   if (!news?.price) return null;
-  const name = news.text.replace(/^dagens ret\s*[:\-–]\s*/i, "") || news.text;
+  const name = news.text.replace(/^dagens (ret|tilbud)\s*[:\-–]\s*/i, "") || news.text;
   return { id: `dagens-ret-${todayInCopenhagen(new Date(news.sentAt))}`, name, price: news.price };
 }
 
-// Menukortet, som kunden kan bestille fra: dagens ret øverst, hvis der er en
+// Menukortet, som kunden kan bestille fra: dagens tilbud øverst, hvis der er en
 export function orderableMenu(place: Pick<Place, "menu" | "news">): MenuCategory[] {
   const dish = todaysDish(place.news);
-  return dish ? [{ name: "Dagens ret", items: [dish] }, ...place.menu] : place.menu;
+  return dish ? [{ name: "Dagens tilbud", items: [dish] }, ...place.menu] : place.menu;
 }

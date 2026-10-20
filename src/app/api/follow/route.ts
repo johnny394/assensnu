@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cleanSubscription } from "@/lib/push";
 import { store } from "@/lib/store";
 
-// Kunden følger et sted (eller holder op) og får besked, når stedet lægger dagens ret eller et tilbud ud
+// Kunden følger et sted (eller holder op) og får besked, når stedet lægger dagens tilbud ud
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { slug?: unknown; subscription?: unknown; stop?: unknown } | null;
   const slug = typeof body?.slug === "string" ? body.slug : "";

@@ -53,10 +53,11 @@ export function WaitBar({ place, onChange }: { place: Place; onChange: () => voi
   );
 }
 
-// Dagens ret eller tilbud: står på stedets side i dag, og følgerne får en besked på telefonen
+// Dagens tilbud: står på stedets side i dag, og følgerne får en besked på telefonen
 export function NewsBox({ place, followers, onChange }: { place: Place; followers: number | null; onChange: () => void }) {
   const [text, setText] = useState(place.news?.text ?? "");
   const [price, setPrice] = useState(place.news?.price ? String(place.news.price) : "");
+  const [wasPrice, setWasPrice] = useState(place.news?.wasPrice ? String(place.news.wasPrice) : "");
   const [editing, setEditing] = useState(!place.news);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +68,7 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
   const send = async () => {
     setBusy(true);
     setError(null);
-    const res = await post("/api/panel/news", { text, price: price.trim() });
+    const res = await post("/api/panel/news", { text, price: price.trim(), wasPrice: price.trim() ? wasPrice.trim() : "" });
     setBusy(false);
     if (!res?.ok) {
       const body = (await res?.json().catch(() => null)) as { error?: string } | null;
@@ -83,14 +84,19 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
 
   return (
     <div className="rounded-3xl bg-surface px-5 py-4">
-      <p className="text-lg font-bold">Dagens ret eller tilbud</p>
+      <p className="text-lg font-bold">Dagens tilbud</p>
       <p className="text-ink-soft">{who ? `${who} på AssensNu.` : "Kunderne kan følge jer på AssensNu."} De får en besked på telefonen.</p>
 
       {place.news && !editing ? (
         <>
           <p className="mt-3 rounded-2xl border-2 border-ink px-4 py-3 text-lg">
             {place.news.text}
-            {place.news.price && <strong className="block">{kr(place.news.price)} · kan bestilles</strong>}
+            {place.news.price && (
+              <strong className="block">
+                {kr(place.news.price)}
+                {place.news.wasPrice && <span className="font-normal"> (før {kr(place.news.wasPrice)})</span>} · kan bestilles
+              </strong>
+            )}
           </p>
           <p className="mt-2 font-bold text-go">Sendt kl. {clockTime(place.news.sentAt)}. Det står på jeres side resten af dagen.</p>
           <button onClick={() => setEditing(true)} className="mt-2 w-full py-2 text-lg underline">
@@ -104,7 +110,7 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
             onChange={(e) => setText(e.target.value)}
             maxLength={NEWS_MAX}
             rows={3}
-            placeholder="Fx Dagens ret: Stegt flæsk med persillesovs"
+            placeholder="Fx Stegt flæsk med persillesovs"
             className="mt-3 w-full rounded-2xl border-2 border-line bg-paper px-4 py-3 text-lg"
           />
           <p className="text-right text-ink-soft tabular-nums">
@@ -112,18 +118,34 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
           </p>
           <label className="mt-1 flex items-center gap-3 text-lg">
             <span className="flex-1">
-              Pris i kr.
-              <span className="block text-base text-ink-soft">Så kan kunderne bestille den. Lad stå tom for kun en besked.</span>
+              Tilbudspris i kr.
+              <span className="block text-base text-ink-soft">Så kan kunderne bestille det. Lad stå tom for kun en besked.</span>
             </span>
             <input
               value={price}
               onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))}
               inputMode="numeric"
               placeholder="109"
-              aria-label="Pris i kroner"
+              aria-label="Tilbudspris i kroner"
               className="w-24 rounded-2xl border-2 border-line bg-paper px-3 py-3 text-right text-lg tabular-nums"
             />
           </label>
+          {price && (
+            <label className="mt-3 flex items-center gap-3 text-lg">
+              <span className="flex-1">
+                Normalpris i kr.
+                <span className="block text-base text-ink-soft">Hvis du vil vise, hvor meget kunden sparer.</span>
+              </span>
+              <input
+                value={wasPrice}
+                onChange={(e) => setWasPrice(e.target.value.replace(/\D/g, ""))}
+                inputMode="numeric"
+                placeholder="129"
+                aria-label="Normalpris i kroner"
+                className="w-24 rounded-2xl border-2 border-line bg-paper px-3 py-3 text-right text-lg tabular-nums"
+              />
+            </label>
+          )}
           {place.news && <p className="mt-2 text-ink-soft">Følgerne har allerede fået dagens besked, så rettelsen kommer kun på jeres side.</p>}
           {error && <p className="mt-1 font-bold text-signal">{error}</p>}
           <button onClick={send} disabled={busy || !text.trim()} className="mt-3 min-h-14 w-full rounded-2xl bg-buoy px-4 text-lg font-bold disabled:opacity-50">

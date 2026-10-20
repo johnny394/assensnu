@@ -36,8 +36,8 @@ describe("dagens ret", () => {
 
   it("gælder kun den dag, den er skrevet, i dansk tid", () => {
     const sent = "2026-10-20T22:30:00Z"; // 00:30 den 21. i Assens
-    expect(todaysNews("Tilbud", sent, null, at("2026-10-21T10:00:00Z"))).toEqual({ text: "Tilbud", sentAt: sent });
-    expect(todaysNews("Tilbud", sent, null, at("2026-10-22T10:00:00Z"))).toBeUndefined();
+    expect(todaysNews("Tilbud", sent, {}, at("2026-10-21T10:00:00Z"))).toEqual({ text: "Tilbud", sentAt: sent });
+    expect(todaysNews("Tilbud", sent, {}, at("2026-10-22T10:00:00Z"))).toBeUndefined();
     expect(todaysNews(null, sent)).toBeUndefined();
   });
 });
@@ -52,7 +52,7 @@ describe("dagens ret kan bestilles", () => {
 
   it("står øverst i det, man kan bestille, og prissættes af serveren", () => {
     const place = { menu: [{ name: "Pizza", items: [{ id: "p1", name: "Margherita", price: 75 }] }], news } as unknown as Place;
-    expect(orderableMenu(place).map((c) => c.name)).toEqual(["Dagens ret", "Pizza"]);
+    expect(orderableMenu(place).map((c) => c.name)).toEqual(["Dagens tilbud", "Pizza"]);
     const line = priceChoice(place, { itemId: "dagens-ret-2026-10-20" });
     expect(line.ok && line.value.price).toBe(109);
     expect(priceChoice({ ...place, news: undefined }, { itemId: "dagens-ret-2026-10-20" }).ok).toBe(false);
@@ -63,5 +63,14 @@ describe("dagens ret kan bestilles", () => {
     expect(cleanNewsPrice("")).toBeNull();
     expect(cleanNewsPrice("9,50")).toBeUndefined();
     expect(cleanNewsPrice(0)).toBeUndefined();
+  });
+});
+
+describe("normalpris", () => {
+  it("vises kun, når den er højere end tilbudsprisen", () => {
+    const sent = new Date().toISOString();
+    expect(todaysNews("Tilbud", sent, { price: 99, wasPrice: 129 })).toMatchObject({ price: 99, wasPrice: 129 });
+    expect(todaysNews("Tilbud", sent, { price: 99, wasPrice: 89 })?.wasPrice).toBeUndefined();
+    expect(todaysNews("Tilbud", sent, { wasPrice: 129 })?.wasPrice).toBeUndefined();
   });
 });

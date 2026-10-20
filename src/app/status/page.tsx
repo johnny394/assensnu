@@ -120,15 +120,22 @@ async function runChecks(): Promise<Check[]> {
   const nyt = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("busy_until, news, news_at").limit(1);
   checks.push(
     folg.error || nyt.error
-      ? { ok: false, text: "Databasen kan ikke gemme følgere, dagens ret og travlt-tid endnu.", fix: "Kør tilfoej-folg.sql i Supabase under SQL Editor. Den sletter ingenting." }
-      : { ok: true, text: "Databasen kan gemme følgere, dagens ret og travlt-tid." },
+      ? { ok: false, text: "Databasen kan ikke gemme følgere, dagens tilbud og travlt-tid endnu.", fix: "Kør tilfoej-folg.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan gemme følgere, dagens tilbud og travlt-tid." },
   );
 
   const dagensRet = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("news_price").limit(1);
   checks.push(
     dagensRet.error
-      ? { ok: false, text: "Dagens ret kan ikke få en pris endnu.", fix: "Kør tilfoej-dagens-ret.sql i Supabase under SQL Editor. Den sletter ingenting." }
-      : { ok: true, text: "Dagens ret kan få en pris og bestilles." },
+      ? { ok: false, text: "Dagens tilbud kan ikke få en pris endnu.", fix: "Kør tilfoej-dagens-ret.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Dagens tilbud kan få en pris og bestilles." },
+  );
+
+  const tilbud = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("news_was_price").limit(1);
+  checks.push(
+    tilbud.error
+      ? { ok: false, text: "Dagens tilbud kan ikke vise normalpris endnu.", fix: "Kør tilfoej-tilbud.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Dagens tilbud kan vise normalpris." },
   );
 
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
