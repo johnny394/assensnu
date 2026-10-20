@@ -45,6 +45,8 @@ export type Store = {
   adminListPlaces(): Promise<AdminPlace[]>;
   adminUpdatePlace(slug: string, patch: AdminPatch): Promise<void>;
   createPlace(slug: string, basics: PlaceBasics): Promise<void>;
+  /** Sletter stedet for altid, også tider, menu og gamle bestillinger */
+  deletePlace(slug: string): Promise<void>;
 
   savePush(target: PushTarget, subscription: PushSubscription | null): Promise<void>;
   getPush(target: PushTarget): Promise<PushSubscription | null>;

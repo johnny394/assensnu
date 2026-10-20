@@ -316,6 +316,13 @@ export function supabaseStore(url: string, serviceKey: string): Store {
         }),
       );
     },
+    async deletePlace(slug) {
+      // Bestillinger og bordforespørgsler holder fast i stedet, så de skal ud først.
+      // Tider og menukort forsvinder af sig selv sammen med stedet.
+      check(await db.from("bookings").delete().eq("place_slug", slug));
+      check(await db.from("orders").delete().eq("place_slug", slug));
+      check(await db.from("places").delete().eq("slug", slug));
+    },
 
     async savePush({ kind, id }, subscription) {
       check(await db.from(kind === "order" ? "orders" : "bookings").update({ push: subscription }).eq("id", id));

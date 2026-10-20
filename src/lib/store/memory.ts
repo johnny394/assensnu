@@ -135,6 +135,14 @@ export const memoryStore: Store = {
     if (published === false) state.hidden.add(slug);
     if (pinHash) state.pins.set(slug, pinHash);
   },
+  async deletePlace(slug) {
+    state.places = state.places.filter((p) => p.slug !== slug);
+    state.orders = state.orders.filter((o) => o.placeSlug !== slug);
+    state.bookings = state.bookings.filter((b) => b.placeSlug !== slug);
+    state.hidden.delete(slug);
+    state.pins.delete(slug);
+    state.closedOn.delete(slug);
+  },
   async createPlace(slug, b) {
     state.places.push({
       slug,

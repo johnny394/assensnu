@@ -207,6 +207,7 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
   const [confirmNew, setConfirmNew] = useState(false);
   const [editHours, setEditHours] = useState(false);
   const [hoursSaved, setHoursSaved] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const url = `/api/admin/places/${place.slug}`;
 
   async function save() {
@@ -232,6 +233,14 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
     const res = await post(url, { newCode: true });
     if (!res.ok) return setError(res.error!);
     setPin(res.pin!);
+    router.refresh();
+  }
+
+  async function remove() {
+    setError(null);
+    const res = await post(`${url}/delete`, {});
+    if (!res.ok) return setError(res.error!);
+    onClose();
     router.refresh();
   }
 
@@ -299,6 +308,28 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
       <Link href={`/sted/${place.slug}`} target="_blank" className="mt-6 block text-lg underline">
         Se stedets side
       </Link>
+
+      <section className="mt-10 border-t border-line pt-6">
+        {confirmDelete ? (
+          <div className="rounded-3xl border-2 border-stamp bg-stamp-soft px-5 py-5">
+            <p className="text-lg font-bold">Slet {place.name} for altid?</p>
+            <p className="mt-2 text-lg">
+              Stedet forsvinder fra AssensNu sammen med åbningstider, menukort og gamle bestillinger. Det kan ikke fortrydes.
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button onClick={remove} className="min-h-12 rounded-2xl bg-stamp text-lg font-bold text-white">Ja, slet</button>
+              <button onClick={() => setConfirmDelete(false)} className="min-h-12 rounded-2xl border-2 border-line bg-paper text-lg">Fortryd</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <button onClick={() => setConfirmDelete(true)} className="min-h-12 w-full rounded-2xl border-2 border-stamp px-5 text-lg font-bold text-stamp">
+              Slet spisested
+            </button>
+            <p className="mt-2 px-1 text-ink-soft">Kun hvis stedet er lukket for altid. Holder det bare lukket en periode, så slå &quot;Vis på AssensNu&quot; fra.</p>
+          </>
+        )}
+      </section>
       {editHours && (
         <HoursEditor
           place={place}
