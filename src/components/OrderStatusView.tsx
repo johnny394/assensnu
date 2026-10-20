@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { kr, telLink } from "@/lib/format";
+import { choiceText } from "@/lib/menu-options";
 import { townName } from "@/lib/postcodes";
 import type { Order } from "@/lib/types";
 import { HomeScreenGuide, type PushFor } from "./HomeScreenGuide";
@@ -100,9 +101,12 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
       <div className="border-2 border-ink bg-surface px-5 py-4 text-lg">
         <p className="font-bold">Du har bestilt</p>
         <ul className="mt-2 space-y-1">
-          {order.lines.map((l) => (
-            <li key={l.itemId} className="flex justify-between">
-              <span>{l.quantity} × {l.name}</span>
+          {order.lines.map((l, i) => (
+            <li key={i} className="flex justify-between gap-3">
+              <span>
+                {l.quantity} × {l.name}
+                {choiceText(l) && <span className="block text-ink-soft">{choiceText(l)}</span>}
+              </span>
               <span className="tabular-nums">{kr(l.price * l.quantity)}</span>
             </li>
           ))}

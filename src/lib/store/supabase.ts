@@ -26,6 +26,7 @@ type PlaceRow = {
   menu_categories: {
     name: string;
     position: number;
+    options?: MenuCategory["options"] | null;
     menu_items: { id: string; name: string; description: string | null; price_kr: number; sold_out: boolean; position: number }[];
   }[];
 };
@@ -33,12 +34,20 @@ type PlaceRow = {
 const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, description, takeaway, dine_in,
   accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, closed_on, panel_pin_hash,
   opening_hours (day, open, close),
-  menu_categories (name, position, menu_items (id, name, description, price_kr, sold_out, position))`;
+  menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))`;
 
-// Indtil tilfoej-levering.sql er kørt, findes kolonnen delivery ikke. Så spørger vi uden den,
-// så siden virker som før, bare uden levering.
-const withoutDelivery = (select: string) => select.replace(/delivery, /, "");
-const missingDelivery = (error: unknown) => /delivery/.test(String((error as { message?: string } | null)?.message));
+// Indtil tilfoej-levering.sql og tilfoej-tilvalg.sql er kørt, findes kolonnerne delivery og options ikke.
+// Så spørger vi uden dem, så siden virker som før, bare uden levering og tilvalg.
+type Res = { data: unknown; error: unknown };
+async function withFallback(select: string, run: (select: string) => PromiseLike<Res>): Promise<Res> {
+  let res = await run(select);
+  for (const column of ["delivery", "options"]) {
+    if (!new RegExp(column).test(String((res.error as { message?: string } | null)?.message))) continue;
+    select = select.replace(`${column}, `, "");
+    res = await run(select);
+  }
+  return res;
+}
 
 const byPosition = (a: { position: number }, b: { position: number }) => a.position - b.position;
 
@@ -71,6 +80,7 @@ function toPlace(r: PlaceRow): Place {
 function toMenu(categories: PlaceRow["menu_categories"]): MenuCategory[] {
   return [...categories].sort(byPosition).map((c) => ({
     name: c.name,
+    ...(c.options && { options: c.options }),
     items: [...c.menu_items].sort(byPosition).map((i) => ({
       id: i.id,
       name: i.name,
@@ -156,14 +166,12 @@ export function supabaseStore(url: string, serviceKey: string): Store {
 
   return {
     async getPlaces() {
-      let res: { data: unknown; error: unknown } = await db.from("places").select(PLACE_SELECT).eq("published", true).order("name");
-      if (missingDelivery(res.error)) res = await db.from("places").select(withoutDelivery(PLACE_SELECT)).eq("published", true).order("name");
+      const res = await withFallback(PLACE_SELECT, (select) => db.from("places").select(select).eq("published", true).order("name"));
       const rows = check(res);
       return (rows as unknown as PlaceRow[]).map(toPlace);
     },
     async getPlace(slug) {
-      let res: { data: unknown; error: unknown } = await db.from("places").select(PLACE_SELECT).eq("slug", slug).maybeSingle();
-      if (missingDelivery(res.error)) res = await db.from("places").select(withoutDelivery(PLACE_SELECT)).eq("slug", slug).maybeSingle();
+      const res = await withFallback(PLACE_SELECT, (select) => db.from("places").select(select).eq("slug", slug).maybeSingle());
       const row = check(res);
       return row ? toPlace(row as unknown as PlaceRow) : null;
     },
@@ -194,7 +202,8 @@ export function supabaseStore(url: string, serviceKey: string): Store {
         const soldOut = new Set(current?.menu.flatMap((c) => c.items).filter((i) => i.soldOut).map((i) => i.id));
         check(await db.from("menu_categories").delete().eq("place_slug", slug));
         for (const [position, c] of d.menu.entries()) {
-          const category = check(await db.from("menu_categories").insert({ place_slug: slug, name: c.name, position }).select("id").single()) as { id: number };
+          const row = { place_slug: slug, name: c.name, position, ...(c.options && { options: c.options }) };
+          const category = check(await db.from("menu_categories").insert(row).select("id").single()) as { id: number };
           if (!c.items.length) continue;
           const items = c.items.map((i, p) => ({
             id: i.id,
@@ -282,9 +291,8 @@ export function supabaseStore(url: string, serviceKey: string): Store {
 
     async adminListPlaces() {
       const select =
-        "slug, name, address, cuisines, phone, takeaway, dine_in, published, accepts_orders, accepts_bookings, delivery, panel_pin_hash, opening_hours (day, open, close), menu_categories (name, position, menu_items (id, name, description, price_kr, sold_out, position))";
-      let res: { data: unknown; error: unknown } = await db.from("places").select(select).order("name");
-      if (missingDelivery(res.error)) res = await db.from("places").select(withoutDelivery(select)).order("name");
+        "slug, name, address, cuisines, phone, takeaway, dine_in, published, accepts_orders, accepts_bookings, delivery, panel_pin_hash, opening_hours (day, open, close), menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))";
+      const res = await withFallback(select, (s) => db.from("places").select(s).order("name"));
       const rows = check(res) as unknown as (Pick<PlaceRow, "slug" | "name" | "address" | "cuisines" | "phone" | "takeaway" | "dine_in" | "accepts_orders" | "accepts_bookings" | "delivery"> & {
         published: boolean;
         panel_pin_hash: string | null;

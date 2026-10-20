@@ -191,7 +191,13 @@ export function DeliveryEditor({ place, onClose, onSaved, saveUrl }: {
 }
 
 type DraftItem = { id: string; name: string; description: string; price: string };
-type DraftCategory = { key: string; name: string; items: DraftItem[] };
+type DraftChoice = { key: string; name: string; price: string };
+type DraftCategory = { key: string; name: string; items: DraftItem[]; open?: boolean; sizes: DraftChoice[]; extras: DraftChoice[] };
+
+const priceText = (n: number) => String(n).replace(".", ",");
+const toKroner = (v: string) => (v.trim() === "" ? 0 : Number(v.replace(/\s|kr\.?|\+/g, "").replace(",", ".")));
+const draftChoices = (list: { name: string; price: number }[] = []): DraftChoice[] => list.map((c) => ({ key: crypto.randomUUID(), name: c.name, price: priceText(c.price) }));
+const newChoice = (): DraftChoice => ({ key: crypto.randomUUID(), name: "", price: "" });
 
 const newItem = (): DraftItem => ({ id: crypto.randomUUID(), name: "", description: "", price: "" });
 const move = <T,>(list: T[], from: number, to: number) => {
@@ -212,9 +218,11 @@ export function MenuEditor({ place, onClose, onSaved, saveUrl }: {
       ? place.menu.map((c) => ({
           key: crypto.randomUUID(),
           name: c.name,
+          sizes: draftChoices(c.options?.sizes.map((x) => ({ name: x.name, price: x.extra }))),
+          extras: draftChoices(c.options?.extras),
           items: c.items.map((i) => ({ id: i.id, name: i.name, description: i.description ?? "", price: String(i.price).replace(".", ",") })),
         }))
-      : [{ key: crypto.randomUUID(), name: "", items: [newItem()] }],
+      : [{ key: crypto.randomUUID(), name: "", items: [newItem()], sizes: [], extras: [] }],
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -228,6 +236,10 @@ export function MenuEditor({ place, onClose, onSaved, saveUrl }: {
     const menu: MenuCategory[] = categories
       .map((c) => ({
         name: c.name,
+        options: {
+          sizes: c.sizes.filter((x) => x.name.trim() || x.price.trim()).map((x) => ({ name: x.name, extra: toKroner(x.price) })),
+          extras: c.extras.filter((x) => x.name.trim() || x.price.trim()).map((x) => ({ name: x.name, price: x.price.trim() ? toKroner(x.price) : NaN })),
+        },
         items: c.items
           .filter((i) => i.name.trim() || i.price.trim())
           .map((i) => ({ id: i.id, name: i.name, description: i.description, price: i.price.trim() ? Number(i.price.replace(/\s|kr\.?/g, "").replace(",", ".")) : NaN })),
@@ -251,6 +263,12 @@ export function MenuEditor({ place, onClose, onSaved, saveUrl }: {
               <span className="mb-1 block font-bold">Kategori</span>
               <input value={c.name} onChange={(e) => setCategory(ci, (x) => ({ ...x, name: e.target.value }))} placeholder="Fx Pizza eller Drikkevarer" className={`${field} font-bold`} />
             </label>
+
+            <ChoicesEditor
+              category={c}
+              others={categories.filter((o, oi) => oi !== ci && (o.sizes.length || o.extras.length) && o.name.trim())}
+              onChange={(change) => setCategory(ci, (x) => ({ ...x, ...change }))}
+            />
 
             <ul className="mt-3 space-y-3">
               {c.items.map((item, ii) => (
@@ -291,9 +309,95 @@ export function MenuEditor({ place, onClose, onSaved, saveUrl }: {
           </section>
         ))}
       </div>
-      <button onClick={() => setCategories((all) => [...all, { key: crypto.randomUUID(), name: "", items: [newItem()] }])} className="mt-5 min-h-14 w-full rounded-2xl border-2 border-dashed border-ink text-lg font-bold">
+      <button onClick={() => setCategories((all) => [...all, { key: crypto.randomUUID(), name: "", items: [newItem()], sizes: [], extras: [] }])} className="mt-5 min-h-14 w-full rounded-2xl border-2 border-dashed border-ink text-lg font-bold">
         + Ny kategori
       </button>
     </Sheet>
+  );
+}
+
+// Størrelser og tilvalg for en hel kategori, fx alle pizzaer. Gemt væk bag en knap, så menuen er let at overskue.
+function ChoicesEditor({ category, others, onChange }: {
+  category: DraftCategory;
+  others: DraftCategory[];
+  onChange: (change: Partial<DraftCategory>) => void;
+}) {
+  const sizes = category.sizes.filter((x) => x.name.trim()).length;
+  const extras = category.extras.filter((x) => x.name.trim()).length;
+  const summary = [sizes && `${sizes} størrelser`, extras && `${extras} tilvalg`].filter(Boolean).join(" og ");
+  const copy = (from: DraftCategory) =>
+    onChange({ sizes: from.sizes.map((x) => ({ ...x, key: crypto.randomUUID() })), extras: from.extras.map((x) => ({ ...x, key: crypto.randomUUID() })) });
+
+  if (!category.open) {
+    return (
+      <button onClick={() => onChange({ open: true })} className="mt-3 flex min-h-12 w-full items-center justify-between rounded-2xl border-2 border-line px-4 text-left text-lg">
+        <span className="font-bold">Størrelser og tilvalg</span>
+        <span className="text-ink-soft">{summary || "Ingen"} ›</span>
+      </button>
+    );
+  }
+
+  const list = (kind: "sizes" | "extras", namePlaceholder: string, pricePlaceholder: string) => (
+    <ul className="mt-2 space-y-2">
+      {category[kind].map((x, i) => (
+        <li key={x.key} className="flex items-center gap-2">
+          <input
+            aria-label={kind === "sizes" ? "Størrelse" : "Tilvalg"}
+            value={x.name}
+            onChange={(e) => onChange({ [kind]: category[kind].map((y, j) => (j === i ? { ...y, name: e.target.value } : y)) })}
+            placeholder={namePlaceholder}
+            className={`${field} min-w-0 flex-1 py-2.5`}
+          />
+          <label className="flex w-28 shrink-0 items-center rounded-2xl border-2 border-line bg-surface pr-2 focus-within:border-ink">
+            <span className="pl-3 text-ink-soft">+</span>
+            <input
+              aria-label={`Pris for ${x.name || "valget"}`}
+              inputMode="decimal"
+              value={x.price}
+              onChange={(e) => onChange({ [kind]: category[kind].map((y, j) => (j === i ? { ...y, price: e.target.value } : y)) })}
+              placeholder={pricePlaceholder}
+              className="w-full min-w-0 bg-transparent px-1 py-2.5 text-right text-lg tabular-nums outline-none"
+            />
+            <span className="text-ink-soft">kr.</span>
+          </label>
+          <button onClick={() => onChange({ [kind]: category[kind].filter((_, j) => j !== i) })} aria-label="Fjern" className="grid h-11 w-9 shrink-0 place-items-center text-2xl text-ink-soft">×</button>
+        </li>
+      ))}
+    </ul>
+  );
+
+  return (
+    <div className="mt-3 rounded-2xl border-2 border-ink p-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-lg font-bold">Størrelser og tilvalg</h4>
+        <button onClick={() => onChange({ open: false })} className="py-1 text-ink-soft underline">Skjul</button>
+      </div>
+      <p className="text-ink-soft">Gælder alle retter i {category.name.trim() || "kategorien"}. Kunden vælger, når de trykker +.</p>
+
+      {others.length > 0 && !summary && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {others.map((o) => (
+            <button key={o.key} onClick={() => copy(o)} className={`${small} border-2 border-line`}>Brug samme som {o.name}</button>
+          ))}
+        </div>
+      )}
+
+      <h5 className="mt-4 font-bold">Størrelser</h5>
+      <p className="text-ink-soft">Den første er den normale. Skriv hvad de andre koster ekstra.</p>
+      {list("sizes", "Fx Familie", "0")}
+      <button
+        onClick={() => onChange({ sizes: category.sizes.length ? [...category.sizes, newChoice()] : [{ ...newChoice(), name: "Alm.", price: "0" }, newChoice()] })}
+        className="mt-2 py-1 text-lg underline"
+      >
+        + Tilføj størrelse
+      </button>
+
+      <h5 className="mt-4 font-bold">Tilvalg</h5>
+      <p className="text-ink-soft">Fx ekstra ost eller bacon.</p>
+      {list("extras", "Fx Bacon", "10")}
+      <button onClick={() => onChange({ extras: [...category.extras, newChoice()] })} className="mt-2 py-1 text-lg underline">
+        + Tilføj tilvalg
+      </button>
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Wordmark } from "@/components/AppShell";
 import { usePolling } from "@/components/usePolling";
 import { kr, longDate, telLink } from "@/lib/format";
+import { choiceText } from "@/lib/menu-options";
 import { townName } from "@/lib/postcodes";
 import { copenhagenNow, toTime } from "@/lib/hours";
 import type { Booking, Order, Place } from "@/lib/types";
@@ -149,9 +150,10 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
           )}
           {o.status === "new" && <p className="font-bold text-buoy-deep">NY ORDRE · {toTime(copenhagenNow(new Date(o.createdAt)).minutes)}</p>}
           <ul className="mt-2 text-xl">
-            {o.lines.map((l) => (
-              <li key={l.itemId}>
+            {o.lines.map((l, i) => (
+              <li key={i}>
                 <strong>{l.quantity} ×</strong> {l.name}
+                {choiceText(l) && <span className="block pl-8 text-lg font-bold text-ink-soft">{choiceText(l)}</span>}
               </li>
             ))}
           </ul>

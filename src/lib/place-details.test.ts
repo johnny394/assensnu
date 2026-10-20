@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 import { cleanDetails } from "./place-details";
 
 describe("cleanDetails", () => {
+  it("gemmer størrelser og tilvalg på en kategori", () => {
+    const menu = [{ name: "Pizza", items: [], options: { sizes: [{ name: "Alm.", extra: 0 }, { name: "Fam.", extra: 100 }], extras: [{ name: "Bacon", price: 11 }] } }];
+    const r = cleanDetails({ menu });
+    expect(r.ok && r.value.menu?.[0].options).toEqual(menu[0].options);
+    expect(cleanDetails({ menu: [{ name: "Pizza", items: [], options: { sizes: [], extras: [] } }] })).toEqual({ ok: true, value: { menu: [{ name: "Pizza", items: [] }] } });
+    expect(cleanDetails({ menu: [{ name: "Pizza", items: [], options: { sizes: [{ name: "Alm.", extra: 0 }], extras: [] } }] }).ok).toBe(false);
+    expect(cleanDetails({ menu: [{ name: "Pizza", items: [], options: { sizes: [], extras: [{ name: "Bacon", price: NaN }] } }] }).ok).toBe(false);
+  });
+
   it("gemmer levering med sorterede postnumre og kan slå den fra", () => {
     expect(cleanDetails({ delivery: { fee: 39, postcodes: ["5620", "5610", "5610"] } })).toEqual({
       ok: true,

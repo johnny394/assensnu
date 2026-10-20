@@ -1,6 +1,6 @@
 import { cleanPhone, type Result } from "./orders";
 import type { PlaceDetails } from "./store/types";
-import type { DeliverySettings, MenuCategory, OpeningPeriod, Weekday } from "./types";
+import type { DeliverySettings, MenuCategory, MenuOptions, OpeningPeriod, Weekday } from "./types";
 
 // Det, restauranterne selv kan rette i panelet: telefon, åbningstider og menukort.
 // Alt tjekkes her på serveren, så panelet ikke kan gemme noget, siden ikke kan vise.
@@ -11,7 +11,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Raw = {
   phone?: unknown;
   hours?: { day?: unknown; open?: unknown; close?: unknown }[];
-  menu?: { name?: unknown; items?: { id?: unknown; name?: unknown; description?: unknown; price?: unknown }[] }[];
+  menu?: {
+    name?: unknown;
+    items?: { id?: unknown; name?: unknown; description?: unknown; price?: unknown }[];
+    options?: { sizes?: { name?: unknown; extra?: unknown }[]; extras?: { name?: unknown; price?: unknown }[] } | null;
+  }[];
   delivery?: { fee?: unknown; minimum?: unknown; postcodes?: unknown } | null;
 };
 
@@ -60,7 +64,9 @@ export function cleanDetails(input: unknown): Result<PlaceDetails> {
       const name = text(c?.name).slice(0, 60);
       const items = Array.isArray(c?.items) ? c.items : [];
       if (!name) return { ok: false, error: "Giv hver kategori et navn, fx Pizza eller Drikkevarer." };
-      const category: MenuCategory = { name, items: [] };
+      const options = cleanOptions(name, c?.options);
+      if (!options.ok) return options;
+      const category: MenuCategory = { name, items: [], ...(options.value && { options: options.value }) };
       for (const i of items) {
         const itemName = text(i?.name).slice(0, 80);
         const price = typeof i?.price === "number" ? Math.round(i.price * 100) / 100 : NaN;
@@ -95,4 +101,29 @@ export function cleanDetails(input: unknown): Result<PlaceDetails> {
   }
 
   return { ok: true, value: details };
+}
+
+// Størrelser og tilvalg til en kategori. Tomme lister betyder, at retterne bare har én pris.
+function cleanOptions(category: string, raw: NonNullable<Raw["menu"]>[number]["options"]): Result<MenuOptions | undefined> {
+  if (!raw) return { ok: true, value: undefined };
+  const sizes: MenuOptions["sizes"] = [];
+  const extras: MenuOptions["extras"] = [];
+  for (const s of Array.isArray(raw.sizes) ? raw.sizes.slice(0, 8) : []) {
+    const name = text(s?.name).slice(0, 30);
+    const extra = kroner(s?.extra ?? 0);
+    if (!name) return { ok: false, error: `En størrelse under ${category} mangler et navn, fx Familie.` };
+    if (extra === null) return { ok: false, error: `Skriv hvad ${name} koster ekstra under ${category}, fx 100. Skriv 0, hvis det er samme pris.` };
+    if (sizes.some((x) => x.name.toLowerCase() === name.toLowerCase())) return { ok: false, error: `${name} står to gange under ${category}.` };
+    sizes.push({ name, extra });
+  }
+  for (const e of Array.isArray(raw.extras) ? raw.extras.slice(0, 80) : []) {
+    const name = text(e?.name).slice(0, 40);
+    const price = kroner(e?.price);
+    if (!name) return { ok: false, error: `Et tilvalg under ${category} mangler et navn, fx Bacon.` };
+    if (price === null) return { ok: false, error: `Skriv hvad ${name} koster under ${category}, fx 10.` };
+    if (extras.some((x) => x.name.toLowerCase() === name.toLowerCase())) return { ok: false, error: `${name} står to gange under ${category}.` };
+    extras.push({ name, price });
+  }
+  if (sizes.length === 1) return { ok: false, error: `Skriv mindst to størrelser under ${category}, eller fjern den ene.` };
+  return { ok: true, value: sizes.length || extras.length ? { sizes, extras } : undefined };
 }

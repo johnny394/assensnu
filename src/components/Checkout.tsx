@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { kr } from "@/lib/format";
 import { pickupOptions } from "@/lib/hours";
+import { choiceText, parseKey, priceChoice } from "@/lib/menu-options";
 import { townName } from "@/lib/postcodes";
 import type { Place } from "@/lib/types";
 import { useCart } from "./useCart";
@@ -40,8 +41,11 @@ export function Checkout({ place }: { place: Place }) {
     } catch {}
   }, []);
 
-  const lines = place.menu.flatMap((c) => c.items).filter((i) => cart[i.id]);
-  const food = lines.reduce((sum, i) => sum + i.price * cart[i.id], 0);
+  const lines = Object.entries(cart).flatMap(([key, quantity]) => {
+    const p = priceChoice(place, parseKey(key));
+    return p.ok && !p.value.item.soldOut ? [{ key, quantity, ...p.value }] : [];
+  });
+  const food = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
   const delivery = place.delivery ?? null;
   const fee = delivering && delivery ? delivery.fee : 0;
   const total = food + fee;
@@ -60,7 +64,7 @@ export function Checkout({ place }: { place: Place }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         slug: place.slug,
-        items: lines.map((i) => ({ itemId: i.id, quantity: cart[i.id] })),
+        items: lines.map((l) => ({ itemId: l.itemId, quantity: l.quantity, size: l.size, extras: l.extras })),
         name,
         phone,
         pickup: chosen,
@@ -96,19 +100,22 @@ export function Checkout({ place }: { place: Place }) {
     <form onSubmit={send} className="mt-6 space-y-8">
       <section>
         <ul className="border-t-[3px] border-double border-ink">
-          {lines.map((i) => (
-            <li key={i.id} className="flex items-center gap-3 border-b border-line px-1 py-3">
+          {lines.map((l) => (
+            <li key={l.key} className="flex items-center gap-3 border-b border-line px-1 py-3">
               <div className="flex shrink-0 items-center gap-1 rounded-full border-2 border-ink">
-                <button type="button" onClick={() => change(i.id, -1)} aria-label={`Fjern en ${i.name}`} className="h-10 w-10 text-xl">
+                <button type="button" onClick={() => change(l.key, -1)} aria-label={`Fjern en ${l.name}`} className="h-10 w-10 text-xl">
                   −
                 </button>
-                <span className="w-5 text-center font-bold">{cart[i.id]}</span>
-                <button type="button" onClick={() => change(i.id, 1)} aria-label={`Tilføj en ${i.name}`} className="h-10 w-10 text-xl">
+                <span className="w-5 text-center font-bold">{l.quantity}</span>
+                <button type="button" onClick={() => change(l.key, 1)} aria-label={`Tilføj en ${l.name}`} className="h-10 w-10 text-xl">
                   +
                 </button>
               </div>
-              <span className="flex-1 text-lg">{i.name}</span>
-              <span className="text-lg tabular-nums">{kr(i.price * cart[i.id])}</span>
+              <span className="min-w-0 flex-1 text-lg">
+                {l.name}
+                {choiceText(l) && <span className="block text-base text-ink-soft">{choiceText(l)}</span>}
+              </span>
+              <span className="text-lg tabular-nums">{kr(l.price * l.quantity)}</span>
             </li>
           ))}
           {fee > 0 && (
