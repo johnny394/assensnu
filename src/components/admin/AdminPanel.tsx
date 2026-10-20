@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Wordmark } from "@/components/AppShell";
-import { HoursEditor, Sheet } from "@/components/panel/DetailsEditors";
+import { HoursEditor, MenuEditor, Sheet } from "@/components/panel/DetailsEditors";
 import { Toggle } from "@/components/panel/Panel";
 import type { AdminPlace } from "@/lib/admin";
 import { WEEKDAYS } from "@/lib/hours";
@@ -88,7 +88,7 @@ export function AdminPanel({ places }: { places: AdminPlace[] }) {
                 {p.hasCode ? <Badge tone="go">Har kode</Badge> : <Badge tone="warn">Mangler kode</Badge>}
                 {p.acceptsOrders && <Badge tone="go">Bestilling</Badge>}
                 {p.acceptsBookings && <Badge tone="go">Bordbooking</Badge>}
-                {!p.hasMenu && <Badge tone="soft">Ingen menu</Badge>}
+                {p.menu.length === 0 && <Badge tone="soft">Ingen menu</Badge>}
                 {p.hours.length === 0 && <Badge tone="soft">Ingen åbningstider</Badge>}
               </span>
             </button>
@@ -207,6 +207,8 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
   const [confirmNew, setConfirmNew] = useState(false);
   const [editHours, setEditHours] = useState(false);
   const [hoursSaved, setHoursSaved] = useState(false);
+  const [editMenu, setEditMenu] = useState(false);
+  const [menuSaved, setMenuSaved] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const url = `/api/admin/places/${place.slug}`;
 
@@ -301,7 +303,18 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
           {place.hours.length ? "Ret åbningstider" : "Skriv åbningstider"}
         </button>
       </section>
-      {!place.hasMenu && <p className="mt-3 px-1 text-ink-soft">Menukort mangler. Det skriver restauranten selv ind i deres panel.</p>}
+      <section className="mt-5 rounded-3xl border-2 border-line px-5 py-4">
+        <h3 className="font-display text-xl font-black tracking-tight">Menukort</h3>
+        {menuSaved && <p role="status" className="mt-1 font-bold text-go">Gemt. Kunderne kan se det nu.</p>}
+        <p className="mt-2 text-lg">
+          {place.menu.length === 0
+            ? "Intet menukort endnu."
+            : place.menu.map((c) => `${c.name} (${c.items.length})`).join(", ")}
+        </p>
+        <button onClick={() => setEditMenu(true)} className="mt-3 min-h-12 w-full rounded-2xl border-2 border-ink px-5 text-lg font-bold">
+          {place.menu.length ? "Ret menukort" : "Skriv menukort"}
+        </button>
+      </section>
 
       <h3 className="mb-3 mt-8 font-display text-xl font-black tracking-tight">Oplysninger</h3>
       <BasicsFields form={form} setForm={setForm} />
@@ -330,6 +343,18 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
           </>
         )}
       </section>
+      {editMenu && (
+        <MenuEditor
+          place={place}
+          saveUrl={`${url}/details`}
+          onClose={() => setEditMenu(false)}
+          onSaved={() => {
+            setEditMenu(false);
+            setMenuSaved(true);
+            router.refresh();
+          }}
+        />
+      )}
       {editHours && (
         <HoursEditor
           place={place}

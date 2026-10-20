@@ -1,6 +1,6 @@
 import { createHash, randomInt } from "node:crypto";
 import { cleanPhone, type Result } from "./orders";
-import type { OpeningPeriod } from "./types";
+import type { MenuCategory, OpeningPeriod } from "./types";
 
 // Det, Johnny ser og retter i sit eget panel
 export type AdminPlace = {
@@ -16,7 +16,7 @@ export type AdminPlace = {
   acceptsBookings: boolean;
   hasCode: boolean;
   hours: OpeningPeriod[];
-  hasMenu: boolean;
+  menu: MenuCategory[];
 };
 
 export type PlaceBasics = {

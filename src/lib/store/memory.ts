@@ -126,7 +126,7 @@ export const memoryStore: Store = {
         acceptsBookings: p.acceptsBookings,
         hasCode: state.pins.has(p.slug) || Boolean(p.demo),
         hours: p.hours,
-        hasMenu: p.menu.length > 0,
+        menu: p.menu,
       }));
   },
   async adminUpdatePlace(slug, patch) {

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { todayInCopenhagen } from "../hours";
-import type { Booking, Order, Place, Weekday } from "../types";
+import type { Booking, MenuCategory, Order, Place, Weekday } from "../types";
 import type { PushSubscription, Store } from "./types";
 
 type PlaceRow = {
@@ -57,17 +57,21 @@ function toPlace(r: PlaceRow): Place {
     // Kun ja/nej sendes videre, aldrig selve fingeraftrykket af koden
     member: Boolean(r.panel_pin_hash),
     hours: r.opening_hours.map((h) => ({ day: h.day as Weekday, open: h.open.slice(0, 5), close: h.close.slice(0, 5) })),
-    menu: [...r.menu_categories].sort(byPosition).map((c) => ({
-      name: c.name,
-      items: [...c.menu_items].sort(byPosition).map((i) => ({
-        id: i.id,
-        name: i.name,
-        description: i.description ?? undefined,
-        price: Number(i.price_kr),
-        soldOut: i.sold_out,
-      })),
-    })),
+    menu: toMenu(r.menu_categories),
   };
+}
+
+function toMenu(categories: PlaceRow["menu_categories"]): MenuCategory[] {
+  return [...categories].sort(byPosition).map((c) => ({
+    name: c.name,
+    items: [...c.menu_items].sort(byPosition).map((i) => ({
+      id: i.id,
+      name: i.name,
+      description: i.description ?? undefined,
+      price: Number(i.price_kr),
+      soldOut: i.sold_out,
+    })),
+  }));
 }
 
 type OrderRow = {
@@ -265,13 +269,13 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       const rows = check(
         await db
           .from("places")
-          .select("slug, name, address, cuisines, phone, takeaway, dine_in, published, accepts_orders, accepts_bookings, panel_pin_hash, opening_hours (day, open, close), menu_categories (count)")
+          .select("slug, name, address, cuisines, phone, takeaway, dine_in, published, accepts_orders, accepts_bookings, panel_pin_hash, opening_hours (day, open, close), menu_categories (name, position, menu_items (id, name, description, price_kr, sold_out, position))")
           .order("name"),
       ) as unknown as (Pick<PlaceRow, "slug" | "name" | "address" | "cuisines" | "phone" | "takeaway" | "dine_in" | "accepts_orders" | "accepts_bookings"> & {
         published: boolean;
         panel_pin_hash: string | null;
         opening_hours: { day: number; open: string; close: string }[];
-        menu_categories: { count: number }[];
+        menu_categories: PlaceRow["menu_categories"];
       })[];
       return rows.map((r) => ({
         slug: r.slug,
@@ -288,7 +292,7 @@ export function supabaseStore(url: string, serviceKey: string): Store {
         hours: r.opening_hours
           .map((h) => ({ day: h.day as Weekday, open: h.open.slice(0, 5), close: h.close.slice(0, 5) }))
           .sort((a, b) => a.day - b.day || a.open.localeCompare(b.open)),
-        hasMenu: (r.menu_categories[0]?.count ?? 0) > 0,
+        menu: toMenu(r.menu_categories),
       }));
     },
     async adminUpdatePlace(slug, p) {
