@@ -116,6 +116,14 @@ async function runChecks(): Promise<Check[]> {
       : { ok: true, text: "Databasen kan gemme størrelser og tilvalg." },
   );
 
+  const folg = await createClient(url, key, { auth: { persistSession: false } }).from("followers").select("endpoint").limit(1);
+  const nyt = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("busy_until, news, news_at").limit(1);
+  checks.push(
+    folg.error || nyt.error
+      ? { ok: false, text: "Databasen kan ikke gemme følgere, dagens ret og travlt-tid endnu.", fix: "Kør tilfoej-folg.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan gemme følgere, dagens ret og travlt-tid." },
+  );
+
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     checks.push({ ok: true, text: "Nøglerne til beskeder er sat." });
   } else {

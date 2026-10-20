@@ -53,9 +53,14 @@ export type Place = {
   delivery?: DeliverySettings | null; // null = leverer ikke
   prepMinutes: number; // normal ventetid på takeaway
   extraWaitMinutes: number; // "travlt"-knappen i panelet
+  busyUntil?: string; // "HH:MM", når "travlt" slukker af sig selv
+  news?: PlaceNews; // dagens ret eller tilbud, kun hvis det er skrevet i dag
   demo?: boolean;
   member?: boolean; // stedet har sagt ja til AssensNu og har en kode til panelet
 };
+
+// Restauranten skriver det i panelet, og følgerne får det som besked på telefonen
+export type PlaceNews = { text: string; sentAt: string }; // sentAt er ISO
 
 export type OrderStatus = "new" | "accepted" | "ready" | "picked_up" | "rejected";
 

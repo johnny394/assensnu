@@ -47,3 +47,21 @@ export async function notify(target: PushTarget, message: PushMessage) {
     else console.error("Push-besked kunne ikke sendes", e);
   }
 }
+
+// Dagens ret eller tilbud til alle, der følger stedet. Telefoner, der har sagt nej tak, glemmes.
+export async function notifyFollowers(slug: string, message: PushMessage) {
+  if (!setup()) return;
+  const followers = await store.listFollowers(slug);
+  const payload = JSON.stringify({ ...message, tag: `nyt-${slug}` });
+  await Promise.all(
+    followers.map(async (subscription) => {
+      try {
+        await webpush.sendNotification(subscription, payload, { TTL: 6 * 3600, urgency: "normal" });
+      } catch (e) {
+        const code = (e as { statusCode?: number }).statusCode;
+        if (code === 404 || code === 410) await store.unfollow(slug, subscription.endpoint).catch(() => {});
+        else console.error("Besked til følger kunne ikke sendes", e);
+      }
+    }),
+  );
+}

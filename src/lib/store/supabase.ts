@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { todayInCopenhagen } from "../hours";
+import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import type { Booking, MenuCategory, Order, Place, Weekday } from "../types";
 import type { PushSubscription, Store } from "./types";
 
@@ -20,6 +21,9 @@ type PlaceRow = {
   delivery: Place["delivery"];
   prep_minutes: number;
   extra_wait_minutes: number;
+  busy_until?: string | null;
+  news?: string | null;
+  news_at?: string | null;
   closed_on: string | null;
   panel_pin_hash: string | null;
   opening_hours: { day: number; open: string; close: string }[];
@@ -32,18 +36,20 @@ type PlaceRow = {
 };
 
 const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, description, takeaway, dine_in,
-  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, closed_on, panel_pin_hash,
+  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, closed_on, panel_pin_hash,
   opening_hours (day, open, close),
   menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))`;
 
-// Indtil tilfoej-levering.sql og tilfoej-tilvalg.sql er kørt, findes kolonnerne delivery og options ikke.
-// Så spørger vi uden dem, så siden virker som før, bare uden levering og tilvalg.
+// Indtil tilfoej-levering.sql, tilfoej-tilvalg.sql og tilfoej-folg.sql er kørt, findes de nyere kolonner ikke.
+// Så spørger vi uden dem, så siden virker som før, bare uden levering, tilvalg, dagens ret og travlt-tid.
 type Res = { data: unknown; error: unknown };
+const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"]];
+const mentions = (error: unknown, column: string) => new RegExp(`\\b${column}\\b`).test(String((error as { message?: string } | null)?.message));
 async function withFallback(select: string, run: (select: string) => PromiseLike<Res>): Promise<Res> {
   let res = await run(select);
-  for (const column of ["delivery", "options"]) {
-    if (!new RegExp(column).test(String((res.error as { message?: string } | null)?.message))) continue;
-    select = select.replace(`${column}, `, "");
+  for (const columns of NEWER_COLUMNS) {
+    if (!columns.some((c) => mentions(res.error, c))) continue;
+    for (const c of columns) select = select.replace(`${c}, `, "");
     res = await run(select);
   }
   return res;
@@ -67,7 +73,8 @@ function toPlace(r: PlaceRow): Place {
     acceptsBookings: r.accepts_bookings,
     delivery: r.delivery ?? null,
     prepMinutes: r.prep_minutes,
-    extraWaitMinutes: r.extra_wait_minutes,
+    ...activeWait(r.extra_wait_minutes, r.busy_until ?? null),
+    news: todaysNews(r.news, r.news_at),
     closedToday: r.closed_on === todayInCopenhagen(),
     demo: r.slug === "proevepizza" || undefined,
     // Kun ja/nej sendes videre, aldrig selve fingeraftrykket af koden
@@ -178,9 +185,20 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     async updatePlaceSettings(slug, s) {
       const patch: Record<string, unknown> = {};
       if (s.acceptsOrders !== undefined) patch.accepts_orders = s.acceptsOrders;
-      if (s.extraWaitMinutes !== undefined) patch.extra_wait_minutes = s.extraWaitMinutes;
+      if (s.extraWaitMinutes !== undefined) {
+        patch.extra_wait_minutes = s.extraWaitMinutes;
+        patch.busy_until = busyUntilFrom(s.extraWaitMinutes);
+      }
       if (s.closedToday !== undefined) patch.closed_on = s.closedToday ? todayInCopenhagen() : null;
-      if (Object.keys(patch).length) check(await db.from("places").update(patch).eq("slug", slug));
+      if (Object.keys(patch).length) {
+        let res = await db.from("places").update(patch).eq("slug", slug);
+        // Uden tilfoej-folg.sql virker travlt-knappen som før, bare uden at slukke af sig selv
+        if (mentions(res.error, "busy_until")) {
+          delete patch.busy_until;
+          res = await db.from("places").update(patch).eq("slug", slug);
+        }
+        check(res);
+      }
       if (s.soldOut) {
         // Sørg for at varen hører til netop dette sted
         const place = await this.getPlace(slug);
@@ -352,6 +370,20 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       check(await db.from("bookings").delete().eq("place_slug", slug));
       check(await db.from("orders").delete().eq("place_slug", slug));
       check(await db.from("places").delete().eq("slug", slug));
+    },
+
+    async postNews(slug, text) {
+      check(await db.from("places").update({ news: text, news_at: new Date().toISOString() }).eq("slug", slug));
+    },
+    async follow(slug, subscription) {
+      check(await db.from("followers").upsert({ place_slug: slug, endpoint: subscription.endpoint, push: subscription }));
+    },
+    async unfollow(slug, endpoint) {
+      check(await db.from("followers").delete().eq("place_slug", slug).eq("endpoint", endpoint));
+    },
+    async listFollowers(slug) {
+      const rows = check(await db.from("followers").select("push").eq("place_slug", slug)) as { push: PushSubscription }[];
+      return rows.map((r) => r.push);
     },
 
     async savePush({ kind, id }, subscription) {
