@@ -7,6 +7,7 @@ import { longDate } from "@/lib/format";
 import { todayInCopenhagen } from "@/lib/hours";
 import type { Place } from "@/lib/types";
 import { field, label } from "./Checkout";
+import { useLang } from "./useLang";
 
 const CUSTOMER_KEY = "assensnu:kunde";
 
@@ -45,11 +46,12 @@ export function BookingForm({ place }: { place: Place }) {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const { lang, t } = useLang();
 
   useEffect(() => {
-    const t = todayInCopenhagen();
-    setToday(t);
-    setDate(t);
+    const day = todayInCopenhagen();
+    setToday(day);
+    setDate(day);
     try {
       const saved = JSON.parse(localStorage.getItem(CUSTOMER_KEY) ?? "{}");
       setName(saved.name ?? "");
@@ -63,7 +65,7 @@ export function BookingForm({ place }: { place: Place }) {
   async function send(e: React.FormEvent) {
     e.preventDefault();
     if (!date || !time) {
-      setError("Vælg dag og tidspunkt.");
+      setError(t("Vælg dag og tidspunkt."));
       return;
     }
     setSending(true);
@@ -75,7 +77,7 @@ export function BookingForm({ place }: { place: Place }) {
     }).catch(() => null);
     const data = await res?.json().catch(() => null);
     if (!res?.ok || !data?.id) {
-      setError(data?.error ?? "Forespørgslen blev ikke sendt. Tjek din forbindelse og prøv igen.");
+      setError(t(data?.error ?? "Forespørgslen blev ikke sendt. Tjek din forbindelse og prøv igen."));
       setSending(false);
       return;
     }
@@ -85,27 +87,27 @@ export function BookingForm({ place }: { place: Place }) {
     router.push(`/booking/${data.id}`);
   }
 
-  const dayName = (d: string, i: number) => (i === 0 ? "I dag" : i === 1 ? "I morgen" : longDate(d).split(" den ")[0]);
+  const dayName = (d: string, i: number) => (i === 0 ? t("I dag") : i === 1 ? t("I morgen") : longDate(d, lang).split(/[ ,]/)[0]);
 
   return (
     <form onSubmit={send} className="mt-6 space-y-8">
       <fieldset className="min-w-0">
-        <legend className={label}>Hvor mange er I?</legend>
+        <legend className={label}>{t("Hvor mange er I?")}</legend>
         <div className="flex items-center gap-4">
-          <button type="button" onClick={() => setGuests(Math.max(1, guests - 1))} aria-label="Én færre" className="h-14 w-14 rounded-full border-2 border-ink text-2xl">
+          <button type="button" onClick={() => setGuests(Math.max(1, guests - 1))} aria-label={t("Én færre")} className="h-14 w-14 rounded-full border-2 border-ink text-2xl">
             −
           </button>
           <span className="w-24 text-center font-display text-3xl font-black" aria-live="polite">
-            {guests} <span className="text-lg font-semibold">{guests === 1 ? "person" : "personer"}</span>
+            {guests} <span className="text-lg font-semibold">{t(guests === 1 ? "person" : "personer")}</span>
           </span>
-          <button type="button" onClick={() => setGuests(Math.min(20, guests + 1))} aria-label="Én mere" className="h-14 w-14 rounded-full border-2 border-ink text-2xl">
+          <button type="button" onClick={() => setGuests(Math.min(20, guests + 1))} aria-label={t("Én mere")} className="h-14 w-14 rounded-full border-2 border-ink text-2xl">
             +
           </button>
         </div>
       </fieldset>
 
       <fieldset className="min-w-0">
-        <legend className={label}>Hvilken dag?</legend>
+        <legend className={label}>{t("Hvilken dag?")}</legend>
         <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
           {days.map((d, i) => (
             <button
@@ -123,24 +125,24 @@ export function BookingForm({ place }: { place: Place }) {
             </button>
           ))}
         </div>
-        {date && <p className="mt-2 text-ink-soft first-letter:uppercase">{longDate(date)}</p>}
+        {date && <p className="mt-2 text-ink-soft first-letter:uppercase">{longDate(date, lang)}</p>}
       </fieldset>
 
       <fieldset className="min-w-0">
-        <legend className={label}>Hvad tid?</legend>
+        <legend className={label}>{t("Hvad tid?")}</legend>
         {times.length === 0 ? (
-          <p className="border-2 border-dashed border-ink-soft/50 px-4 py-3 text-lg text-ink-soft">Der er lukket den dag. Vælg en anden dag.</p>
+          <p className="border-2 border-dashed border-ink-soft/50 px-4 py-3 text-lg text-ink-soft">{t("Der er lukket den dag. Vælg en anden dag.")}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {times.map((t) => (
+            {times.map((slot) => (
               <button
                 type="button"
-                key={t}
-                onClick={() => setTime(t)}
-                aria-pressed={time === t}
-                className={`border-2 border-ink px-4 py-2.5 text-lg tabular-nums ${time === t ? "bg-ink font-bold text-paper" : "bg-transparent"}`}
+                key={slot}
+                onClick={() => setTime(slot)}
+                aria-pressed={time === slot}
+                className={`border-2 border-ink px-4 py-2.5 text-lg tabular-nums ${time === slot ? "bg-ink font-bold text-paper" : "bg-transparent"}`}
               >
-                {t}
+                {slot}
               </button>
             ))}
           </div>
@@ -149,30 +151,30 @@ export function BookingForm({ place }: { place: Place }) {
 
       <div className="space-y-5">
         <div>
-          <label htmlFor="bname" className={label}>Dit navn</label>
+          <label htmlFor="bname" className={label}>{t("Dit navn")}</label>
           <input id="bname" required autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={field} />
         </div>
         <div>
-          <label htmlFor="bphone" className={label}>Dit telefonnummer</label>
+          <label htmlFor="bphone" className={label}>{t("Dit telefonnummer")}</label>
           <input id="bphone" required type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={field} />
         </div>
         <div>
-          <label htmlFor="bnote" className={label}>Noget restauranten skal vide? <span className="font-normal text-ink-soft">(hvis du vil)</span></label>
-          <input id="bnote" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Fx barnestol eller fødselsdag" className={field} />
+          <label htmlFor="bnote" className={label}>{t("Noget restauranten skal vide?")} <span className="font-normal text-ink-soft">{t("(hvis du vil)")}</span></label>
+          <input id="bnote" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("Fx barnestol eller fødselsdag")} className={field} />
         </div>
       </div>
 
       <p className="border-2 border-ink bg-surface px-5 py-4 text-lg">
-        Det er en <strong>forespørgsel</strong>. {place.name} svarer så hurtigt som muligt, og du kan følge svaret på næste side.
+        {t("Det er en forespørgsel. {navn} svarer så hurtigt som muligt, og du kan følge svaret på næste side.", { navn: place.name })}
       </p>
 
       {error && <p role="alert" className="bg-stamp-soft px-4 py-3 text-lg text-stamp">{error}</p>}
 
       <button disabled={sending} className="w-full bg-stamp px-5 py-4.5 text-xl font-bold text-white disabled:opacity-50">
-        {sending ? "Sender…" : "Send forespørgsel"}
+        {t(sending ? "Sender…" : "Send forespørgsel")}
       </button>
       <Link href={`/sted/${place.slug}`} className="block text-center text-lg text-ink-soft underline">
-        Fortryd
+        {t("Fortryd")}
       </Link>
     </form>
   );

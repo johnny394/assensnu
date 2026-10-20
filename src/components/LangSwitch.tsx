@@ -5,22 +5,27 @@ import { useEffect } from "react";
 import { LANGS, type Lang } from "@/lib/i18n";
 import { useLang } from "./useLang";
 
-// Dansk · English · Deutsch øverst på stedets side
-export function LangSwitch({ slug }: { slug: string }) {
+// Dansk · English · Deutsch. Valget huskes på telefonen og gælder alle sider.
+export function LangSwitch({ className = "mt-3" }: { className?: string }) {
   const { lang } = useLang();
+  const router = useRouter();
+  const choose = (next: Lang) => {
+    document.cookie = `sprog=${next}; path=/; max-age=${60 * 60 * 24 * 60}; samesite=lax`;
+    router.refresh();
+  };
   return (
-    <nav aria-label="Sprog / Language / Sprache" className="mt-3 flex flex-wrap gap-2">
-      {LANGS.map((l) =>
-        l.lang === lang ? (
-          <span key={l.lang} aria-current="true" className="border-2 border-ink bg-ink px-3 py-1 font-bold text-paper">
-            {l.name}
-          </span>
-        ) : (
-          <a key={l.lang} href={`/sted/${slug}?sprog=${l.lang}`} hrefLang={l.lang} lang={l.lang} className="border-2 border-ink px-3 py-1 font-bold">
-            {l.name}
-          </a>
-        ),
-      )}
+    <nav aria-label="Sprog / Language / Sprache" className={`${className} flex flex-wrap gap-2`}>
+      {LANGS.map((l) => (
+        <button
+          key={l.lang}
+          lang={l.lang}
+          onClick={() => choose(l.lang)}
+          aria-pressed={l.lang === lang}
+          className={`border-2 border-ink px-3 py-1 font-bold ${l.lang === lang ? "bg-ink text-paper" : ""}`}
+        >
+          {l.name}
+        </button>
+      ))}
     </nav>
   );
 }

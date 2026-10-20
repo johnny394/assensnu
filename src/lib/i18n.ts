@@ -1,3 +1,4 @@
+import { PAGES } from "./i18n-pages";
 import type { Place } from "./types";
 
 // Stedets side på engelsk og tysk, til turister. Knapper og overskrifter er oversat her i hånden.
@@ -30,7 +31,7 @@ const fill = (s: string, vars?: Vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k) 
 
 // Finder oversættelsen: først menukortet, så knapperne. Mangler den, står der dansk.
 export function translator(lang: Lang, texts: Record<string, string> = {}): T {
-  return (da, vars) => fill(lang === "da" ? da : (texts[da] ?? UI[da]?.[lang] ?? da), vars);
+  return (da, vars) => fill(lang === "da" ? da : (texts[da] ?? (UI[da] ?? PAGES[da])?.[lang] ?? da), vars);
 }
 
 export const UI: Record<string, { en: string; de: string }> = {
@@ -69,6 +70,32 @@ export const UI: Record<string, { en: string; de: string }> = {
     en: "Ordering and paying is in Danish. Feel free to ask the restaurant if you are unsure.",
     de: "Bestellung und Bezahlung sind auf Dänisch. Fragen Sie gern im Restaurant nach.",
   },
+
+  // Forsiden
+  "Hvem har åbent?": { en: "Who's open?", de: "Wer hat geöffnet?" },
+  "Hvem har åbent i dag?": { en: "Who's open today?", de: "Wer hat heute geöffnet?" },
+  "Hvem har åbent i aften?": { en: "Who's open tonight?", de: "Wer hat heute Abend geöffnet?" },
+  "Ingen har åbent lige nu.": { en: "Nobody is open right now.", de: "Gerade hat niemand geöffnet." },
+  "Ét sted har åbent lige nu.": { en: "One place is open right now.", de: "Ein Lokal hat gerade geöffnet." },
+  "{n} steder har åbent lige nu.": { en: "{n} places are open right now.", de: "{n} Lokale haben gerade geöffnet." },
+  Søg: { en: "Search", de: "Suchen" },
+  "Søg, fx pizza eller durum": { en: "Search, e.g. pizza or kebab", de: "Suchen, z. B. Pizza oder Döner" },
+  "Åben nu": { en: "Open now", de: "Jetzt geöffnet" },
+  Takeaway: { en: "Takeaway", de: "Zum Mitnehmen" },
+  "Spis på stedet": { en: "Eat in", de: "Vor Ort essen" },
+  "Bestil her": { en: "Order here", de: "Hier bestellen" },
+  "Halv pris på 1 ret til kl. {tid}": { en: "Half price on 1 dish until {tid}", de: "Halber Preis auf 1 Gericht bis {tid} Uhr" },
+  "Halv pris på {n} retter til kl. {tid}": { en: "Half price on {n} dishes until {tid}", de: "Halber Preis auf {n} Gerichte bis {tid} Uhr" },
+  "Kommer snart": { en: "Coming soon", de: "Bald dabei" },
+  "Ingen steder passer.": { en: "No places match.", de: "Keine Lokale gefunden." },
+  "Vis alle": { en: "Show all", de: "Alle zeigen" },
+  "Travlt, ": { en: "Busy, ", de: "Viel los, " },
+  "Dagens tilbud": { en: "Today's offers", de: "Angebote des Tages" },
+  "Se alle {n} ›": { en: "See all {n} ›", de: "Alle {n} ansehen ›" },
+  "Stederne med tilbud i dag har ikke åbent lige nu.": { en: "The places with offers today are not open right now.", de: "Die Lokale mit Angeboten haben gerade geschlossen." },
+  "Kl. {tid}": { en: "{tid}", de: "{tid} Uhr" },
+  Mad: { en: "Food", de: "Essen" },
+  Favoritter: { en: "Favourites", de: "Favoriten" },
 
   // Ugedage
   Mandag: { en: "Monday", de: "Montag" },

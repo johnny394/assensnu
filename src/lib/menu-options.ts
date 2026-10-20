@@ -61,7 +61,9 @@ export function priceChoice(place: Place, c: Choice): Result<Omit<OrderLine, "qu
 }
 
 // "Fam. + bacon, feta" til køkkenet og kunden
-export function choiceText(l: Pick<OrderLine, "size" | "extras">): string {
-  const extras = l.extras?.length ? `+ ${l.extras.map((e) => e.toLowerCase()).join(", ")}` : "";
-  return [l.size, extras].filter(Boolean).join(" ");
+// t oversætter navnene for turister. Tilvalg skrives med lille, når de står på dansk.
+export function choiceText(l: Pick<OrderLine, "size" | "extras">, t: (s: string) => string = (s) => s): string {
+  const extra = (e: string) => (t(e) === e ? e.toLowerCase() : t(e));
+  const extras = l.extras?.length ? `+ ${l.extras.map(extra).join(", ")}` : "";
+  return [l.size && t(l.size), extras].filter(Boolean).join(" ");
 }

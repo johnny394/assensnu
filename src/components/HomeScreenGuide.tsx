@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { phoneSubscription } from "./phone-push";
+import { useLang } from "./useLang";
 
 type InstallPrompt = Event & { prompt: () => Promise<void> };
 
@@ -25,6 +26,7 @@ async function subscribe(push: PushFor): Promise<PushState> {
 // Beder om lov til at give besked, når restauranten svarer. Skal ses med det samme.
 // På iPhone virker beskeder fra en hjemmeside kun fra hjemmeskærmen, så der vises vejen dertil.
 export function HomeScreenGuide({ title, text, push, iosLastStep = "Bestil fremover fra det nye ikon, så får du besked", iosNote = "Denne gang siger siden her til, når maden er klar, hvis du holder den åben." }: { title: string; text: string; push?: PushFor; iosLastStep?: string; iosNote?: string }) {
+  const { t } = useLang();
   const [platform, setPlatform] = useState<"ios" | "other" | "installed" | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
   const [notify, setNotify] = useState<NotificationPermission | "unsupported">("unsupported");
@@ -56,20 +58,22 @@ export function HomeScreenGuide({ title, text, push, iosLastStep = "Bestil fremo
   const status =
     notify === "granted" ? (
       !push || pushState === "ok" ? (
-        <p className="font-bold text-go">✓ Du får besked på denne telefon, også når den er låst.</p>
+        <p className="font-bold text-go">{t("✓ Du får besked på denne telefon, også når den er låst.")}</p>
       ) : pushState === "pending" ? (
-        <p className="text-ink-soft">Slår beskeder til …</p>
+        <p className="text-ink-soft">{t("Slår beskeder til …")}</p>
       ) : (
         <p className="font-bold text-stamp">
-          {pushState === "no-key"
-            ? "Beskeder er ikke sat op på AssensNu endnu. Hold siden her åben, så siger den til."
-            : pushState === "unsupported"
-              ? "Telefonen kan ikke få beskeder herfra. Hold siden her åben, så siger den til."
-              : "Beskeder kunne ikke slås til. Hold siden her åben, så siger den til."}
+          {t(
+            pushState === "no-key"
+              ? "Beskeder er ikke sat op på AssensNu endnu. Hold siden her åben, så siger den til."
+              : pushState === "unsupported"
+                ? "Telefonen kan ikke få beskeder herfra. Hold siden her åben, så siger den til."
+                : "Beskeder kunne ikke slås til. Hold siden her åben, så siger den til.",
+          )}
         </p>
       )
     ) : notify === "denied" ? (
-      <p className="font-bold text-stamp">Du har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.</p>
+      <p className="font-bold text-stamp">{t("Du har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.")}</p>
     ) : null;
 
   // Har kunden allerede svaret, er en enkelt linje nok
@@ -85,30 +89,30 @@ export function HomeScreenGuide({ title, text, push, iosLastStep = "Bestil fremo
       </p>
       {platform === "ios" ? (
         <>
-          <p className="mt-2">På iPhone skal AssensNu ligge på hjemmeskærmen, før den kan give besked:</p>
+          <p className="mt-2">{t("På iPhone skal AssensNu ligge på hjemmeskærmen, før den kan give besked:")}</p>
           <ol className="mt-4 space-y-3">
             <li className="flex items-center gap-3">
               <Step n={1} />
               <span>
-                Tryk på <strong>Del</strong>-knappen
-                <svg viewBox="0 0 24 24" className="mx-1 inline h-6 w-6 align-[-5px] text-stamp" fill="none" stroke="currentColor" strokeWidth="2" aria-label="Del-knappen">
+                {t("Tryk på")} <strong>{t("Del")}</strong>
+                <svg viewBox="0 0 24 24" className="mx-1 inline h-6 w-6 align-[-5px] text-stamp" fill="none" stroke="currentColor" strokeWidth="2" aria-label={t("Del")}>
                   <path d="M12 3v12M8 7l4-4 4 4M5 11v9h14v-9" />
                 </svg>
-                nederst i Safari
+                {t("nederst i Safari")}
               </span>
             </li>
             <li className="flex items-center gap-3">
               <Step n={2} />
               <span>
-                Vælg <strong>Føj til hjemmeskærm</strong> og tryk <strong>Tilføj</strong>
+                {t("Vælg")} <strong>{t("Føj til hjemmeskærm")}</strong> {t("og tryk")} <strong>{t("Tilføj")}</strong>
               </span>
             </li>
             <li className="flex items-center gap-3">
               <Step n={3} />
-              <span>{iosLastStep}</span>
+              <span>{t(iosLastStep)}</span>
             </li>
           </ol>
-          {iosNote && <p className="mt-4 text-ink-soft">{iosNote}</p>}
+          {iosNote && <p className="mt-4 text-ink-soft">{t(iosNote)}</p>}
         </>
       ) : (
         <>
@@ -117,11 +121,11 @@ export function HomeScreenGuide({ title, text, push, iosLastStep = "Bestil fremo
             onClick={async () => setNotify(await Notification.requestPermission())}
             className="mt-4 w-full bg-stamp px-5 py-4 text-xl font-bold text-paper"
           >
-            Ja tak, giv mig besked
+            {t("Ja tak, giv mig besked")}
           </button>
           {platform === "other" && installPrompt && (
             <button onClick={() => installPrompt.prompt()} className="mt-3 w-full border-2 border-ink px-5 py-3 text-lg font-bold">
-              Læg AssensNu på hjemmeskærmen
+              {t("Læg AssensNu på hjemmeskærmen")}
             </button>
           )}
         </>

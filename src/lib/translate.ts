@@ -1,7 +1,8 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { cookies, headers } from "next/headers";
 import { after } from "next/server";
-import { placeTexts, type Lang } from "./i18n";
+import { langFromHeader, parseLang, placeTexts, translator, type Lang } from "./i18n";
 import { store } from "./store";
 import type { Place } from "./types";
 
@@ -20,10 +21,27 @@ const remembered = new Map<string, string>(); // også i serverens hukommelse, h
 
 export const canTranslate = () => !!process.env.ANTHROPIC_API_KEY?.trim();
 
+// Sproget: det, man valgte sidst med knapperne, ellers telefonens sprog
+export async function chooseLang(): Promise<Lang> {
+  return parseLang((await cookies()).get("sprog")?.value) ?? langFromHeader((await headers()).get("accept-language"));
+}
+
+// Til overskrifter på serverens sider
+export async function pageT(texts?: Record<string, string>) {
+  return translator(await chooseLang(), texts);
+}
+
 // Det, stedets side skal bruge. Mangler noget, oversættes det bagefter, og siden spørger igen om lidt.
-export async function translatePlace(place: Place, lang: Lang): Promise<MenuTranslation> {
+export const translatePlace = (place: Place, lang: Lang) => translateTexts(placeTexts(place), lang);
+
+// Forsiden: køkkentyper og dagens tilbud fra alle steder
+export function translateFrontPage(places: Place[], lang: Lang) {
+  const sources = places.flatMap((p) => [...p.cuisines, ...(p.news ? [p.news.text] : [])]);
+  return translateTexts([...new Set(sources.map((s) => s.trim()).filter(Boolean))], lang);
+}
+
+async function translateTexts(sources: string[], lang: Lang): Promise<MenuTranslation> {
   if (lang === "da") return { texts: {}, state: "done" };
-  const sources = placeTexts(place);
   const saved = await store.getTranslations(lang, sources).catch((e) => {
     console.error("Kunne ikke hente oversættelser", e);
     return {} as Record<string, string>;

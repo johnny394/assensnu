@@ -10,6 +10,7 @@ import { field, label } from "../Checkout";
 import { useCart } from "../useCart";
 import { entryKeys, hostKey, joinGroup, leaveGroup, saveEntryKey } from "../useGroup";
 import { usePolling } from "../usePolling";
+import { useLang } from "../useLang";
 
 const CUSTOMER_KEY = "assensnu:kunde";
 
@@ -24,6 +25,7 @@ export function GroupBoard({ place, initial }: { place: Place; initial: GroupVie
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useLang();
 
   useEffect(() => {
     setHost(hostKey(initial.id));
@@ -56,7 +58,7 @@ export function GroupBoard({ place, initial }: { place: Place; initial: GroupVie
     }).catch(() => null);
     const body = await res?.json().catch(() => null);
     setBusy(false);
-    if (!res?.ok || !body?.entryId) return setError(body?.error ?? "Det gik ikke. Tjek din forbindelse og prøv igen.");
+    if (!res?.ok || !body?.entryId) return setError(t(body?.error ?? "Det gik ikke. Tjek din forbindelse og prøv igen."));
     saveEntryKey(body.entryId, body.key);
     setMine(entryKeys());
     try {
@@ -68,13 +70,13 @@ export function GroupBoard({ place, initial }: { place: Place; initial: GroupVie
   }
 
   async function remove(entryId: string, who: string) {
-    if (!confirm(`Fjern ${who}s mad fra fællesbestillingen?`)) return;
+    if (!confirm(t("Fjern maden til {navn} fra fællesbestillingen?", { navn: who }))) return;
     const res = await fetch(`/api/groups/${data.id}`, {
       method: "DELETE",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ entryId, key: mine[entryId] ?? host }),
     }).catch(() => null);
-    if (!res?.ok) alert("Det gik ikke igennem. Prøv igen.");
+    if (!res?.ok) alert(t("Det gik ikke igennem. Prøv igen."));
     refresh();
   }
 
@@ -83,56 +85,54 @@ export function GroupBoard({ place, initial }: { place: Place; initial: GroupVie
       <Link href={`/sted/${place.slug}`} className="inline-block py-2 text-lg text-ink-soft">
         ‹ {place.name}
       </Link>
-      <h1 className="mt-2 font-display text-[2.3rem] font-black leading-tight tracking-tight">Fællesbestilling</h1>
-      <p className="text-lg text-ink-soft">
-        Hos {data.placeName} · startet af {data.hostName}
-      </p>
+      <h1 className="mt-2 font-display text-[2.3rem] font-black leading-tight tracking-tight">{t("Fællesbestilling")}</h1>
+      <p className="text-lg text-ink-soft">{t("Hos {navn} · startet af {vært}", { navn: data.placeName, vært: data.hostName })}</p>
 
       {data.orderId && (
         <div className="mt-6 border-2 border-go bg-go-soft px-5 py-4 text-lg">
-          <p className="font-bold">Bestillingen er sendt til {data.placeName}.</p>
+          <p className="font-bold">{t("Bestillingen er sendt til {navn}.", { navn: data.placeName })}</p>
           <Link href={`/ordre/${data.orderId}`} className="mt-1 inline-block font-bold underline">
-            Følg bestillingen ›
+            {t("Følg bestillingen ›")}
           </Link>
         </div>
       )}
       {!data.open && !data.orderId && (
-        <p className="mt-6 bg-stamp-soft px-4 py-3 text-lg text-stamp">Den her fællesbestilling er udløbet. En fællesbestilling gælder kun samme dag.</p>
+        <p className="mt-6 bg-stamp-soft px-4 py-3 text-lg text-stamp">{t("Den her fællesbestilling er udløbet. En fællesbestilling gælder kun samme dag.")}</p>
       )}
 
       {data.open && <ShareBox placeName={data.placeName} />}
 
       {data.open && (
         <section className="mt-8">
-          <h2 className="font-display text-2xl font-extrabold tracking-tight">Din mad</h2>
+          <h2 className="font-display text-2xl font-extrabold tracking-tight">{t("Din mad")}</h2>
           {lines.length === 0 && data.entries.some((e) => mine[e.id]) ? (
             <p className="mt-1 text-lg">
-              ✓ Din mad er med.{" "}
+              {t("✓ Din mad er med.")}{" "}
               <Link href={`/sted/${place.slug}`} className="underline">
-                Vil du have mere med?
+                {t("Vil du have mere med?")}
               </Link>
             </p>
           ) : lines.length === 0 ? (
             <>
-              <p className="mt-1 text-lg text-ink-soft">Vælg din mad på menukortet. Bagefter kommer du tilbage hertil.</p>
+              <p className="mt-1 text-lg text-ink-soft">{t("Vælg din mad på menukortet. Bagefter kommer du tilbage hertil.")}</p>
               <Link href={`/sted/${place.slug}`} className="mt-3 flex min-h-14 items-center justify-center bg-ink px-5 py-4 text-center text-lg font-bold text-paper">
-                Vælg din mad hos {place.name}
+                {t("Vælg din mad hos {navn}", { navn: place.name })}
               </Link>
             </>
           ) : (
             <form onSubmit={add} className="mt-2 space-y-4">
               <Lines lines={lines} />
               <Link href={`/sted/${place.slug}`} className="inline-block text-lg underline">
-                Ret i maden
+                {t("Ret i maden")}
               </Link>
               <div>
-                <label htmlFor="name" className={label}>Dit navn</label>
+                <label htmlFor="name" className={label}>{t("Dit navn")}</label>
                 <input id="name" required autoComplete="given-name" value={name} onChange={(e) => setName(e.target.value)} className={field} />
-                <p className="mt-1 text-ink-soft">Så køkkenet ved, hvem maden er til.</p>
+                <p className="mt-1 text-ink-soft">{t("Så køkkenet ved, hvem maden er til.")}</p>
               </div>
               {error && <p className="font-bold text-stamp">{error}</p>}
               <button disabled={busy} className="min-h-14 w-full bg-stamp px-5 py-4 text-lg font-bold text-white disabled:opacity-60">
-                {busy ? "Et øjeblik …" : `Læg min mad i · ${kr(myTotal)}`}
+                {busy ? t("Et øjeblik …") : t("Læg min mad i · {pris}", { pris: kr(myTotal) })}
               </button>
             </form>
           )}
@@ -141,7 +141,7 @@ export function GroupBoard({ place, initial }: { place: Place; initial: GroupVie
 
       <section className="mt-10">
         <h2 className="font-display text-2xl font-extrabold tracking-tight">
-          {people === 0 ? "Ingen har lagt mad i endnu" : people === 1 ? "1 person er med" : `${people} personer er med`}
+          {t(people === 0 ? "Ingen har lagt mad i endnu" : people === 1 ? "1 person er med" : "{n} personer er med", { n: people })}
         </h2>
         <ul className="mt-2 border-t-[3px] border-double border-ink">
           {data.entries.map((e) => (
@@ -149,21 +149,21 @@ export function GroupBoard({ place, initial }: { place: Place; initial: GroupVie
               <p className="flex items-baseline justify-between gap-3 text-lg">
                 <strong>
                   {e.name}
-                  {mine[e.id] && <span className="font-normal text-ink-soft"> (dig)</span>}
+                  {mine[e.id] && <span className="font-normal text-ink-soft"> {t("(dig)")}</span>}
                 </strong>
                 <span className="tabular-nums">{kr(e.total)}</span>
               </p>
               <Lines lines={e.lines} quiet />
               {data.open && (mine[e.id] || host) && (
                 <button onClick={() => remove(e.id, e.name)} className="mt-1 text-ink-soft underline">
-                  Fjern
+                  {t("Fjern")}
                 </button>
               )}
             </li>
           ))}
           {people > 0 && (
             <li className="flex justify-between border-t-2 border-ink px-1 py-3.5 text-xl font-bold">
-              <span>I alt</span>
+              <span>{t("I alt")}</span>
               <span className="tabular-nums">{kr(data.total)}</span>
             </li>
           )}
@@ -174,17 +174,17 @@ export function GroupBoard({ place, initial }: { place: Place; initial: GroupVie
         (host ? (
           <div className="mt-8">
             {people === 0 ? (
-              <p className="text-lg text-ink-soft">Når de andre har lagt deres mad i, sender du det hele herfra.</p>
+              <p className="text-lg text-ink-soft">{t("Når de andre har lagt deres mad i, sender du det hele herfra.")}</p>
             ) : (
               <Link href={`/faelles/${data.id}/bestil`} className="flex min-h-14 items-center justify-center bg-stamp px-5 py-4 text-xl font-bold text-white">
-                Send bestillingen · {kr(data.total)}
+                {t("Send bestillingen · {pris}", { pris: kr(data.total) })}
               </Link>
             )}
-            <p className="mt-2 text-ink-soft">Kun du kan sende den. Når den er sendt, kan der ikke lægges mere i.</p>
+            <p className="mt-2 text-ink-soft">{t("Kun du kan sende den. Når den er sendt, kan der ikke lægges mere i.")}</p>
           </div>
         ) : (
           <p className="mt-8 border-2 border-ink bg-surface px-5 py-4 text-lg">
-            <strong>{data.hostName} sender bestillingen</strong>, når alle er med. Siden her opdaterer sig selv.
+            {t("{vært} sender bestillingen, når alle er med. Siden her opdaterer sig selv.", { vært: data.hostName })}
           </p>
         ))}
     </>
@@ -192,13 +192,14 @@ export function GroupBoard({ place, initial }: { place: Place; initial: GroupVie
 }
 
 function Lines({ lines, quiet }: { lines: (Pick<OrderLine, "name" | "price" | "quantity" | "size" | "extras"> & { key?: string })[]; quiet?: boolean }) {
+  const { t } = useLang();
   return (
     <ul className={quiet ? "text-ink-soft" : "text-lg"}>
       {lines.map((l, i) => (
         <li key={l.key ?? i} className="flex justify-between gap-3">
           <span>
-            {l.quantity} × {l.name}
-            {choiceText(l) && <span className="block text-base">{choiceText(l)}</span>}
+            {l.quantity} × {t(l.name)}
+            {choiceText(l) && <span className="block text-base">{choiceText(l, t)}</span>}
           </span>
           {!quiet && <span className="tabular-nums">{kr(l.price * l.quantity)}</span>}
         </li>
@@ -209,12 +210,13 @@ function Lines({ lines, quiet }: { lines: (Pick<OrderLine, "name" | "price" | "q
 
 function ShareBox({ placeName }: { placeName: string }) {
   const [copied, setCopied] = useState(false);
+  const { t } = useLang();
   const share = async () => {
     const url = window.location.href;
-    const text = `Vi bestiller mad fra ${placeName}. Vælg din mad her:`;
+    const text = t("Vi bestiller mad fra {navn}. Vælg din mad her:", { navn: placeName });
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Fællesbestilling", text, url });
+        await navigator.share({ title: t("Fællesbestilling"), text, url });
         return;
       } catch {
         // Lukket uden at dele, eller ikke muligt. Så kopierer vi linket i stedet.
@@ -224,15 +226,15 @@ function ShareBox({ placeName }: { placeName: string }) {
       await navigator.clipboard.writeText(url);
       setCopied(true);
     } catch {
-      prompt("Kopier linket og send det til de andre:", url);
+      prompt(t("Kopier linket og send det til de andre:"), url);
     }
   };
   return (
     <div className="mt-6 border-2 border-dashed border-stamp bg-stamp-soft px-4 py-4">
-      <p className="text-lg font-bold">Send linket til dem, der skal have mad med</p>
-      <p className="text-ink-soft">De vælger selv deres mad og skriver deres navn. Ingen skal oprette noget.</p>
+      <p className="text-lg font-bold">{t("Send linket til dem, der skal have mad med")}</p>
+      <p className="text-ink-soft">{t("De vælger selv deres mad og skriver deres navn. Ingen skal oprette noget.")}</p>
       <button onClick={share} className="mt-3 min-h-14 w-full bg-ink px-5 py-3 text-lg font-bold text-paper">
-        {copied ? "Linket er kopieret. Sæt det ind i en besked." : "Del linket"}
+        {t(copied ? "Linket er kopieret. Sæt det ind i en besked." : "Del linket")}
       </button>
     </div>
   );

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { HomeScreenGuide } from "./HomeScreenGuide";
 import { phoneSubscription } from "./phone-push";
 import { useFavorites } from "./useFavorites";
+import { useLang } from "./useLang";
 
 const KEY = "assensnu:folger";
 
@@ -28,6 +29,7 @@ type State = "loading" | "idle" | "working" | "following" | "ios" | "denied" | "
 export function FollowButton({ slug, name, publicKey }: { slug: string; name: string; publicKey: string | null }) {
   const [state, setState] = useState<State>("loading");
   const { favorites, toggle } = useFavorites();
+  const { t } = useLang();
 
   useEffect(() => {
     setState(readFollowing().includes(slug) ? "following" : "idle");
@@ -70,9 +72,9 @@ export function FollowButton({ slug, name, publicKey }: { slug: string; name: st
     return (
       <div className="mt-5">
         <HomeScreenGuide
-          title={`Følg ${name}`}
+          title={t("Følg {navn}", { navn: name })}
           text=""
-          iosLastStep={`Åbn ${name} fra det nye ikon, og tryk Følg igen`}
+          iosLastStep={t("Åbn {navn} fra det nye ikon, og tryk Følg igen", { navn: name })}
           iosNote=""
         />
       </div>
@@ -82,9 +84,9 @@ export function FollowButton({ slug, name, publicKey }: { slug: string; name: st
   if (state === "following") {
     return (
       <p className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-2 border-ink px-4 py-3 text-lg">
-        <span className="font-bold">✓ Du følger {name}</span>
+        <span className="font-bold">{t("✓ Du følger {navn}", { navn: name })}</span>
         <button onClick={unfollow} className="text-ink-soft underline">
-          Stop
+          {t("Stop")}
         </button>
       </p>
     );
@@ -101,12 +103,12 @@ export function FollowButton({ slug, name, publicKey }: { slug: string; name: st
           <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2ZM10 20a2 2 0 0 0 4 0" />
         </svg>
         <span>
-          <span className="block text-lg font-bold text-stamp">{state === "working" ? "Et øjeblik …" : `Følg ${name}`}</span>
-          <span className="block text-ink-soft">Få besked om dagens tilbud. Højst én om dagen.</span>
+          <span className="block text-lg font-bold text-stamp">{state === "working" ? t("Et øjeblik …") : t("Følg {navn}", { navn: name })}</span>
+          <span className="block text-ink-soft">{t("Få besked om dagens tilbud. Højst én om dagen.")}</span>
         </span>
       </button>
-      {state === "denied" && <p className="mt-2 font-bold text-stamp">Telefonen har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.</p>}
-      {state === "failed" && <p className="mt-2 font-bold text-stamp">Det lykkedes ikke at slå beskeder til på denne telefon. Prøv igen senere.</p>}
+      {state === "denied" && <p className="mt-2 font-bold text-stamp">{t("Telefonen har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.")}</p>}
+      {state === "failed" && <p className="mt-2 font-bold text-stamp">{t("Det lykkedes ikke at slå beskeder til på denne telefon. Prøv igen senere.")}</p>}
     </div>
   );
 }

@@ -14,9 +14,12 @@ export type OrderInput = {
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
+// Danske numre gemmes som "12 34 56 78". Turister kan skrive et udenlandsk nummer med + foran, fx +49 151 2345678.
 export function cleanPhone(phone: string): string | null {
-  const digits = phone.replace(/\D/g, "").replace(/^45(?=\d{8}$)/, "");
-  return /^\d{8}$/.test(digits) ? digits.replace(/(\d{2})(?=\d)/g, "$1 ") : null;
+  const abroad = /^\s*(\+|00)/.test(phone);
+  const digits = phone.replace(/\D/g, "").replace(/^00/, "").replace(/^45(?=\d{8}$)/, "");
+  if (/^\d{8}$/.test(digits)) return digits.replace(/(\d{2})(?=\d)/g, "$1 ");
+  return abroad && /^[1-9]\d{7,14}$/.test(digits) ? `+${digits}` : null;
 }
 
 // Tjekker en bestilling og regner prisen ud fra menuen, så kunden ikke selv kan sætte prisen
@@ -25,7 +28,7 @@ export function buildOrder(place: Place, input: OrderInput, now = new Date()): R
   const name = input.name?.trim();
   if (!name) return { ok: false, error: "Skriv dit navn, så restauranten ved, hvem der henter." };
   const phone = cleanPhone(input.phone ?? "");
-  if (!phone) return { ok: false, error: "Skriv dit telefonnummer med 8 cifre." };
+  if (!phone) return { ok: false, error: "Skriv dit telefonnummer med 8 cifre. Et udenlandsk nummer skal starte med +." };
 
   const lines = [];
   for (const { itemId, quantity, size, extras, person } of (input.items ?? []).slice(0, 200)) {
@@ -86,7 +89,7 @@ export function buildBooking(place: Place, input: BookingInput, today: string): 
   const name = input.name?.trim();
   if (!name) return { ok: false, error: "Skriv dit navn." };
   const phone = cleanPhone(input.phone ?? "");
-  if (!phone) return { ok: false, error: "Skriv dit telefonnummer med 8 cifre." };
+  if (!phone) return { ok: false, error: "Skriv dit telefonnummer med 8 cifre. Et udenlandsk nummer skal starte med +." };
   return {
     ok: true,
     value: {
