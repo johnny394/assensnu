@@ -1,0 +1,281 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Wordmark } from "@/components/AppShell";
+import { Sheet } from "@/components/panel/DetailsEditors";
+import { Toggle } from "@/components/panel/Panel";
+import type { AdminPlace } from "@/lib/admin";
+
+async function post(url: string, body: unknown): Promise<{ ok: boolean; error?: string; pin?: string; slug?: string }> {
+  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+  const data = await res?.json().catch(() => null);
+  return res?.ok ? { ok: true, ...data } : { ok: false, error: data?.error ?? "Ingen forbindelse. Prøv igen." };
+}
+
+export function AdminLogin() {
+  const router = useRouter();
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function login(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const res = await post("/api/admin/login", { code });
+    setBusy(false);
+    if (res.ok) router.refresh();
+    else setError(res.error!);
+  }
+
+  return (
+    <form onSubmit={login} className="mx-auto max-w-sm space-y-4">
+      <label className="block">
+        <span className="mb-1.5 block text-lg font-bold">Din kode</span>
+        <input type="password" autoComplete="current-password" value={code} onChange={(e) => setCode(e.target.value)} className="w-full rounded-2xl border-2 border-line bg-surface px-4 py-3.5 text-lg" />
+      </label>
+      {error && <p role="alert" className="text-lg text-signal">{error}</p>}
+      <button disabled={busy || !code} className="min-h-14 w-full rounded-2xl bg-buoy px-5 text-xl font-bold disabled:opacity-60">
+        {busy ? "Logger ind…" : "Log ind"}
+      </button>
+    </form>
+  );
+}
+
+// Johnnys overblik over alle spisesteder
+export function AdminPanel({ places }: { places: AdminPlace[] }) {
+  const router = useRouter();
+  const [open, setOpen] = useState<string | "new" | null>(null);
+  const selected = places.find((p) => p.slug === open);
+
+  const withCode = places.filter((p) => p.hasCode).length;
+  const ordering = places.filter((p) => p.acceptsOrders).length;
+
+  async function logout() {
+    await post("/api/admin/logout", {});
+    router.refresh();
+  }
+
+  return (
+    <main className="mx-auto max-w-2xl px-5 py-6">
+      <div className="flex items-center justify-between">
+        <Wordmark />
+        <button onClick={logout} className="py-2 text-lg text-ink-soft underline">Log ud</button>
+      </div>
+      <h1 className="mt-6 font-display text-[2.3rem] font-extrabold leading-tight tracking-tight">Dit panel</h1>
+      <p className="text-lg text-ink-soft">
+        {places.length} spisesteder · {withCode} kan logge ind · {ordering} tager imod bestillinger
+      </p>
+
+      <button onClick={() => setOpen("new")} className="mt-6 min-h-14 w-full rounded-2xl bg-buoy px-5 text-xl font-bold">
+        + Nyt spisested
+      </button>
+
+      <ul className="mt-6 space-y-3">
+        {places.map((p) => (
+          <li key={p.slug}>
+            <button onClick={() => setOpen(p.slug)} className="w-full rounded-2xl border-2 border-ink bg-surface px-4 py-3 text-left">
+              <span className="flex items-baseline justify-between gap-3">
+                <span className="text-lg font-bold">{p.name}</span>
+                <span className="shrink-0 text-ink-soft">Ret ›</span>
+              </span>
+              <span className="block text-ink-soft">{p.address}</span>
+              <span className="mt-2 flex flex-wrap gap-1.5">
+                {!p.published && <Badge tone="dark">Skjult</Badge>}
+                {p.hasCode ? <Badge tone="go">Har kode</Badge> : <Badge tone="warn">Mangler kode</Badge>}
+                {p.acceptsOrders && <Badge tone="go">Bestilling</Badge>}
+                {p.acceptsBookings && <Badge tone="go">Bordbooking</Badge>}
+                {!p.hasMenu && <Badge tone="soft">Ingen menu</Badge>}
+                {!p.hasHours && <Badge tone="soft">Ingen åbningstider</Badge>}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {open === "new" && (
+        <BasicsSheet
+          title="Nyt spisested"
+          onClose={() => setOpen(null)}
+          onSaved={(slug) => {
+            router.refresh();
+            setOpen(slug ?? null);
+          }}
+        />
+      )}
+      {selected && <PlaceSheet place={selected} onClose={() => setOpen(null)} />}
+    </main>
+  );
+}
+
+function Badge({ tone, children }: { tone: "go" | "warn" | "soft" | "dark"; children: React.ReactNode }) {
+  const style = { go: "bg-go-soft text-go", warn: "bg-buoy text-ink", soft: "bg-line/60 text-ink-soft", dark: "bg-ink text-paper" }[tone];
+  return <span className={`rounded-full px-2.5 py-0.5 text-sm font-bold ${style}`}>{children}</span>;
+}
+
+const YES_NO: { label: string; value: boolean | null }[] = [
+  { label: "Ja", value: true },
+  { label: "Nej", value: false },
+  { label: "Ved ikke", value: null },
+];
+
+function BasicsFields({ form, setForm }: { form: Basics; setForm: (f: Basics) => void }) {
+  const field = "w-full rounded-2xl border-2 border-line bg-surface px-4 py-3 text-lg";
+  return (
+    <div className="space-y-4">
+      <label className="block">
+        <span className="mb-1 block text-lg font-bold">Navn</span>
+        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={field} />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-lg font-bold">Adresse</span>
+        <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Østergade 12, 5610 Assens" className={field} />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-lg font-bold">Telefon</span>
+        <input type="tel" inputMode="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="12 34 56 78" className={field} />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-lg font-bold">Madtyper</span>
+        <input value={form.cuisines} onChange={(e) => setForm({ ...form, cuisines: e.target.value })} placeholder="Pizza, Kebab" className={field} />
+        <span className="mt-1 block text-ink-soft">Skriv komma imellem. De bruges til filterknapperne på forsiden.</span>
+      </label>
+      {(["takeaway", "dineIn"] as const).map((key) => (
+        <fieldset key={key}>
+          <legend className="mb-1 text-lg font-bold">{key === "takeaway" ? "Takeaway" : "Siddepladser"}</legend>
+          <div className="grid grid-cols-3 gap-2">
+            {YES_NO.map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => setForm({ ...form, [key]: o.value })}
+                aria-pressed={form[key] === o.value}
+                className={`min-h-12 rounded-2xl border-2 text-lg font-bold ${form[key] === o.value ? "border-ink bg-ink text-paper" : "border-line bg-surface"}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+    </div>
+  );
+}
+
+type Basics = { name: string; address: string; phone: string; cuisines: string; takeaway: boolean | null; dineIn: boolean | null };
+
+const toBasics = (p?: AdminPlace): Basics => ({
+  name: p?.name ?? "",
+  address: p?.address ?? "",
+  phone: p?.phone ?? "",
+  cuisines: p?.cuisines.join(", ") ?? "",
+  takeaway: p?.takeaway ?? null,
+  dineIn: p?.dineIn ?? null,
+});
+
+function BasicsSheet({ title, onClose, onSaved }: { title: string; onClose: () => void; onSaved: (slug?: string) => void }) {
+  const [form, setForm] = useState<Basics>(toBasics());
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const res = await post("/api/admin/places", form);
+    setSaving(false);
+    if (res.ok) onSaved(res.slug);
+    else setError(res.error!);
+  }
+
+  return (
+    <Sheet title={title} onClose={onClose} onSave={save} saving={saving} error={error}>
+      <BasicsFields form={form} setForm={setForm} />
+      <p className="mt-6 text-ink-soft">Bagefter kan du give stedet en kode, så de selv kan skrive åbningstider og menukort ind.</p>
+    </Sheet>
+  );
+}
+
+function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void }) {
+  const router = useRouter();
+  const [form, setForm] = useState<Basics>(() => toBasics(place));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pin, setPin] = useState<string | null>(null);
+  const [confirmNew, setConfirmNew] = useState(false);
+  const url = `/api/admin/places/${place.slug}`;
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const res = await post(url, { basics: form });
+    setSaving(false);
+    if (!res.ok) return setError(res.error!);
+    router.refresh();
+    onClose();
+  }
+
+  async function toggle(key: "published" | "acceptsOrders" | "acceptsBookings") {
+    setError(null);
+    const res = await post(url, { [key]: !place[key] });
+    if (res.ok) router.refresh();
+    else setError(res.error!);
+  }
+
+  async function makeCode() {
+    setConfirmNew(false);
+    setError(null);
+    const res = await post(url, { newCode: true });
+    if (!res.ok) return setError(res.error!);
+    setPin(res.pin!);
+    router.refresh();
+  }
+
+  return (
+    <Sheet title={place.name} onClose={onClose} onSave={save} saving={saving} error={error}>
+      <section className="rounded-3xl border-2 border-ink bg-surface px-5 py-5">
+        <h3 className="font-display text-xl font-black tracking-tight">Kode til restaurantpanelet</h3>
+        {pin ? (
+          <>
+            <p className="mt-3 font-display text-6xl font-black tracking-[0.2em] tabular-nums">{pin}</p>
+            <p className="mt-3 text-lg">Skriv koden ned og giv den til {place.name}. Den vises kun nu.</p>
+            <p className="mt-2 text-lg">De logger ind på {window.location.host}/panel, vælger {place.name} og taster koden.</p>
+          </>
+        ) : confirmNew ? (
+          <>
+            <p className="mt-2 text-lg">Den gamle kode holder op med at virke, og restauranten skal logge ind igen med den nye.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button onClick={makeCode} className="min-h-12 rounded-2xl bg-buoy text-lg font-bold">Ja, lav ny kode</button>
+              <button onClick={() => setConfirmNew(false)} className="min-h-12 rounded-2xl border-2 border-line text-lg">Fortryd</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mt-2 text-lg">{place.hasCode ? "Stedet har en kode og kan logge ind." : "Stedet har ingen kode endnu og kan ikke logge ind."}</p>
+            <button onClick={() => (place.hasCode ? setConfirmNew(true) : makeCode())} className="mt-3 min-h-12 w-full rounded-2xl bg-buoy px-5 text-lg font-bold">
+              {place.hasCode ? "Lav en ny kode" : "Lav en kode"}
+            </button>
+          </>
+        )}
+      </section>
+
+      <section className="mt-5 rounded-3xl border-2 border-line px-5 py-2">
+        <Toggle label="Tag imod bestillinger" hint="Kunderne kan bestille takeaway her" on={place.acceptsOrders} onClick={() => toggle("acceptsOrders")} />
+        <Toggle label="Tag imod bordforespørgsler" on={place.acceptsBookings} onClick={() => toggle("acceptsBookings")} />
+        <Toggle label="Vis på AssensNu" hint="Slået fra er stedet skjult for kunderne" on={place.published} onClick={() => toggle("published")} />
+      </section>
+      {(!place.hasMenu || !place.hasHours) && (
+        <p className="mt-3 px-1 text-ink-soft">
+          {[!place.hasHours && "åbningstider", !place.hasMenu && "menukort"].filter(Boolean).join(" og ")} mangler. Det skriver restauranten selv ind i deres panel.
+        </p>
+      )}
+
+      <h3 className="mb-3 mt-8 font-display text-xl font-black tracking-tight">Oplysninger</h3>
+      <BasicsFields form={form} setForm={setForm} />
+      <Link href={`/sted/${place.slug}`} target="_blank" className="mt-6 block text-lg underline">
+        Se stedets side
+      </Link>
+    </Sheet>
+  );
+}

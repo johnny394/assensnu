@@ -86,6 +86,14 @@ async function runChecks(): Promise<Check[]> {
       : { ok: false, text: "PANEL_SECRET mangler.", fix: "Tilføj en lang tilfældig tekst som PANEL_SECRET på Vercel." },
   );
 
+  checks.push(
+    (process.env.ADMIN_KODE?.trim().length ?? 0) >= 8
+      ? { ok: true, text: "ADMIN_KODE er sat, så du kan logge ind på /admin." }
+      : process.env.ADMIN_KODE
+        ? { ok: false, text: "ADMIN_KODE er for kort.", fix: "Brug mindst 8 tegn, så den ikke kan gættes. Ret den på Vercel og tryk Redeploy." }
+        : { ok: false, text: "ADMIN_KODE mangler, så du kan ikke logge ind på /admin.", fix: "Tilføj en kode på mindst 8 tegn som ADMIN_KODE på Vercel, og tryk Redeploy." },
+  );
+
   // Kolonnen til beskeder kom til efter første udgave af databasen
   const { error } = await createClient(url, key, { auth: { persistSession: false } }).from("orders").select("push").limit(1);
   checks.push(

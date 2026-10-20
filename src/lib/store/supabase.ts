@@ -258,6 +258,63 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       check(await db.from("bookings").update({ status, suggested_time: suggestedTime ?? null }).eq("id", id));
     },
 
+    async adminListPlaces() {
+      const rows = check(
+        await db
+          .from("places")
+          .select("slug, name, address, cuisines, phone, takeaway, dine_in, published, accepts_orders, accepts_bookings, panel_pin_hash, opening_hours (count), menu_categories (count)")
+          .order("name"),
+      ) as unknown as (Pick<PlaceRow, "slug" | "name" | "address" | "cuisines" | "phone" | "takeaway" | "dine_in" | "accepts_orders" | "accepts_bookings"> & {
+        published: boolean;
+        panel_pin_hash: string | null;
+        opening_hours: { count: number }[];
+        menu_categories: { count: number }[];
+      })[];
+      return rows.map((r) => ({
+        slug: r.slug,
+        name: r.name,
+        address: r.address,
+        cuisines: r.cuisines,
+        phone: r.phone ?? undefined,
+        takeaway: r.takeaway,
+        dineIn: r.dine_in,
+        published: r.published,
+        acceptsOrders: r.accepts_orders,
+        acceptsBookings: r.accepts_bookings,
+        hasCode: Boolean(r.panel_pin_hash),
+        hasHours: (r.opening_hours[0]?.count ?? 0) > 0,
+        hasMenu: (r.menu_categories[0]?.count ?? 0) > 0,
+      }));
+    },
+    async adminUpdatePlace(slug, p) {
+      const patch: Record<string, unknown> = {};
+      if (p.name !== undefined) patch.name = p.name;
+      if (p.address !== undefined) patch.address = p.address;
+      if (p.cuisines !== undefined) patch.cuisines = p.cuisines;
+      if (p.phone !== undefined) patch.phone = p.phone;
+      if (p.takeaway !== undefined) patch.takeaway = p.takeaway;
+      if (p.dineIn !== undefined) patch.dine_in = p.dineIn;
+      if (p.published !== undefined) patch.published = p.published;
+      if (p.acceptsOrders !== undefined) patch.accepts_orders = p.acceptsOrders;
+      if (p.acceptsBookings !== undefined) patch.accepts_bookings = p.acceptsBookings;
+      if (p.pinHash !== undefined) patch.panel_pin_hash = p.pinHash;
+      if (Object.keys(patch).length) check(await db.from("places").update(patch).eq("slug", slug));
+    },
+    async createPlace(slug, b) {
+      check(
+        await db.from("places").insert({
+          slug,
+          name: b.name,
+          address: b.address,
+          cuisines: b.cuisines,
+          phone: b.phone,
+          takeaway: b.takeaway,
+          dine_in: b.dineIn,
+          published: true,
+        }),
+      );
+    },
+
     async savePush({ kind, id }, subscription) {
       check(await db.from(kind === "order" ? "orders" : "bookings").update({ push: subscription }).eq("id", id));
     },

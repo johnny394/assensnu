@@ -16,7 +16,7 @@ async function saveDetails(body: object): Promise<string | null> {
 const field = "w-full rounded-2xl border-2 border-line bg-surface px-4 py-3 text-lg outline-none focus:border-ink";
 const small = "min-h-11 rounded-xl px-3 text-base";
 
-function Sheet({ title, onClose, onSave, saving, error, children }: {
+export function Sheet({ title, onClose, onSave, saving, error, children }: {
   title: string;
   onClose: () => void;
   onSave: () => void;

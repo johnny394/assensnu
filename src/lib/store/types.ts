@@ -1,3 +1,4 @@
+import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
 import type { Booking, BookingStatus, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
 
 export type NewOrder = Omit<Order, "id" | "number" | "status" | "createdAt" | "readyAt">;
@@ -39,6 +40,11 @@ export type Store = {
   getBooking(id: string): Promise<Booking | null>;
   listBookings(slug: string): Promise<Booking[]>;
   setBookingStatus(id: string, status: BookingStatus, suggestedTime?: string): Promise<void>;
+
+  // Johnnys eget panel
+  adminListPlaces(): Promise<AdminPlace[]>;
+  adminUpdatePlace(slug: string, patch: AdminPatch): Promise<void>;
+  createPlace(slug: string, basics: PlaceBasics): Promise<void>;
 
   savePush(target: PushTarget, subscription: PushSubscription | null): Promise<void>;
   getPush(target: PushTarget): Promise<PushSubscription | null>;

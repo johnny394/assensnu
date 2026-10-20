@@ -367,7 +367,7 @@ function EditButton({ label, missing, onClick }: { label: string; missing: boole
   );
 }
 
-function Toggle({ label, hint, on, onClick }: { label: string; hint?: string; on: boolean; onClick: () => void }) {
+export function Toggle({ label, hint, on, onClick }: { label: string; hint?: string; on: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick} role="switch" aria-checked={on} className="flex w-full items-center justify-between gap-4 border-b border-line py-3 text-left last:border-b-0">
       <span>
