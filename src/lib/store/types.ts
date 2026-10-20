@@ -17,6 +17,10 @@ export type PlaceDetails = {
   menu?: MenuCategory[];
 };
 
+// En kundes telefon, som vi kan sende en besked til, når restauranten svarer
+export type PushTarget = { kind: "order" | "booking"; id: string };
+export type PushSubscription = { endpoint: string; keys: { p256dh: string; auth: string } };
+
 // Alt, appen gemmer og henter. Der er to udgaver: i hukommelsen (til afprøvning)
 // og Supabase (til drift). Hvilken der bruges, afgøres i ./index.ts.
 export type Store = {
@@ -35,4 +39,7 @@ export type Store = {
   getBooking(id: string): Promise<Booking | null>;
   listBookings(slug: string): Promise<Booking[]>;
   setBookingStatus(id: string, status: BookingStatus, suggestedTime?: string): Promise<void>;
+
+  savePush(target: PushTarget, subscription: PushSubscription | null): Promise<void>;
+  getPush(target: PushTarget): Promise<PushSubscription | null>;
 };

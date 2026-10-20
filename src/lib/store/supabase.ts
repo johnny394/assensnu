@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { todayInCopenhagen } from "../hours";
 import type { Booking, Order, Place, Weekday } from "../types";
-import type { Store } from "./types";
+import type { PushSubscription, Store } from "./types";
 
 type PlaceRow = {
   slug: string;
@@ -256,6 +256,14 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     },
     async setBookingStatus(id, status, suggestedTime) {
       check(await db.from("bookings").update({ status, suggested_time: suggestedTime ?? null }).eq("id", id));
+    },
+
+    async savePush({ kind, id }, subscription) {
+      check(await db.from(kind === "order" ? "orders" : "bookings").update({ push: subscription }).eq("id", id));
+    },
+    async getPush({ kind, id }) {
+      const row = check(await db.from(kind === "order" ? "orders" : "bookings").select("push").eq("id", id).maybeSingle()) as { push: PushSubscription | null } | null;
+      return row?.push ?? null;
     },
   };
 }

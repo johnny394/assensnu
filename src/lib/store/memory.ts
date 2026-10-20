@@ -1,10 +1,10 @@
 import { seedPlaces } from "@/data/places";
 import { todayInCopenhagen } from "../hours";
 import type { Booking, Order, Place } from "../types";
-import type { Store } from "./types";
+import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -13,7 +13,9 @@ const state: State = (g.__assensnu ??= {
   orders: [],
   bookings: [],
   nextNumber: 101,
+  push: new Map(),
 });
+const pushKey = (t: PushTarget) => `${t.kind}:${t.id}`;
 
 const DEMO_PIN = "1234";
 
@@ -95,5 +97,13 @@ export const memoryStore: Store = {
     if (!booking) return;
     booking.status = status;
     booking.suggestedTime = suggestedTime;
+  },
+
+  async savePush(target, subscription) {
+    if (subscription) state.push.set(pushKey(target), subscription);
+    else state.push.delete(pushKey(target));
+  },
+  async getPush(target) {
+    return state.push.get(pushKey(target)) ?? null;
   },
 };

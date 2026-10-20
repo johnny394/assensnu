@@ -4,9 +4,34 @@ import { useEffect, useState } from "react";
 
 type InstallPrompt = Event & { prompt: () => Promise<void> };
 
+export type PushFor = { kind: "order" | "booking"; id: string; publicKey: string | null };
+
+// Melder telefonen til beskeder om netop denne bestilling, så de kommer, selv om siden er lukket
+async function subscribe(push: PushFor) {
+  if (!push.publicKey || !("PushManager" in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const subscription =
+      (await reg.pushManager.getSubscription()) ??
+      (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(push.publicKey) }));
+    await fetch("/api/push", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kind: push.kind, id: push.id, subscription }),
+    });
+  } catch {
+    // Så får de stadig besked, mens siden er åben
+  }
+}
+
+function base64UrlToBytes(value: string) {
+  const raw = atob((value + "=".repeat((4 - (value.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
 // Beder folk lægge AssensNu på hjemmeskærmen, så de kan få besked, når maden er klar.
 // På iPhone virker beskeder fra en hjemmeside kun derfra.
-export function HomeScreenGuide({ reason }: { reason: string }) {
+export function HomeScreenGuide({ reason, push }: { reason: string; push?: PushFor }) {
   const [platform, setPlatform] = useState<"ios" | "other" | "installed" | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
   const [notify, setNotify] = useState<NotificationPermission | "unsupported">("unsupported");
@@ -23,6 +48,13 @@ export function HomeScreenGuide({ reason }: { reason: string }) {
     window.addEventListener("beforeinstallprompt", onPrompt);
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
   }, []);
+
+  const pushKind = push?.kind;
+  const pushId = push?.id;
+  const pushKey = push?.publicKey ?? null;
+  useEffect(() => {
+    if (notify === "granted" && pushKind && pushId) subscribe({ kind: pushKind, id: pushId, publicKey: pushKey });
+  }, [notify, pushKind, pushId, pushKey]);
 
   if (!platform) return null;
 

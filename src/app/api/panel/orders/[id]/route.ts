@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { copenhagenNow, toTime } from "@/lib/hours";
 import { panelSlug } from "@/lib/panel-auth";
+import { notify } from "@/lib/push";
 import { store } from "@/lib/store";
 import type { OrderStatus } from "@/lib/types";
 
@@ -17,5 +18,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const readyAt =
     status !== "accepted" ? undefined : order.pickup !== "asap" ? order.pickup : readyInMinutes ? toTime(copenhagenNow().minutes + readyInMinutes) : undefined;
   await store.setOrderStatus(order.id, status, readyAt);
+
+  const message =
+    status === "ready"
+      ? { title: `${order.placeName}: maden er klar`, body: `Ordre ${order.number} kan hentes nu.` }
+      : status === "accepted"
+        ? { title: `${order.placeName} har fået din bestilling`, body: readyAt ? `Den er klar ca. kl. ${readyAt}.` : "Du får besked, når den er klar." }
+        : status === "rejected"
+          ? { title: `${order.placeName} kan ikke lave din bestilling`, body: "Tryk for at se mere." }
+          : null;
+  if (message) after(() => notify({ kind: "order", id: order.id }, { ...message, url: `/ordre/${order.id}` }));
   return NextResponse.json({ ok: true });
 }
