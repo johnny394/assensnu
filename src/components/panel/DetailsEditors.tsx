@@ -138,7 +138,12 @@ const move = <T,>(list: T[], from: number, to: number) => {
   return next;
 };
 
-export function MenuEditor({ place, onClose, onSaved }: { place: Place; onClose: () => void; onSaved: () => void }) {
+export function MenuEditor({ place, onClose, onSaved, saveUrl }: {
+  place: Pick<Place, "menu">;
+  onClose: () => void;
+  onSaved: () => void;
+  saveUrl?: string;
+}) {
   const [categories, setCategories] = useState<DraftCategory[]>(() =>
     place.menu.length
       ? place.menu.map((c) => ({
@@ -167,7 +172,7 @@ export function MenuEditor({ place, onClose, onSaved }: { place: Place; onClose:
       .filter((c) => c.name.trim() || c.items.length);
     setSaving(true);
     setError(null);
-    const problem = await saveDetails({ menu });
+    const problem = await saveDetails({ menu }, saveUrl);
     setSaving(false);
     if (problem) setError(problem);
     else onSaved();
