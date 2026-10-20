@@ -213,6 +213,22 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
   const [deliverySaved, setDeliverySaved] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const url = `/api/admin/places/${place.slug}`;
+  const [openingPanel, setOpeningPanel] = useState(false);
+
+  // Logger ind i stedets restaurantpanel uden deres kode og åbner det i en ny fane
+  async function openPanel() {
+    setOpeningPanel(true);
+    const tab = window.open("", "_blank");
+    const res = await post(`${url}/panel`, {});
+    setOpeningPanel(false);
+    if (!res.ok) {
+      tab?.close();
+      setError(res.error ?? "Panelet kunne ikke åbnes.");
+      return;
+    }
+    if (tab) tab.location.href = "/panel";
+    else window.location.href = "/panel";
+  }
 
   async function save() {
     setSaving(true);
@@ -250,6 +266,9 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
 
   return (
     <Sheet title={place.name} onClose={onClose} onSave={save} saving={saving} error={error}>
+      <button onClick={openPanel} disabled={openingPanel} className="mb-4 min-h-14 w-full rounded-2xl bg-ink px-5 text-lg font-bold text-white disabled:opacity-60">
+        {openingPanel ? "Åbner …" : "Åbn deres restaurantpanel"}
+      </button>
       <section className="rounded-3xl border-2 border-ink bg-surface px-5 py-5">
         <h3 className="font-display text-xl font-black tracking-tight">Kode til restaurantpanelet</h3>
         {pin ? (
