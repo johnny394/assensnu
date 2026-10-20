@@ -8,8 +8,9 @@ import { pickupOptions } from "@/lib/hours";
 import { slotsByHour } from "@/lib/later";
 import { choiceText, parseKey, priceChoice } from "@/lib/menu-options";
 import { townName } from "@/lib/postcodes";
-import type { Place } from "@/lib/types";
+import type { OrderLine, Place } from "@/lib/types";
 import { useCart } from "./useCart";
+import { hostKey, leaveGroup } from "./useGroup";
 import { useNow } from "./useNow";
 
 const CUSTOMER_KEY = "assensnu:kunde";
@@ -17,7 +18,8 @@ const CUSTOMER_KEY = "assensnu:kunde";
 export const field = "w-full border-2 border-ink bg-surface px-4 py-3.5 text-lg outline-none focus:border-stamp";
 export const label = "mb-1.5 block text-lg font-bold";
 
-export function Checkout({ place }: { place: Place }) {
+// Med group sendes en fællesbestilling: maden kommer fra den, ikke fra kurven på telefonen
+export function Checkout({ place, group }: { place: Place; group?: { id: string; lines: OrderLine[] } }) {
   const router = useRouter();
   const now = useNow();
   const { cart, change, clear } = useCart(place.slug);
@@ -42,10 +44,14 @@ export function Checkout({ place }: { place: Place }) {
     } catch {}
   }, []);
 
-  const lines = Object.entries(cart).flatMap(([key, quantity]) => {
-    const p = priceChoice(place, parseKey(key));
-    return p.ok && !p.value.item.soldOut ? [{ key, quantity, ...p.value }] : [];
-  });
+  const lines: (OrderLine & { key: string })[] = group
+    ? group.lines.map((l, i) => ({ ...l, key: String(i) }))
+    : Object.entries(cart).flatMap(([key, quantity]) => {
+        const p = priceChoice(place, parseKey(key));
+        if (!p.ok || p.value.item.soldOut) return [];
+        const { item: _item, ...line } = p.value; // eslint-disable-line @typescript-eslint/no-unused-vars
+        return [{ key, quantity, ...line }];
+      });
   const food = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
   const delivery = place.delivery ?? null;
   const fee = delivering && delivery ? delivery.fee : 0;
@@ -66,7 +72,8 @@ export function Checkout({ place }: { place: Place }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         slug: place.slug,
-        items: lines.map((l) => ({ itemId: l.itemId, quantity: l.quantity, size: l.size, extras: l.extras })),
+        items: group ? [] : lines.map((l) => ({ itemId: l.itemId, quantity: l.quantity, size: l.size, extras: l.extras })),
+        ...(group && { group: { id: group.id, key: hostKey(group.id) } }),
         name,
         phone,
         pickup: chosen,
@@ -83,8 +90,20 @@ export function Checkout({ place }: { place: Place }) {
     try {
       localStorage.setItem(CUSTOMER_KEY, JSON.stringify({ name, phone, address, postcode: zip || postcode }));
     } catch {}
-    clear();
+    if (group) leaveGroup(place.slug, group.id);
+    else clear();
     router.push(`/ordre/${data.id}`);
+  }
+
+  if (lines.length === 0 && group) {
+    return (
+      <div className="mt-6 border-y-[3px] border-double border-ink px-5 py-8 text-center text-lg">
+        <p>Der er ikke lagt noget mad i fællesbestillingen endnu.</p>
+        <Link href={`/faelles/${group.id}`} className="mt-3 inline-block font-bold text-ink underline decoration-stamp decoration-2 underline-offset-4">
+          Tilbage til fællesbestillingen
+        </Link>
+      </div>
+    );
   }
 
   if (lines.length === 0) {
@@ -104,6 +123,9 @@ export function Checkout({ place }: { place: Place }) {
         <ul className="border-t-[3px] border-double border-ink">
           {lines.map((l) => (
             <li key={l.key} className="flex items-center gap-3 border-b border-line px-1 py-3">
+              {group ? (
+                <span className="w-8 shrink-0 text-lg font-bold">{l.quantity} ×</span>
+              ) : (
               <div className="flex shrink-0 items-center gap-1 rounded-full border-2 border-ink">
                 <button type="button" onClick={() => change(l.key, -1)} aria-label={`Fjern en ${l.name}`} className="h-10 w-10 text-xl">
                   −
@@ -113,7 +135,9 @@ export function Checkout({ place }: { place: Place }) {
                   +
                 </button>
               </div>
+              )}
               <span className="min-w-0 flex-1 text-lg">
+                {l.person && <span className="block text-base font-bold">{l.person}</span>}
                 {l.name}
                 {choiceText(l) && <span className="block text-base text-ink-soft">{choiceText(l)}</span>}
               </span>

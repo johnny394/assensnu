@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { todayInCopenhagen } from "../hours";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
-import type { Booking, MenuCategory, Order, Place, Weekday } from "../types";
+import type { Booking, GroupEntry, GroupOrder, MenuCategory, Order, Place, Weekday } from "../types";
 import type { PushSubscription, Store } from "./types";
 
 type PlaceRow = {
@@ -163,6 +163,28 @@ const toBooking = (r: BookingRow): Booking => ({
   suggestedTime: r.suggested_time ?? undefined,
   createdAt: r.created_at,
 });
+
+type GroupRow = {
+  id: string;
+  place_slug: string;
+  host_name: string;
+  order_id: string | null;
+  created_at: string;
+  group_entries?: { id: string; name: string; items: GroupEntry["items"]; created_at: string }[];
+};
+
+const toGroup = (r: GroupRow): GroupOrder => ({
+  id: r.id,
+  placeSlug: r.place_slug,
+  hostName: r.host_name,
+  orderId: r.order_id ?? undefined,
+  createdAt: r.created_at,
+  entries: [...(r.group_entries ?? [])]
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .map((e) => ({ id: e.id, name: e.name, items: e.items, createdAt: e.created_at })),
+});
+
+const isUuid = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
 
 export const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 
@@ -395,6 +417,41 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     async listFollowers(slug) {
       const rows = check(await db.from("followers").select("push").eq("place_slug", slug)) as { push: PushSubscription }[];
       return rows.map((r) => r.push);
+    },
+
+    async createGroup(slug, hostName, hostKey) {
+      const row = check(await db.from("group_orders").insert({ place_slug: slug, host_name: hostName, host_hash: sha256(hostKey) }).select("id, place_slug, host_name, order_id, created_at").single());
+      return toGroup(row as GroupRow);
+    },
+    async getGroup(id) {
+      if (!isUuid(id)) return null;
+      const row = check(
+        await db.from("group_orders").select("id, place_slug, host_name, order_id, created_at, group_entries (id, name, items, created_at)").eq("id", id).maybeSingle(),
+      );
+      return row ? toGroup(row as GroupRow) : null;
+    },
+    async isGroupHost(id, hostKey) {
+      if (!isUuid(id)) return false;
+      const row = check(await db.from("group_orders").select("host_hash").eq("id", id).maybeSingle()) as { host_hash: string } | null;
+      return row?.host_hash === sha256(hostKey);
+    },
+    async addGroupEntry(id, name, items, entryKey) {
+      const row = check(
+        await db.from("group_entries").insert({ group_id: id, name, items, entry_hash: sha256(entryKey) }).select("id, name, items, created_at").single(),
+      ) as { id: string; name: string; items: GroupEntry["items"]; created_at: string };
+      return { id: row.id, name: row.name, items: row.items, createdAt: row.created_at };
+    },
+    async removeGroupEntry(id, entryId, key) {
+      if (!isUuid(id) || !isUuid(entryId)) return false;
+      const hash = sha256(key);
+      const host = await this.isGroupHost(id, key);
+      let query = db.from("group_entries").delete().eq("group_id", id).eq("id", entryId);
+      if (!host) query = query.eq("entry_hash", hash);
+      const rows = check(await query.select("id")) as unknown[];
+      return rows.length > 0;
+    },
+    async closeGroup(id, orderId) {
+      check(await db.from("group_orders").update({ order_id: orderId }).eq("id", id));
     },
 
     async savePush({ kind, id }, subscription) {

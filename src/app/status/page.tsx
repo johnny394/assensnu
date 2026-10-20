@@ -138,6 +138,13 @@ async function runChecks(): Promise<Check[]> {
       : { ok: true, text: "Dagens tilbud kan vise normalpris." },
   );
 
+  const faelles = await createClient(url, key, { auth: { persistSession: false } }).from("group_entries").select("id").limit(1);
+  checks.push(
+    faelles.error
+      ? { ok: false, text: "Databasen kan ikke gemme fællesbestillinger endnu.", fix: "Kør tilfoej-faelles.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan gemme fællesbestillinger." },
+  );
+
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     checks.push({ ok: true, text: "Nøglerne til beskeder er sat." });
   } else {

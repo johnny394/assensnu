@@ -7,6 +7,7 @@ import { choiceKey, hasOptions, parseKey, priceChoice } from "@/lib/menu-options
 import type { MenuItem, MenuOptions, Place } from "@/lib/types";
 import { ChoiceSheet } from "./ChoiceSheet";
 import { useCart } from "./useCart";
+import { useActiveGroup } from "./useGroup";
 
 // Menukortet. Hvis stedet tager imod bestillinger, kan man lægge retter i kurven.
 export function Menu({ place }: { place: Place }) {
@@ -21,6 +22,7 @@ export function Menu({ place }: { place: Place }) {
   const total = priced.reduce((sum, l) => sum + l.quantity * l.price, 0);
   const inCart = (itemId: string) => priced.filter((l) => l.itemId === itemId).reduce((a, l) => a + l.quantity, 0);
   const canOrder = place.acceptsOrders;
+  const group = useActiveGroup(place.slug);
 
   return (
     <>
@@ -99,13 +101,13 @@ export function Menu({ place }: { place: Place }) {
       {canOrder && count > 0 && (
         <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 px-4">
           <Link
-            href={`/sted/${place.slug}/bestil`}
+            href={group ? `/faelles/${group}` : `/sted/${place.slug}/bestil`}
             className="mx-auto flex max-w-2xl items-center justify-between bg-stamp px-5 py-4 text-lg text-white shadow-lg"
           >
             <span>
               {count} {count === 1 ? "vare" : "varer"} · {kr(total)}
             </span>
-            <span className="font-bold">Se kurven ›</span>
+            <span className="font-bold">{group ? "Til fællesbestillingen ›" : "Se kurven ›"}</span>
           </Link>
         </div>
       )}

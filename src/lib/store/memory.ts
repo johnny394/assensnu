@@ -2,11 +2,11 @@ import { seedPlaces } from "@/data/places";
 import { createHash } from "node:crypto";
 import { todayInCopenhagen } from "../hours";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
-import type { Booking, Order, Place, PlaceNews } from "../types";
+import type { Booking, GroupOrder, Order, Place, PlaceNews } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -21,11 +21,13 @@ const state: State = (g.__assensnu ??= {
   busyUntil: new Map(),
   news: new Map(),
   followers: new Map(),
+  groups: new Map(),
 });
 // Tilstand fra før en genstart af udviklingsserveren mangler måske de nyeste felter
 state.busyUntil ??= new Map();
 state.news ??= new Map();
 state.followers ??= new Map();
+state.groups ??= new Map();
 const pushKey = (t: PushTarget) => `${t.kind}:${t.id}`;
 
 const DEMO_PIN = "1234";
@@ -198,6 +200,39 @@ export const memoryStore: Store = {
   },
   async listFollowers(slug) {
     return [...(state.followers.get(slug)?.values() ?? [])];
+  },
+
+  async createGroup(slug, hostName, hostKey) {
+    const group: GroupOrder = { id: crypto.randomUUID(), placeSlug: slug, hostName, entries: [], createdAt: new Date().toISOString() };
+    state.groups.set(group.id, { group, hostHash: sha256(hostKey), entryHashes: new Map() });
+    return structuredClone(group);
+  },
+  async getGroup(id) {
+    const hit = state.groups.get(id);
+    return hit ? structuredClone(hit.group) : null;
+  },
+  async isGroupHost(id, hostKey) {
+    return state.groups.get(id)?.hostHash === sha256(hostKey);
+  },
+  async addGroupEntry(id, name, items, entryKey) {
+    const hit = state.groups.get(id);
+    if (!hit) throw new Error("Fællesbestillingen findes ikke");
+    const entry = { id: crypto.randomUUID(), name, items, createdAt: new Date().toISOString() };
+    hit.group.entries.push(entry);
+    hit.entryHashes.set(entry.id, sha256(entryKey));
+    return structuredClone(entry);
+  },
+  async removeGroupEntry(id, entryId, key) {
+    const hit = state.groups.get(id);
+    if (!hit) return false;
+    const hash = sha256(key);
+    if (hash !== hit.hostHash && hash !== hit.entryHashes.get(entryId)) return false;
+    hit.group.entries = hit.group.entries.filter((e) => e.id !== entryId);
+    return true;
+  },
+  async closeGroup(id, orderId) {
+    const hit = state.groups.get(id);
+    if (hit) hit.group.orderId = orderId;
   },
 
   async savePush(target, subscription) {

@@ -104,6 +104,7 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
           {order.lines.map((l, i) => (
             <li key={i} className="flex justify-between gap-3">
               <span>
+                {l.person && l.person !== order.lines[i - 1]?.person && <span className="block font-bold">{l.person}</span>}
                 {l.quantity} × {l.name}
                 {choiceText(l) && <span className="block text-ink-soft">{choiceText(l)}</span>}
               </span>
