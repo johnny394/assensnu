@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { kr } from "@/lib/format";
 import { pickupOptions } from "@/lib/hours";
+import { slotsByHour } from "@/lib/later";
 import { choiceText, parseKey, priceChoice } from "@/lib/menu-options";
 import { townName } from "@/lib/postcodes";
 import type { Place } from "@/lib/types";
@@ -53,6 +54,7 @@ export function Checkout({ place }: { place: Place }) {
   const zip = delivery?.postcodes.includes(postcode) ? postcode : delivery?.postcodes.length === 1 ? delivery.postcodes[0] : "";
   const options = now ? pickupOptions(place, now) : null;
   const chosen = pickup ?? (options?.asapMinutes != null ? "asap" : options?.slots[0] ?? null);
+  const later = options?.slots ?? [];
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
@@ -173,18 +175,37 @@ export function Checkout({ place }: { place: Place }) {
         {options && options.asapMinutes === null && options.slots.length === 0 ? (
           <p className="bg-stamp-soft px-4 py-3 text-lg text-stamp">{place.name} tager ikke imod flere bestillinger i dag.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <>
             {options?.asapMinutes != null && (
-              <button type="button" onClick={() => setPickup("asap")} aria-pressed={chosen === "asap"} className={choice(chosen === "asap")}>
-                Hurtigst muligt <span className="font-normal">(ca. {options.asapMinutes + (delivering ? 15 : 0)} min)</span>
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setPickup("asap")} aria-pressed={chosen === "asap"} className={choice(chosen === "asap")}>
+                  Hurtigst muligt <span className="block font-normal">ca. {options.asapMinutes + (delivering ? 15 : 0)} min</span>
+                </button>
+                <button type="button" onClick={() => setPickup(chosen && chosen !== "asap" ? chosen : later[0])} aria-pressed={chosen !== "asap"} disabled={!later.length} className={`${choice(chosen !== "asap")} disabled:opacity-40`}>
+                  Senere i dag <span className="block font-normal">{chosen && chosen !== "asap" ? `kl. ${chosen}` : "vælg et tidspunkt"}</span>
+                </button>
+              </div>
             )}
-            {options?.slots.slice(0, 12).map((t) => (
-              <button type="button" key={t} onClick={() => setPickup(t)} aria-pressed={chosen === t} className={choice(chosen === t)}>
-                {t}
-              </button>
-            ))}
-          </div>
+            {options?.asapMinutes == null && (
+              <p className="mb-3 text-lg">{place.name} har lukket lige nu, men du kan bestille allerede nu til senere i dag.</p>
+            )}
+            {chosen !== "asap" && (
+              <div className={options?.asapMinutes != null ? "mt-4 space-y-2" : "space-y-2"}>
+                {slotsByHour(later).map((g) => (
+                  <div key={g.hour} className="flex items-center gap-2">
+                    <span className="w-14 shrink-0 text-lg text-ink-soft tabular-nums">kl. {g.hour}</span>
+                    <div className="grid flex-1 grid-cols-4 gap-2">
+                      {g.slots.map((t) => (
+                        <button type="button" key={t} onClick={() => setPickup(t)} aria-pressed={chosen === t} className={`${choice(chosen === t).replace("px-4", "px-1")} tabular-nums`}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </fieldset>
 
