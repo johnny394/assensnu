@@ -1,12 +1,13 @@
 import { seedPlaces } from "@/data/places";
 import { createHash } from "node:crypto";
 import { todayInCopenhagen } from "../hours";
+import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import type { Booking, GroupOrder, Order, Place, PlaceNews } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -22,12 +23,14 @@ const state: State = (g.__assensnu ??= {
   news: new Map(),
   followers: new Map(),
   groups: new Map(),
+  lastChance: new Map(),
 });
 // Tilstand fra før en genstart af udviklingsserveren mangler måske de nyeste felter
 state.busyUntil ??= new Map();
 state.news ??= new Map();
 state.followers ??= new Map();
 state.groups ??= new Map();
+state.lastChance ??= new Map();
 const pushKey = (t: PushTarget) => `${t.kind}:${t.id}`;
 
 const DEMO_PIN = "1234";
@@ -38,6 +41,7 @@ function withToday(place: Place): Place {
     ...place,
     ...activeWait(place.extraWaitMinutes, state.busyUntil.get(place.slug) ?? null),
     news: todaysNews(news?.text, news?.sentAt, news),
+    lastChance: activeLastChance(state.lastChance.get(place.slug)),
     closedToday: state.closedOn.get(place.slug) === todayInCopenhagen(),
     member: state.pins.has(place.slug) || Boolean(place.demo),
   };
@@ -190,6 +194,10 @@ export const memoryStore: Store = {
 
   async postNews(slug, text, price, wasPrice) {
     state.news.set(slug, { text, sentAt: new Date().toISOString(), ...(price && { price }), ...(wasPrice && { wasPrice }) });
+  },
+  async setLastChance(slug, value) {
+    if (value) state.lastChance.set(slug, value);
+    else state.lastChance.delete(slug);
   },
   async follow(slug, subscription) {
     if (!state.followers.has(slug)) state.followers.set(slug, new Map());

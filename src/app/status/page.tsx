@@ -138,6 +138,13 @@ async function runChecks(): Promise<Check[]> {
       : { ok: true, text: "Dagens tilbud kan vise normalpris." },
   );
 
+  const sidste = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("last_chance").limit(1);
+  checks.push(
+    sidste.error
+      ? { ok: false, text: "Sidste chance (halv pris før lukketid) kan ikke gemmes endnu.", fix: "Kør tilfoej-sidste-chance.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Sidste chance (halv pris før lukketid) kan gemmes." },
+  );
+
   const faelles = await createClient(url, key, { auth: { persistSession: false } }).from("group_entries").select("id").limit(1);
   checks.push(
     faelles.error

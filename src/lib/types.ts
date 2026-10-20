@@ -55,12 +55,16 @@ export type Place = {
   extraWaitMinutes: number; // "travlt"-knappen i panelet
   busyUntil?: string; // "HH:MM", når "travlt" slukker af sig selv
   news?: PlaceNews; // dagens tilbud, kun hvis det er skrevet i dag
+  lastChance?: LastChance; // halv pris på rester til lukketid
   demo?: boolean;
   member?: boolean; // stedet har sagt ja til AssensNu og har en kode til panelet
 };
 
 // Restauranten skriver det i panelet, og følgerne får det som besked på telefonen
 // sentAt er ISO. Med pris kan tilbuddet bestilles. wasPrice er normalprisen, som vises overstreget.
+// Sidste chance før lukketid: retterne til halv pris, og hvornår det slutter (ISO)
+export type LastChance = { itemIds: string[]; until: string };
+
 export type PlaceNews = { text: string; sentAt: string; price?: number; wasPrice?: number };
 
 export type OrderStatus = "new" | "accepted" | "ready" | "picked_up" | "rejected";
@@ -73,6 +77,7 @@ export type OrderLine = {
   size?: string;
   extras?: string[];
   person?: string; // ved fællesbestilling: hvem retten er til
+  halfPrice?: boolean; // bestilt til halv pris under "Sidste chance"
 };
 
 export type Order = {

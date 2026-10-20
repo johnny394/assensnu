@@ -7,11 +7,11 @@ import { usePolling } from "@/components/usePolling";
 import { kr, longDate, telLink } from "@/lib/format";
 import { choiceText } from "@/lib/menu-options";
 import { townName } from "@/lib/postcodes";
-import { copenhagenNow, toTime } from "@/lib/hours";
+import { copenhagenNow, openStatus, toTime } from "@/lib/hours";
 import { startLater } from "@/lib/later";
 import type { Booking, Order, Place } from "@/lib/types";
 import { DeliveryEditor, HoursEditor, MenuEditor } from "./DetailsEditors";
-import { NewsBox, WaitBar } from "./LiveBoxes";
+import { LastChanceBox, NewsBox, WaitBar } from "./LiveBoxes";
 import { useAlarm } from "./useAlarm";
 
 type Data = { place: Place; orders: Order[]; bookings: Booking[]; followers: number | null };
@@ -165,6 +165,7 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
             {/* Fællesbestilling: navnet står over hver persons mad, så den kan pakkes for sig */}
             {l.person && l.person !== o.lines[i - 1]?.person && <p className="mt-2 border-b border-line text-lg font-bold uppercase tracking-[0.08em] text-ink-soft">{l.person}</p>}
             <strong>{l.quantity} ×</strong> {l.name}
+            {l.halfPrice && <span className="ml-2 rounded bg-stamp px-1.5 text-base font-bold text-white">½ pris</span>}
             {choiceText(l) && <span className="block pl-8 text-lg font-bold text-ink-soft">{choiceText(l)}</span>}
           </li>
         ))}
@@ -326,6 +327,7 @@ function Settings({ place: fromServer, followers, onChange, onLogout }: { place:
   return (
     <div className="space-y-3">
       <NewsBox place={fromServer} followers={followers} onChange={onChange} />
+      <LastChanceBox place={fromServer} open={openStatus(fromServer).state === "open"} onChange={onChange} />
       <div className="rounded-3xl bg-surface px-5 py-4">
         <p className="text-lg font-bold">Det, kunderne ser</p>
         {saved && <p role="status" className="mt-1 font-bold text-go">Gemt. Kunderne kan se det nu.</p>}
