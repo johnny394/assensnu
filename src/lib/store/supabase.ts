@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { todayInCopenhagen } from "../hours";
+import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import type { Booking, GroupEntry, GroupOrder, MenuCategory, Order, Place, Weekday } from "../types";
 import type { PushSubscription, Store } from "./types";
@@ -26,6 +27,7 @@ type PlaceRow = {
   news_at?: string | null;
   news_price?: number | null;
   news_was_price?: number | null;
+  last_chance?: { itemIds: string[]; until: string } | null;
   closed_on: string | null;
   panel_pin_hash: string | null;
   opening_hours: { day: number; open: string; close: string }[];
@@ -38,14 +40,14 @@ type PlaceRow = {
 };
 
 const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, description, takeaway, dine_in,
-  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, closed_on, panel_pin_hash,
+  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, last_chance, closed_on, panel_pin_hash,
   opening_hours (day, open, close),
   menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))`;
 
-// Indtil tilfoej-levering.sql, tilfoej-tilvalg.sql, tilfoej-folg.sql og tilfoej-dagens-ret.sql er kørt, findes de nyere kolonner ikke.
+// Indtil tilfoej-levering.sql, tilfoej-tilvalg.sql, tilfoej-folg.sql, tilfoej-dagens-ret.sql, tilfoej-tilbud.sql og tilfoej-sidste-chance.sql er kørt, findes de nyere kolonner ikke.
 // Så spørger vi uden dem, så siden virker som før, bare uden levering, tilvalg, dagens tilbud og travlt-tid.
 type Res = { data: unknown; error: unknown };
-const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"]];
+const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["last_chance"]];
 const mentions = (error: unknown, column: string) => new RegExp(`\\b${column}\\b`).test(String((error as { message?: string } | null)?.message));
 async function withFallback(select: string, run: (select: string) => PromiseLike<Res>): Promise<Res> {
   let res = await run(select);
@@ -77,6 +79,7 @@ function toPlace(r: PlaceRow): Place {
     prepMinutes: r.prep_minutes,
     ...activeWait(r.extra_wait_minutes, r.busy_until ?? null),
     news: todaysNews(r.news, r.news_at, { price: r.news_price, wasPrice: r.news_was_price }),
+    lastChance: activeLastChance(r.last_chance),
     closedToday: r.closed_on === todayInCopenhagen(),
     demo: r.slug === "proevepizza" || undefined,
     // Kun ja/nej sendes videre, aldrig selve fingeraftrykket af koden
@@ -407,6 +410,9 @@ export function supabaseStore(url: string, serviceKey: string): Store {
         res = await db.from("places").update(patch).eq("slug", slug);
       }
       check(res);
+    },
+    async setLastChance(slug, value) {
+      check(await db.from("places").update({ last_chance: value }).eq("slug", slug));
     },
     async follow(slug, subscription) {
       check(await db.from("followers").upsert({ place_slug: slug, endpoint: subscription.endpoint, push: subscription }));

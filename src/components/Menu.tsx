@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { kr } from "@/lib/format";
+import { lastChancePrice } from "@/lib/last-chance";
 import { choiceKey, hasOptions, parseKey, priceChoice } from "@/lib/menu-options";
 import type { MenuItem, MenuOptions, Place } from "@/lib/types";
 import { ChoiceSheet } from "./ChoiceSheet";
@@ -23,6 +24,7 @@ export function Menu({ place }: { place: Place }) {
   const inCart = (itemId: string) => priced.filter((l) => l.itemId === itemId).reduce((a, l) => a + l.quantity, 0);
   const canOrder = place.acceptsOrders;
   const group = useActiveGroup(place.slug);
+  const half = new Set(place.lastChance?.itemIds);
 
   return (
     <>
@@ -35,7 +37,7 @@ export function Menu({ place }: { place: Place }) {
               const quantity = withOptions ? inCart(item.id) : (cart[item.id] ?? 0);
               const fromPrice = withOptions && category.options!.sizes.length > 1;
               return (
-                <li key={item.id} className="flex items-center gap-3 border-b border-line py-3 last:border-b-0">
+                <li key={item.id} id={`ret-${item.id}`} className="flex scroll-mt-24 items-center gap-3 border-b border-line py-3 last:border-b-0">
                   <div className="min-w-0 flex-1">
                     {/* Prisliste som på et menukort: navn, prikker og pris på samme linje */}
                     <p className="flex items-baseline gap-2">
@@ -44,7 +46,16 @@ export function Menu({ place }: { place: Place }) {
                       {item.soldOut ? (
                         <span className="whitespace-nowrap font-bold text-stamp">Udsolgt i dag</span>
                       ) : (
-                        <span className="whitespace-nowrap font-bold tabular-nums">{fromPrice && <span className="font-normal">fra </span>}{kr(item.price)}</span>
+                        <span className="whitespace-nowrap font-bold tabular-nums">
+                          {fromPrice && <span className="font-normal">fra </span>}
+                          {half.has(item.id) ? (
+                            <>
+                              <s className="font-normal text-ink-soft">{kr(item.price)}</s> <span className="text-stamp">{kr(lastChancePrice(item.price))}</span>
+                            </>
+                          ) : (
+                            kr(item.price)
+                          )}
+                        </span>
                       )}
                     </p>
                     {item.description && <p className="text-ink-soft">{item.description}</p>}
@@ -90,6 +101,7 @@ export function Menu({ place }: { place: Place }) {
         <ChoiceSheet
           item={choosing.item}
           options={choosing.options}
+          halfPrice={half.has(choosing.item.id)}
           onClose={() => setChoosing(null)}
           onAdd={(size, extras) => {
             change(choiceKey({ itemId: choosing.item.id, size, extras }), 1);

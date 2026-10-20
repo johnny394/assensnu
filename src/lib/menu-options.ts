@@ -1,3 +1,4 @@
+import { lastChancePrice } from "./last-chance";
 import { orderableMenu } from "./live";
 import type { Result } from "./orders";
 import type { MenuCategory, MenuItem, MenuOptions, OrderLine, Place } from "./types";
@@ -52,7 +53,11 @@ export function priceChoice(place: Place, c: Choice): Result<Omit<OrderLine, "qu
     price += extra.price;
   }
 
-  return { ok: true, value: { item, itemId: item.id, name: item.name, price, ...(size && { size }), ...(picked.length && { extras: picked }) } };
+  // Sidste chance: halv pris på hele linjen, også størrelse og tilvalg
+  const half = Boolean(place.lastChance?.itemIds.includes(item.id));
+  if (half) price = lastChancePrice(price);
+
+  return { ok: true, value: { item, itemId: item.id, name: item.name, price, ...(size && { size }), ...(picked.length && { extras: picked }), ...(half && { halfPrice: true }) } };
 }
 
 // "Fam. + bacon, feta" til køkkenet og kunden

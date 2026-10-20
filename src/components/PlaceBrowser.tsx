@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { copenhagenNow, openStatus, pickupOptions } from "@/lib/hours";
+import { clockTime } from "@/lib/live";
 import type { Place } from "@/lib/types";
 import { OfferStrip } from "./Offers";
 import { OpenSign } from "./OpenSign";
@@ -110,6 +111,12 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
                     {p.acceptsOrders && <span className="font-bold text-stamp"> · Bestil her</span>}
                     {p.acceptsOrders && now && <WaitText place={p} now={now} />}
                   </p>
+                  {p.lastChance && (
+                    <p className="mt-1 text-base">
+                      <span className="mr-1.5 bg-stamp px-1.5 py-0.5 text-sm font-black uppercase tracking-[0.08em] text-white">Sidste chance</span>
+                      Halv pris på {p.lastChance.itemIds.length === 1 ? "1 ret" : `${p.lastChance.itemIds.length} retter`} til kl. {clockTime(p.lastChance.until)}
+                    </p>
+                  )}
                   {p.news && (
                     <p className="mt-1 line-clamp-2 text-base">
                       <span className="mr-1.5 bg-buoy px-1.5 py-0.5 text-sm font-black uppercase tracking-[0.08em]">Tilbud</span>

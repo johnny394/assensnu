@@ -51,6 +51,8 @@ export type Store = {
 
   /** Dagens tilbud. Erstatter dagens tidligere tekst. */
   postNews(slug: string, text: string, price: number | null, wasPrice: number | null): Promise<void>;
+  /** Sidste chance: retter til halv pris indtil until. null stopper det. */
+  setLastChance(slug: string, value: { itemIds: string[]; until: string } | null): Promise<void>;
   follow(slug: string, subscription: PushSubscription): Promise<void>;
   unfollow(slug: string, endpoint: string): Promise<void>;
   listFollowers(slug: string): Promise<PushSubscription[]>;
