@@ -34,6 +34,10 @@ export const demoPlace: Place = {
   menu: [
     {
       name: "Pizza",
+      options: {
+        sizes: [{ name: "Alm.", extra: 0 }, { name: "Familie", extra: 90 }],
+        extras: [{ name: "Ekstra ost", price: 10 }, { name: "Bacon", price: 12 }, { name: "Jalapeños", price: 8 }, { name: "Kebab", price: 16 }],
+      },
       items: [
         { id: "d1", name: "Margherita", description: "Tomat og ost", price: 75 },
         { id: "d2", name: "Pepperoni", description: "Tomat, ost og pepperoni", price: 85 },

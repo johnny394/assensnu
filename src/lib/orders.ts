@@ -1,9 +1,10 @@
 import { pickupOptions } from "./hours";
+import { priceChoice } from "./menu-options";
 import type { NewBooking, NewOrder } from "./store/types";
 import type { Place } from "./types";
 
 export type OrderInput = {
-  items: { itemId: string; quantity: number }[];
+  items: { itemId: string; quantity: number; size?: string; extras?: string[] }[];
   name: string;
   phone: string;
   pickup: string;
@@ -26,14 +27,18 @@ export function buildOrder(place: Place, input: OrderInput, now = new Date()): R
   const phone = cleanPhone(input.phone ?? "");
   if (!phone) return { ok: false, error: "Skriv dit telefonnummer med 8 cifre." };
 
-  const menu = new Map(place.menu.flatMap((c) => c.items).map((i) => [i.id, i]));
   const lines = [];
-  for (const { itemId, quantity } of input.items ?? []) {
-    const item = menu.get(itemId);
-    if (!item) return { ok: false, error: "En af retterne findes ikke længere. Gå tilbage og prøv igen." };
+  for (const { itemId, quantity, size, extras } of (input.items ?? []).slice(0, 50)) {
+    const priced = priceChoice(place, {
+      itemId: String(itemId),
+      size: typeof size === "string" ? size : undefined,
+      extras: Array.isArray(extras) ? extras.filter((e) => typeof e === "string") : undefined,
+    });
+    if (!priced.ok) return priced;
+    const { item, ...line } = priced.value;
     if (item.soldOut) return { ok: false, error: `${item.name} er desværre udsolgt.` };
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) return { ok: false, error: "Antal skal være mellem 1 og 20." };
-    lines.push({ itemId, name: item.name, price: item.price, quantity });
+    lines.push({ ...line, quantity });
   }
   if (lines.length === 0) return { ok: false, error: "Kurven er tom." };
 

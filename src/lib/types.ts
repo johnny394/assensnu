@@ -15,9 +15,16 @@ export type MenuItem = {
   soldOut?: boolean;
 };
 
+// Størrelser og tilvalg gælder for alle retter i en kategori, fx alle pizzaer
+export type MenuOptions = {
+  sizes: { name: string; extra: number }[]; // den første er standard, extra er kroner oven i rettens pris
+  extras: { name: string; price: number }[];
+};
+
 export type MenuCategory = {
   name: string;
   items: MenuItem[];
+  options?: MenuOptions;
 };
 
 // Restauranten kører selv ud. Kunden betaler ved døren.
@@ -52,7 +59,14 @@ export type Place = {
 
 export type OrderStatus = "new" | "accepted" | "ready" | "picked_up" | "rejected";
 
-export type OrderLine = { itemId: string; name: string; price: number; quantity: number };
+export type OrderLine = {
+  itemId: string;
+  name: string;
+  price: number; // pr. styk, med størrelse og tilvalg
+  quantity: number;
+  size?: string;
+  extras?: string[];
+};
 
 export type Order = {
   id: string;
