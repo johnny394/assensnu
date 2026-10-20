@@ -3,11 +3,15 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { FollowButton } from "@/components/FollowButton";
 import { Menu } from "@/components/Menu";
 import { LiveOpenSign } from "@/components/OpenSign";
+import { TakeawayWait } from "@/components/TakeawayWait";
 import { isAdmin } from "@/lib/admin-auth";
 import { telLink } from "@/lib/format";
 import { WEEKDAYS } from "@/lib/hours";
+import { clockTime } from "@/lib/live";
+import { pushPublicKey } from "@/lib/push";
 import { store } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +51,15 @@ export default async function PlacePage({ params }: Props) {
 
         <div className="mt-4">
           <LiveOpenSign place={place} large />
+          <TakeawayWait place={place} />
         </div>
+
+        {place.news && (
+          <div className="mt-5 border-[3px] border-double border-stamp px-4 py-3">
+            <p className="text-sm font-bold uppercase tracking-[0.15em] text-stamp">Nyt i dag · kl. {clockTime(place.news.sentAt)}</p>
+            <p className="mt-1 font-display text-xl font-semibold leading-snug">{place.news.text}</p>
+          </div>
+        )}
 
         {place.demo && (
           <p className="mt-5 border-2 border-dashed border-stamp bg-stamp-soft px-4 py-3 text-ink">
@@ -81,6 +93,7 @@ export default async function PlacePage({ params }: Props) {
           </a>
         </div>
         {place.phone && <p className="mt-2 text-center text-ink-soft">Telefon {place.phone}</p>}
+        {!preview && <FollowButton slug={place.slug} name={place.name} publicKey={pushPublicKey()} />}
 
         <h2 className={heading}>Menukortet</h2>
         {place.menu.length === 0 ? (

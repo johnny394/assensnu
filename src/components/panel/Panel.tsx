@@ -10,9 +10,10 @@ import { townName } from "@/lib/postcodes";
 import { copenhagenNow, toTime } from "@/lib/hours";
 import type { Booking, Order, Place } from "@/lib/types";
 import { DeliveryEditor, HoursEditor, MenuEditor } from "./DetailsEditors";
+import { NewsBox, WaitBar } from "./LiveBoxes";
 import { useAlarm } from "./useAlarm";
 
-type Data = { place: Place; orders: Order[]; bookings: Booking[] };
+type Data = { place: Place; orders: Order[]; bookings: Booking[]; followers: number | null };
 type Tab = "orders" | "bookings" | "settings";
 
 async function post(url: string, body: unknown) {
@@ -80,6 +81,7 @@ export function Panel({ initial, noDatabase }: { initial: Data; noDatabase?: boo
       )}
 
       <main className="mx-auto grid max-w-6xl gap-6 px-5 py-5 lg:grid-cols-[1fr_1fr_20rem]">
+        <WaitBar place={data.place} onChange={refresh} />
         <section className={tab === "orders" ? "" : "hidden lg:block"}>
           <h2 className="mb-3 hidden font-display text-2xl font-extrabold tracking-tight lg:block">Ordrer</h2>
           <Orders orders={data.orders} waitMinutes={data.place.prepMinutes + data.place.extraWaitMinutes} onChange={refresh} />
@@ -92,6 +94,7 @@ export function Panel({ initial, noDatabase }: { initial: Data; noDatabase?: boo
           <h2 className="mb-3 hidden font-display text-2xl font-extrabold tracking-tight lg:block">Indstillinger</h2>
           <Settings
             place={data.place}
+            followers={data.followers}
             onChange={refresh}
             onLogout={async () => {
               await post("/api/panel/logout", {});
@@ -281,7 +284,7 @@ function Bookings({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
   );
 }
 
-function Settings({ place: fromServer, onChange, onLogout }: { place: Place; onChange: () => void; onLogout: () => void }) {
+function Settings({ place: fromServer, followers, onChange, onLogout }: { place: Place; followers: number | null; onChange: () => void; onLogout: () => void }) {
   // Valget vises med det samme; serveren gemmer i baggrunden
   const [place, setPlace] = useState(fromServer);
   const [editing, setEditing] = useState<"hours" | "menu" | "delivery" | null>(null);
@@ -301,6 +304,7 @@ function Settings({ place: fromServer, onChange, onLogout }: { place: Place; onC
 
   return (
     <div className="space-y-3">
+      <NewsBox place={fromServer} followers={followers} onChange={onChange} />
       <div className="rounded-3xl bg-surface px-5 py-4">
         <p className="text-lg font-bold">Det, kunderne ser</p>
         {saved && <p role="status" className="mt-1 font-bold text-go">Gemt. Kunderne kan se det nu.</p>}
@@ -329,23 +333,6 @@ function Settings({ place: fromServer, onChange, onLogout }: { place: Place; onC
       <div className="rounded-3xl bg-surface px-5 py-2">
         <Toggle label="Tag imod bestillinger" on={place.acceptsOrders} onClick={() => save({ acceptsOrders: !place.acceptsOrders }, (p) => ({ ...p, acceptsOrders: !p.acceptsOrders }))} />
         <Toggle label="Lukket i dag" hint="Vises som lukket indtil i morgen" on={!!place.closedToday} onClick={() => save({ closedToday: !place.closedToday }, (p) => ({ ...p, closedToday: !p.closedToday }))} />
-      </div>
-
-      <div className="rounded-3xl bg-surface px-5 py-4">
-        <p className="text-lg font-bold">Travlt? Læg ekstra ventetid til</p>
-        <p className="text-ink-soft">Normal ventetid er {place.prepMinutes} min.</p>
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {[0, 15, 30, 45].map((m) => (
-            <button
-              key={m}
-              onClick={() => save({ extraWaitMinutes: m }, (p) => ({ ...p, extraWaitMinutes: m }))}
-              aria-pressed={place.extraWaitMinutes === m}
-              className={`${big} ${place.extraWaitMinutes === m ? "bg-ink text-white" : "border-2 border-line"}`}
-            >
-              {m === 0 ? "Nej" : `+${m}`}
-            </button>
-          ))}
-        </div>
       </div>
 
       {place.menu.length > 0 && (

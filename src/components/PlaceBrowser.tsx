@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { copenhagenNow, openStatus } from "@/lib/hours";
+import { copenhagenNow, openStatus, pickupOptions } from "@/lib/hours";
 import type { Place } from "@/lib/types";
 import { OpenSign } from "./OpenSign";
 import { useNow } from "./useNow";
@@ -104,7 +104,14 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
                   <p className="mt-1 text-sm uppercase tracking-[0.1em] text-ink-soft">
                     {[...p.cuisines, p.takeaway && "Takeaway"].filter(Boolean).join(" · ")}
                     {p.acceptsOrders && <span className="font-bold text-stamp"> · Bestil her</span>}
+                    {p.acceptsOrders && now && <WaitText place={p} now={now} />}
                   </p>
+                  {p.news && (
+                    <p className="mt-1 line-clamp-2 text-base">
+                      <span className="font-bold text-stamp">I dag: </span>
+                      {p.news.text}
+                    </p>
+                  )}
                 </div>
                 <OpenSign place={p} now={now} tilt={TILTS[i % TILTS.length]} />
               </Link>
@@ -146,6 +153,16 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
       </ul>
     </div>
   );
+}
+
+// "ca. 35 min" ved steder, man kan bestille fra lige nu. Restauranten skruer op, når der er travlt.
+function WaitText({ place, now }: { place: Place; now: Date }) {
+  const minutes = pickupOptions(place, now).asapMinutes;
+  if (minutes === null) return null;
+  return <span className={place.extraWaitMinutes ? "font-bold text-stamp" : ""}>
+      {" "}
+      · <span className="whitespace-nowrap">{place.extraWaitMinutes ? "Travlt, " : ""}ca. {minutes} min</span>
+    </span>;
 }
 
 // Stemplerne sidder lidt skævt, som var de trykket med hånden

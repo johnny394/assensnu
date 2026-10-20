@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { WAIT_STEPS } from "@/lib/live";
 import { panelSlug } from "@/lib/panel-auth";
 import { store } from "@/lib/store";
 import type { PlaceSettings } from "@/lib/store/types";
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
   const settings: PlaceSettings = {
     acceptsOrders: typeof s.acceptsOrders === "boolean" ? s.acceptsOrders : undefined,
     closedToday: typeof s.closedToday === "boolean" ? s.closedToday : undefined,
-    extraWaitMinutes: [0, 15, 30, 45].includes(s.extraWaitMinutes as number) ? s.extraWaitMinutes : undefined,
+    extraWaitMinutes: WAIT_STEPS.some((w) => w.extra === s.extraWaitMinutes) ? s.extraWaitMinutes : undefined,
     soldOut: s.soldOut && typeof s.soldOut.itemId === "string" ? { itemId: s.soldOut.itemId, soldOut: Boolean(s.soldOut.soldOut) } : undefined,
   };
   await store.updatePlaceSettings(slug, settings);

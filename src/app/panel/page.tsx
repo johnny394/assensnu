@@ -13,8 +13,12 @@ export default async function PanelPage() {
   const place = slug ? await store.getPlace(slug) : null;
 
   if (place) {
-    const [orders, bookings] = await Promise.all([store.listOrders(place.slug), store.listBookings(place.slug)]);
-    return <Panel initial={{ place, orders, bookings }} noDatabase={isDemo && !!process.env.VERCEL} />;
+    const [orders, bookings, followers] = await Promise.all([
+      store.listOrders(place.slug),
+      store.listBookings(place.slug),
+      store.listFollowers(place.slug).then((f) => f.length, () => null),
+    ]);
+    return <Panel initial={{ place, orders, bookings, followers }} noDatabase={isDemo && !!process.env.VERCEL} />;
   }
 
   // Alle steder kan logge ind og rette deres oplysninger, når AssensNu har givet dem en kode

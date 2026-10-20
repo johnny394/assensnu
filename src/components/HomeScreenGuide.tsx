@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { phoneSubscription } from "./phone-push";
 
 type InstallPrompt = Event & { prompt: () => Promise<void> };
 
@@ -11,39 +12,19 @@ type PushState = "pending" | "ok" | "no-key" | "unsupported" | "failed";
 // Melder telefonen til beskeder om netop denne bestilling, så de kommer, selv om siden er lukket
 async function subscribe(push: PushFor): Promise<PushState> {
   if (!push.publicKey) return "no-key";
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return "unsupported";
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    const key = base64UrlToBytes(push.publicKey);
-    let subscription = await reg.pushManager.getSubscription();
-    // En gammel tilmelding med en anden nøgle virker ikke længere
-    const oldKey = subscription?.options.applicationServerKey;
-    if (subscription && oldKey && !sameBytes(new Uint8Array(oldKey), key)) {
-      await subscription.unsubscribe();
-      subscription = null;
-    }
-    subscription ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
-    const res = await fetch("/api/push", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ kind: push.kind, id: push.id, subscription }),
-    });
-    return res.ok ? "ok" : "failed";
-  } catch {
-    return "failed";
-  }
-}
-
-const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
-
-function base64UrlToBytes(value: string) {
-  const raw = atob((value + "=".repeat((4 - (value.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/"));
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+  const subscription = await phoneSubscription(push.publicKey);
+  if (typeof subscription === "string") return subscription;
+  const res = await fetch("/api/push", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind: push.kind, id: push.id, subscription }),
+  }).catch(() => null);
+  return res?.ok ? "ok" : "failed";
 }
 
 // Beder om lov til at give besked, når restauranten svarer. Skal ses med det samme.
 // På iPhone virker beskeder fra en hjemmeside kun fra hjemmeskærmen, så der vises vejen dertil.
-export function HomeScreenGuide({ title, text, push }: { title: string; text: string; push?: PushFor }) {
+export function HomeScreenGuide({ title, text, push, iosLastStep = "Bestil fremover fra det nye ikon, så får du besked", iosNote = "Denne gang siger siden her til, når maden er klar, hvis du holder den åben." }: { title: string; text: string; push?: PushFor; iosLastStep?: string; iosNote?: string }) {
   const [platform, setPlatform] = useState<"ios" | "other" | "installed" | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
   const [notify, setNotify] = useState<NotificationPermission | "unsupported">("unsupported");
@@ -124,10 +105,10 @@ export function HomeScreenGuide({ title, text, push }: { title: string; text: st
             </li>
             <li className="flex items-center gap-3">
               <Step n={3} />
-              <span>Bestil fremover fra det nye ikon, så får du besked</span>
+              <span>{iosLastStep}</span>
             </li>
           </ol>
-          <p className="mt-4 text-ink-soft">Denne gang siger siden her til, når maden er klar, hvis du holder den åben.</p>
+          {iosNote && <p className="mt-4 text-ink-soft">{iosNote}</p>}
         </>
       ) : (
         <>

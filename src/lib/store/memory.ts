@@ -1,11 +1,12 @@
 import { seedPlaces } from "@/data/places";
 import { createHash } from "node:crypto";
 import { todayInCopenhagen } from "../hours";
-import type { Booking, Order, Place } from "../types";
+import { activeWait, busyUntilFrom, todaysNews } from "../live";
+import type { Booking, Order, Place, PlaceNews } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -17,14 +18,24 @@ const state: State = (g.__assensnu ??= {
   push: new Map(),
   hidden: new Set(),
   pins: new Map(),
+  busyUntil: new Map(),
+  news: new Map(),
+  followers: new Map(),
 });
+// Tilstand fra før en genstart af udviklingsserveren mangler måske de nyeste felter
+state.busyUntil ??= new Map();
+state.news ??= new Map();
+state.followers ??= new Map();
 const pushKey = (t: PushTarget) => `${t.kind}:${t.id}`;
 
 const DEMO_PIN = "1234";
 
 function withToday(place: Place): Place {
+  const news = state.news.get(place.slug);
   return {
     ...place,
+    ...activeWait(place.extraWaitMinutes, state.busyUntil.get(place.slug) ?? null),
+    news: todaysNews(news?.text, news?.sentAt),
     closedToday: state.closedOn.get(place.slug) === todayInCopenhagen(),
     member: state.pins.has(place.slug) || Boolean(place.demo),
   };
@@ -46,7 +57,12 @@ export const memoryStore: Store = {
     const place = state.places.find((p) => p.slug === slug);
     if (!place) return;
     if (s.acceptsOrders !== undefined) place.acceptsOrders = s.acceptsOrders;
-    if (s.extraWaitMinutes !== undefined) place.extraWaitMinutes = s.extraWaitMinutes;
+    if (s.extraWaitMinutes !== undefined) {
+      place.extraWaitMinutes = s.extraWaitMinutes;
+      const until = busyUntilFrom(s.extraWaitMinutes);
+      if (until) state.busyUntil.set(slug, until);
+      else state.busyUntil.delete(slug);
+    }
     if (s.closedToday !== undefined) {
       if (s.closedToday) state.closedOn.set(slug, todayInCopenhagen());
       else state.closedOn.delete(slug);
@@ -148,6 +164,9 @@ export const memoryStore: Store = {
     state.hidden.delete(slug);
     state.pins.delete(slug);
     state.closedOn.delete(slug);
+    state.busyUntil.delete(slug);
+    state.news.delete(slug);
+    state.followers.delete(slug);
   },
   async createPlace(slug, b) {
     state.places.push({
@@ -165,6 +184,20 @@ export const memoryStore: Store = {
       prepMinutes: 20,
       extraWaitMinutes: 0,
     });
+  },
+
+  async postNews(slug, text) {
+    state.news.set(slug, { text, sentAt: new Date().toISOString() });
+  },
+  async follow(slug, subscription) {
+    if (!state.followers.has(slug)) state.followers.set(slug, new Map());
+    state.followers.get(slug)!.set(subscription.endpoint, subscription);
+  },
+  async unfollow(slug, endpoint) {
+    state.followers.get(slug)?.delete(endpoint);
+  },
+  async listFollowers(slug) {
+    return [...(state.followers.get(slug)?.values() ?? [])];
   },
 
   async savePush(target, subscription) {
