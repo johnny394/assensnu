@@ -28,7 +28,7 @@ export function BookingStatusView({ initial, placePhone, pushKey }: { initial: B
           </a>
         )}
       </div>
-      {b.status === "requested" && <HomeScreenGuide reason="Vil du have besked, når de svarer?" push={{ kind: "booking", id: b.id, publicKey: pushKey }} />}
+      {b.status === "requested" && <HomeScreenGuide title="Få besked, når de svarer" text="Så behøver du ikke holde øje med siden." push={{ kind: "booking", id: b.id, publicKey: pushKey }} />}
       <div className="border-2 border-ink bg-surface px-5 py-4 text-lg">
         <p className="font-bold first-letter:uppercase">{when}</p>
         <p>{people} · {b.customerName}, {b.customerPhone}</p>

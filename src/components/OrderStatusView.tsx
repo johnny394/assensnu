@@ -46,6 +46,16 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
         <p className="font-display text-6xl font-black tracking-tight tabular-nums">{order.number}</p>
         <p className="mt-1 text-lg">Sig nummeret, når du henter hos {order.placeName}.</p>
 
+        {(order.status === "new" || order.status === "accepted") && (
+          <div className="mt-5">
+            <HomeScreenGuide
+              title="Få besked, når maden er klar"
+              text="Så kan du lægge telefonen væk og gå, når den bipper."
+              push={{ kind: "order", id: order.id, publicKey: pushKey } satisfies PushFor}
+            />
+          </div>
+        )}
+
         {order.status === "rejected" ? (
           <div className="mt-5 bg-stamp-soft px-4 py-4 text-lg text-stamp">
             <p className="font-bold">{order.placeName} kan desværre ikke lave din bestilling.</p>
@@ -81,10 +91,6 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
           </div>
         )}
       </div>
-
-      {order.status !== "rejected" && order.status !== "picked_up" && (
-        <HomeScreenGuide reason="Vil du have besked, når maden er klar?" push={{ kind: "order", id: order.id, publicKey: pushKey } satisfies PushFor} />
-      )}
 
       <div className="border-2 border-ink bg-surface px-5 py-4 text-lg">
         <p className="font-bold">Du har bestilt</p>
