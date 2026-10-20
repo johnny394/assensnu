@@ -1,10 +1,11 @@
 import { seedPlaces } from "@/data/places";
+import { createHash } from "node:crypto";
 import { todayInCopenhagen } from "../hours";
 import type { Booking, Order, Place } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -14,6 +15,8 @@ const state: State = (g.__assensnu ??= {
   bookings: [],
   nextNumber: 101,
   push: new Map(),
+  hidden: new Set(),
+  pins: new Map(),
 });
 const pushKey = (t: PushTarget) => `${t.kind}:${t.id}`;
 
@@ -23,11 +26,13 @@ function withToday(place: Place): Place {
   return { ...place, closedToday: state.closedOn.get(place.slug) === todayInCopenhagen() };
 }
 
+const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
+
 const byNewest = (a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt);
 
 export const memoryStore: Store = {
   async getPlaces() {
-    return state.places.map(withToday);
+    return state.places.filter((p) => !state.hidden.has(p.slug)).map(withToday);
   },
   async getPlace(slug) {
     const place = state.places.find((p) => p.slug === slug);
@@ -60,6 +65,8 @@ export const memoryStore: Store = {
   },
   async checkPanelPin(slug, pin) {
     const place = state.places.find((p) => p.slug === slug);
+    const hash = state.pins.get(slug);
+    if (hash) return hash === sha256(pin);
     return Boolean(place?.demo) && pin === DEMO_PIN;
   },
 
@@ -97,6 +104,53 @@ export const memoryStore: Store = {
     if (!booking) return;
     booking.status = status;
     booking.suggestedTime = suggestedTime;
+  },
+
+  async adminListPlaces() {
+    return [...state.places]
+      .sort((a, b) => a.name.localeCompare(b.name, "da"))
+      .map((p) => ({
+        slug: p.slug,
+        name: p.name,
+        address: p.address,
+        cuisines: p.cuisines,
+        phone: p.phone,
+        takeaway: p.takeaway,
+        dineIn: p.dineIn,
+        published: !state.hidden.has(p.slug),
+        acceptsOrders: p.acceptsOrders,
+        acceptsBookings: p.acceptsBookings,
+        hasCode: state.pins.has(p.slug) || Boolean(p.demo),
+        hasHours: p.hours.length > 0,
+        hasMenu: p.menu.length > 0,
+      }));
+  },
+  async adminUpdatePlace(slug, patch) {
+    const place = state.places.find((p) => p.slug === slug);
+    if (!place) return;
+    const { published, pinHash, phone, ...rest } = patch;
+    Object.assign(place, Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined)));
+    if (phone !== undefined) place.phone = phone ?? undefined;
+    if (published === true) state.hidden.delete(slug);
+    if (published === false) state.hidden.add(slug);
+    if (pinHash) state.pins.set(slug, pinHash);
+  },
+  async createPlace(slug, b) {
+    state.places.push({
+      slug,
+      name: b.name,
+      address: b.address,
+      cuisines: b.cuisines,
+      phone: b.phone ?? undefined,
+      takeaway: b.takeaway,
+      dineIn: b.dineIn,
+      hours: [],
+      menu: [],
+      acceptsOrders: false,
+      acceptsBookings: false,
+      prepMinutes: 20,
+      extraWaitMinutes: 0,
+    });
   },
 
   async savePush(target, subscription) {
