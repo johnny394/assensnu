@@ -23,7 +23,11 @@ const pushKey = (t: PushTarget) => `${t.kind}:${t.id}`;
 const DEMO_PIN = "1234";
 
 function withToday(place: Place): Place {
-  return { ...place, closedToday: state.closedOn.get(place.slug) === todayInCopenhagen() };
+  return {
+    ...place,
+    closedToday: state.closedOn.get(place.slug) === todayInCopenhagen(),
+    member: state.pins.has(place.slug) || Boolean(place.demo),
+  };
 }
 
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");

@@ -20,6 +20,7 @@ type PlaceRow = {
   prep_minutes: number;
   extra_wait_minutes: number;
   closed_on: string | null;
+  panel_pin_hash: string | null;
   opening_hours: { day: number; open: string; close: string }[];
   menu_categories: {
     name: string;
@@ -29,7 +30,7 @@ type PlaceRow = {
 };
 
 const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, description, takeaway, dine_in,
-  accepts_orders, accepts_bookings, prep_minutes, extra_wait_minutes, closed_on,
+  accepts_orders, accepts_bookings, prep_minutes, extra_wait_minutes, closed_on, panel_pin_hash,
   opening_hours (day, open, close),
   menu_categories (name, position, menu_items (id, name, description, price_kr, sold_out, position))`;
 
@@ -53,6 +54,8 @@ function toPlace(r: PlaceRow): Place {
     extraWaitMinutes: r.extra_wait_minutes,
     closedToday: r.closed_on === todayInCopenhagen(),
     demo: r.slug === "proevepizza" || undefined,
+    // Kun ja/nej sendes videre, aldrig selve fingeraftrykket af koden
+    member: Boolean(r.panel_pin_hash),
     hours: r.opening_hours.map((h) => ({ day: h.day as Weekday, open: h.open.slice(0, 5), close: h.close.slice(0, 5) })),
     menu: [...r.menu_categories].sort(byPosition).map((c) => ({
       name: c.name,
