@@ -1,4 +1,5 @@
 import type { Place } from "@/lib/types";
+import { SITE } from "@/lib/site";
 
 // Startliste samlet 17/10-2026 fra dagensmenu.dk, visitassensinfo.com, vores-assens.dk
 // og onlinetakeaway.dk. Telefon, åbningstider og menuer udfyldes, når stederne er tjekket.
@@ -24,7 +25,7 @@ export const demoPlace: Place = {
   cuisines: ["Pizza", "Kebab"],
   address: "Østergade 1, 5610 Assens",
   phone: "11 22 33 44",
-  description: "Et opdigtet sted til at afprøve AssensNu. Bestillinger her går ingen steder.",
+  description: `Et opdigtet sted til at afprøve ${SITE}. Bestillinger her går ingen steder.`,
   takeaway: true,
   dineIn: true,
   acceptsOrders: true,

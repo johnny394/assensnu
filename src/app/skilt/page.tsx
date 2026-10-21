@@ -5,9 +5,10 @@ import { CAMPSITE } from "@/lib/orders";
 import { qrSvg, siteOrigin } from "@/lib/qr";
 import { store } from "@/lib/store";
 import { PrintButton } from "./PrintButton";
+import { CITY, SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Skilt · AssensNu", robots: { index: false } };
+export const metadata: Metadata = { title: `Skilt · ${SITE}`, robots: { index: false } };
 
 type Sign = { kicker?: string; headline: string; da: string; en: string; de: string; path: string };
 
@@ -49,7 +50,7 @@ async function sign(q: { sted?: string; navn?: string; event?: string; til?: str
     };
   }
   return {
-    kicker: where ? `Til gæsterne på ${where}` : "Alle spisesteder i Assens",
+    kicker: where ? `Til gæsterne på ${where}` : `Alle spisesteder i ${CITY}`,
     headline: "Sult?",
     da: "Scan her, og se hvem der har åbent lige nu. Bestil takeaway eller book et bord.",
     en: "Hungry? Scan here to see who is open now. Menus in English.",
@@ -71,7 +72,7 @@ export default async function SignPage({ searchParams }: { searchParams: Promise
         <p className="text-center text-ink-soft">Print på A4 eller A5. Hæng det, hvor folk venter.</p>
       </div>
       <article className="flex aspect-[1/1.414] flex-col border-[3px] border-ink bg-paper px-[7%] py-[6%] print:h-[100vh] print:border-0">
-        <p className="text-center font-display text-[2rem] font-black leading-none tracking-tight">AssensNu</p>
+        <p className="text-center font-display text-[2rem] font-black leading-none tracking-tight">{SITE}</p>
         <div className="mt-2 h-[7px] border-y border-t-[3px] border-ink" aria-hidden />
         {s.kicker && <p className="mt-3 text-center text-sm uppercase tracking-[0.14em]">{s.kicker}</p>}
         <h1 className="mt-4 text-center font-display text-[5.5rem] font-black leading-[0.9] tracking-tight text-stamp">{s.headline}</h1>

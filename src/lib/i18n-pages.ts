@@ -1,6 +1,7 @@
 // Kassen, bekræftelsen, bordbooking, fællesbestilling og de andre kundesider på engelsk og tysk.
 // Hører sammen med UI i i18n.ts.
 export const PAGES: Record<string, { en: string; de: string }> = {
+  "{site} er en del af {brand}": { en: "{site} is part of {brand}", de: "{site} ist Teil von {brand}" },
   // Fælles
   // Events og Spis før koncerten
   "Kl. {tid}": { en: "{tid}", de: "{tid} Uhr" },
@@ -11,7 +12,7 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "‹ Alle events": { en: "‹ All events", de: "‹ Alle Veranstaltungen" },
   "Tryk på Spis før, så finder vi et sted at spise inden.": { en: "Tap Eat before, and we will find a place to eat first.", de: "Tippen Sie auf Vorher essen, dann finden wir ein Lokal für vorher." },
   "Bordet er i god tid, så I når det. Restauranten svarer ja eller nej.": { en: "The table is early enough for you to make it. The restaurant will say yes or no.", de: "Der Tisch ist früh genug, damit Sie es rechtzeitig schaffen. Das Restaurant sagt ja oder nein." },
-  "Ingen af stederne på AssensNu har åbent i timerne før. Se alle steder under Mad.": { en: "None of the places on AssensNu are open in the hours before. See all places under Food.", de: "Keines der Lokale auf AssensNu hat vorher geöffnet. Alle Lokale finden Sie unter Essen." },
+  "Ingen af stederne på {site} har åbent i timerne før. Se alle steder under Mad.": { en: "None of the places on {site} are open in the hours before. See all places under Food.", de: "Keines der Lokale auf {site} hat vorher geöffnet. Alle Lokale finden Sie unter Essen." },
   "Bord kl. {tid}": { en: "Table at {tid}", de: "Tisch um {tid}" },
   "Mad klar kl. {tid}": { en: "Food ready at {tid}", de: "Essen fertig um {tid}" },
   "Dit navn": { en: "Your name", de: "Ihr Name" },
@@ -118,7 +119,7 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "Maden kører ud til dig": { en: "The food is on its way to you", de: "Das Essen ist unterwegs zu Ihnen" },
   "Klar til afhentning": { en: "Ready for pick-up", de: "Bereit zur Abholung" },
   "Restauranten har ikke svaret endnu.": { en: "The restaurant hasn't answered yet.", de: "Das Restaurant hat noch nicht geantwortet." },
-  "Ring og sig, at du har bestilt gennem AssensNu.": { en: "Call and say you ordered through AssensNu.", de: "Rufen Sie an und sagen Sie, dass Sie über AssensNu bestellt haben." },
+  "Ring og sig, at du har bestilt gennem {site}.": { en: "Call and say you ordered through {site}.", de: "Rufen Sie an und sagen Sie, dass Sie über {site} bestellt haben." },
   "Du har bestilt": { en: "You ordered", de: "Ihre Bestellung" },
   "Betales, når maden kommer": { en: "Pay when the food arrives", de: "Zahlung bei Lieferung" },
   "Betales ved afhentning": { en: "Pay at pick-up", de: "Zahlung bei Abholung" },
@@ -129,13 +130,13 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   // Beskeder og hjemmeskærm
   "✓ Du får besked på denne telefon, også når den er låst.": { en: "✓ You'll get a message on this phone, even when it's locked.", de: "✓ Sie bekommen eine Nachricht auf diesem Handy, auch wenn es gesperrt ist." },
   "Slår beskeder til …": { en: "Turning on messages …", de: "Benachrichtigungen werden eingeschaltet …" },
-  "Beskeder er ikke sat op på AssensNu endnu. Hold siden her åben, så siger den til.": { en: "Messages aren't set up on AssensNu yet. Keep this page open and it will tell you.", de: "Benachrichtigungen sind noch nicht eingerichtet. Lassen Sie diese Seite offen, sie meldet sich." },
+  "Beskeder er ikke sat op på {site} endnu. Hold siden her åben, så siger den til.": { en: "Messages aren't set up on {site} yet. Keep this page open and it will tell you.", de: "Benachrichtigungen sind noch nicht eingerichtet. Lassen Sie diese Seite offen, sie meldet sich." },
   "Telefonen kan ikke få beskeder herfra. Hold siden her åben, så siger den til.": { en: "This phone can't get messages from here. Keep this page open and it will tell you.", de: "Dieses Handy kann hier keine Nachrichten bekommen. Lassen Sie diese Seite offen, sie meldet sich." },
   "Beskeder kunne ikke slås til. Hold siden her åben, så siger den til.": { en: "Messages couldn't be turned on. Keep this page open and it will tell you.", de: "Benachrichtigungen ließen sich nicht einschalten. Lassen Sie diese Seite offen, sie meldet sich." },
-  "Du har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.": { en: "You said no to messages from AssensNu. You can change this in your phone's settings.", de: "Sie haben Nachrichten von AssensNu abgelehnt. Das lässt sich in den Einstellungen des Handys ändern." },
-  "Telefonen har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.": { en: "The phone has said no to messages from AssensNu. You can change this in your phone's settings.", de: "Das Handy hat Nachrichten von AssensNu abgelehnt. Das lässt sich in den Einstellungen ändern." },
+  "Du har sagt nej til beskeder fra {site}. Det kan ændres under telefonens indstillinger.": { en: "You said no to messages from {site}. You can change this in your phone's settings.", de: "Sie haben Nachrichten von {site} abgelehnt. Das lässt sich in den Einstellungen des Handys ändern." },
+  "Telefonen har sagt nej til beskeder fra {site}. Det kan ændres under telefonens indstillinger.": { en: "The phone has said no to messages from {site}. You can change this in your phone's settings.", de: "Das Handy hat Nachrichten von {site} abgelehnt. Das lässt sich in den Einstellungen ändern." },
   "Det lykkedes ikke at slå beskeder til på denne telefon. Prøv igen senere.": { en: "Messages couldn't be turned on on this phone. Try again later.", de: "Benachrichtigungen ließen sich auf diesem Handy nicht einschalten. Später erneut versuchen." },
-  "På iPhone skal AssensNu ligge på hjemmeskærmen, før den kan give besked:": { en: "On iPhone, AssensNu must be on your home screen before it can send messages:", de: "Auf dem iPhone muss AssensNu auf dem Home-Bildschirm liegen, um Nachrichten zu senden:" },
+  "På iPhone skal {site} ligge på hjemmeskærmen, før den kan give besked:": { en: "On iPhone, {site} must be on your home screen before it can send messages:", de: "Auf dem iPhone muss {site} auf dem Home-Bildschirm liegen, um Nachrichten zu senden:" },
   "Tryk på": { en: "Tap the", de: "Tippen Sie auf" },
   Del: { en: "Share", de: "Teilen" },
   "nederst i Safari": { en: "button at the bottom of Safari", de: "unten in Safari" },
@@ -146,7 +147,7 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "Bestil fremover fra det nye ikon, så får du besked": { en: "Order from the new icon from now on, and you'll get messages", de: "Bestellen Sie ab jetzt über das neue Symbol, dann bekommen Sie Nachrichten" },
   "Denne gang siger siden her til, når maden er klar, hvis du holder den åben.": { en: "This time, this page will tell you when the food is ready if you keep it open.", de: "Dieses Mal meldet sich diese Seite, wenn das Essen fertig ist, solange sie offen bleibt." },
   "Ja tak, giv mig besked": { en: "Yes please, send me a message", de: "Ja, bitte benachrichtigen" },
-  "Læg AssensNu på hjemmeskærmen": { en: "Add AssensNu to your home screen", de: "AssensNu auf den Home-Bildschirm legen" },
+  "Læg {site} på hjemmeskærmen": { en: "Add {site} to your home screen", de: "{site} auf den Home-Bildschirm legen" },
   "Følg {navn}": { en: "Follow {navn}", de: "{navn} folgen" },
   "Åbn {navn} fra det nye ikon, og tryk Følg igen": { en: "Open {navn} from the new icon and tap Follow again", de: "Öffnen Sie {navn} über das neue Symbol und tippen Sie erneut auf Folgen" },
   "✓ Du følger {navn}": { en: "✓ You follow {navn}", de: "✓ Sie folgen {navn}" },
@@ -245,7 +246,7 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "Find et spisested": { en: "Find a place to eat", de: "Lokal finden" },
   "Gem {navn} som favorit": { en: "Save {navn} as favourite", de: "{navn} als Favorit speichern" },
   "Fjern {navn} fra favoritter": { en: "Remove {navn} from favourites", de: "{navn} aus Favoriten entfernen" },
-  "i Assens": { en: "in Assens", de: "in Assens" },
+  "i {by}": { en: "in {by}", de: "in {by}" },
   "Ingen steder har lagt et tilbud ud endnu i dag. Kig forbi igen senere, eller følg dine yndlingssteder, så får du besked.": {
     en: "No places have posted an offer today yet. Check back later, or follow your favourite places to get a message.",
     de: "Heute gibt es noch keine Angebote. Schauen Sie später wieder vorbei oder folgen Sie Ihren Lieblingslokalen.",
@@ -254,7 +255,7 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "Ét tilbud fra steder med åbent lige nu.": { en: "One offer from places open right now.", de: "Ein Angebot von Lokalen, die gerade geöffnet haben." },
   "{n} tilbud fra steder med åbent lige nu.": { en: "{n} offers from places open right now.", de: "{n} Angebote von Lokalen, die gerade geöffnet haben." },
   "Ikke åbent lige nu": { en: "Not open right now", de: "Gerade geschlossen" },
-  "Hvad sker der i Assens?": { en: "What's on in Assens?", de: "Was ist los in Assens?" },
+  "Hvad sker der i {by}?": { en: "What's on in {by}?", de: "Was ist los in {by}?" },
   "Koncerter, markeder, festivaler og alt det andet, der sker i byen, kommer her snart.": { en: "Concerts, markets, festivals and everything else happening in town is coming here soon.", de: "Konzerte, Märkte, Festivals und alles andere in der Stadt kommt bald hierher." },
   "Indtil da kan du finde noget godt at spise under Mad.": { en: "Until then, you can find something good to eat under Food.", de: "Bis dahin finden Sie unter Essen etwas Gutes." },
   "Ups, noget gik galt": { en: "Oops, something went wrong", de: "Hoppla, etwas ist schiefgelaufen" },

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { phoneSubscription } from "./phone-push";
 import { useLang } from "./useLang";
+import { SITE } from "@/lib/site";
 
 type InstallPrompt = Event & { prompt: () => Promise<void> };
 
@@ -65,7 +66,7 @@ export function HomeScreenGuide({ title, text, push, iosLastStep = "Bestil fremo
         <p className="font-bold text-stamp">
           {t(
             pushState === "no-key"
-              ? "Beskeder er ikke sat op på AssensNu endnu. Hold siden her åben, så siger den til."
+              ? `Beskeder er ikke sat op på ${SITE} endnu. Hold siden her åben, så siger den til.`
               : pushState === "unsupported"
                 ? "Telefonen kan ikke få beskeder herfra. Hold siden her åben, så siger den til."
                 : "Beskeder kunne ikke slås til. Hold siden her åben, så siger den til.",
@@ -73,7 +74,7 @@ export function HomeScreenGuide({ title, text, push, iosLastStep = "Bestil fremo
         </p>
       )
     ) : notify === "denied" ? (
-      <p className="font-bold text-stamp">{t("Du har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.")}</p>
+      <p className="font-bold text-stamp">{t("Du har sagt nej til beskeder fra {site}. Det kan ændres under telefonens indstillinger.", { site: SITE })}</p>
     ) : null;
 
   // Har kunden allerede svaret, er en enkelt linje nok
@@ -89,7 +90,7 @@ export function HomeScreenGuide({ title, text, push, iosLastStep = "Bestil fremo
       </p>
       {platform === "ios" ? (
         <>
-          <p className="mt-2">{t("På iPhone skal AssensNu ligge på hjemmeskærmen, før den kan give besked:")}</p>
+          <p className="mt-2">{t("På iPhone skal {site} ligge på hjemmeskærmen, før den kan give besked:", { site: SITE })}</p>
           <ol className="mt-4 space-y-3">
             <li className="flex items-center gap-3">
               <Step n={1} />
@@ -125,7 +126,7 @@ export function HomeScreenGuide({ title, text, push, iosLastStep = "Bestil fremo
           </button>
           {platform === "other" && installPrompt && (
             <button onClick={() => installPrompt.prompt()} className="mt-3 w-full border-2 border-ink px-5 py-3 text-lg font-bold">
-              {t("Læg AssensNu på hjemmeskærmen")}
+              {t("Læg {site} på hjemmeskærmen", { site: SITE })}
             </button>
           )}
         </>

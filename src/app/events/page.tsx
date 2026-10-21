@@ -7,6 +7,7 @@ import { todayInCopenhagen } from "@/lib/hours";
 import { translator } from "@/lib/i18n";
 import { store } from "@/lib/store";
 import { chooseLang, translateEvents } from "@/lib/translate";
+import { CITY } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export default async function EventsPage() {
   return (
     <AppShell>
       <main lang={lang} className="mx-auto max-w-2xl px-5 pb-16 pt-8">
-        <h1 className="font-display text-[2.6rem] font-black leading-[1.02] tracking-tight">{t("Hvad sker der i Assens?")}</h1>
+        <h1 className="font-display text-[2.6rem] font-black leading-[1.02] tracking-tight">{t("Hvad sker der i {by}?", { by: CITY })}</h1>
         {events.length === 0 ? (
           <div className="mt-6 border-y-[3px] border-double border-ink px-1 py-6 text-lg">
             <p>{t("Koncerter, markeder, festivaler og alt det andet, der sker i byen, kommer her snart.")}</p>

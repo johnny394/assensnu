@@ -6,9 +6,10 @@ import { PanelLogin } from "@/components/panel/PanelLogin";
 import { panelSlug } from "@/lib/panel-auth";
 import { pushPublicKey } from "@/lib/push";
 import { isDemo, store } from "@/lib/store";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Restaurantpanel · AssensNu", robots: { index: false } };
+export const metadata: Metadata = { title: `Restaurantpanel · ${SITE}`, robots: { index: false } };
 
 async function PanelPage() {
   const slug = await panelSlug();
@@ -29,7 +30,7 @@ async function PanelPage() {
     <main className="mx-auto max-w-2xl px-5 py-8">
       <Wordmark />
       <h1 className="mt-8 font-display text-[2.3rem] font-extrabold leading-tight tracking-tight">Restaurantpanel</h1>
-      <p className="mb-8 text-lg text-ink-soft">Her ser I nye ordrer og bordforespørgsler fra AssensNu.</p>
+      <p className="mb-8 text-lg text-ink-soft">Her ser I nye ordrer og bordforespørgsler fra {SITE}.</p>
       {places.length ? <PanelLogin places={places.map(({ slug, name }) => ({ slug, name }))} /> : <p className="text-lg">Ingen spisesteder er sat op til panelet endnu.</p>}
       {isDemo && <p className="mt-8 text-center text-ink-soft">Afprøvning: vælg Prøvepizza og koden 1234.</p>}
     </main>

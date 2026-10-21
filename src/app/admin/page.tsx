@@ -5,9 +5,10 @@ import { AdminLogin, AdminPanel } from "@/components/admin/AdminPanel";
 import { adminCode, isAdmin } from "@/lib/admin-auth";
 import { todayInCopenhagen } from "@/lib/hours";
 import { isDemo, store } from "@/lib/store";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Dit panel · AssensNu", robots: { index: false } };
+export const metadata: Metadata = { title: `Dit panel · ${SITE}`, robots: { index: false } };
 
 async function AdminPage() {
   if (await isAdmin()) return <AdminPanel places={await store.adminListPlaces()} events={await store.listEvents(todayInCopenhagen())} />;

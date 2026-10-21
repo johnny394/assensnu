@@ -19,6 +19,7 @@ import { StatsTab } from "./StatsTab";
 import { ClosedDaysBox } from "./ClosedDaysBox";
 import { LastChanceBox, NewsBox, WaitBar } from "./LiveBoxes";
 import { useAlarm } from "./useAlarm";
+import { SITE } from "@/lib/site";
 
 type Data = { place: Place; orders: Order[]; bookings: Booking[]; followers: number | null };
 type Tab = "orders" | "bookings" | "stats" | "settings";
@@ -50,7 +51,7 @@ export function Panel({ initial, noDatabase, pushKey = null }: { initial: Data; 
   const { armed, arm } = useAlarm(waiting > 0);
 
   useEffect(() => {
-    document.title = waiting ? `(${waiting}) Nyt i AssensNu` : `${data.place.name} · AssensNu`;
+    document.title = waiting ? `(${waiting}) Nyt i ${SITE}` : `${data.place.name} · ${SITE}`;
   }, [waiting, data.place.name]);
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
@@ -407,7 +408,7 @@ function Settings({ place: fromServer, followers, pushKey, onChange, onLogout }:
         </div>
       )}
 
-      <p className="px-2 text-ink-soft">Brug for hjælp? Ring til AssensNu, så hjælper vi.</p>
+      <p className="px-2 text-ink-soft">Brug for hjælp? Ring til {SITE}, så hjælper vi.</p>
       <button onClick={onLogout} className="w-full py-3 text-lg text-ink-soft underline">Log ud</button>
     </div>
   );

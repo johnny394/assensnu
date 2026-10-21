@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { kr } from "@/lib/format";
 import type { Week } from "@/lib/stats";
+import { SITE } from "@/lib/site";
 
 type Stats = { weeks: Week[]; followers: number; top: { name: string; quantity: number }[] };
 
@@ -34,7 +35,7 @@ export function StatsTab({ visible }: { visible: boolean }) {
   return (
     <div className="space-y-3">
       <div className="rounded-3xl bg-surface p-5">
-        <p className="text-lg font-bold">Denne uge gennem AssensNu</p>
+        <p className="text-lg font-bold">Denne uge gennem {SITE}</p>
         <p className="text-ink-soft">Fra mandag {short(week.start)} til nu</p>
         <div className="mt-4 grid grid-cols-2 gap-4">
           <Figure label="Ordrer" value={String(week.orders)} note={change(week.orders, last.orders)} />

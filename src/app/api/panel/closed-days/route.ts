@@ -3,6 +3,7 @@ import { cleanClosedDays } from "@/lib/closed-days";
 import { todayInCopenhagen } from "@/lib/hours";
 import { panelSlug } from "@/lib/panel-auth";
 import { store } from "@/lib/store";
+import { SITE } from "@/lib/site";
 
 // Lukkedage på forhånd. Restauranten sender hele listen hver gang.
 export async function POST(request: Request) {
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     await store.setClosedDays(slug, periods.value);
   } catch (e) {
     console.error("Kunne ikke gemme lukkedage", e);
-    return NextResponse.json({ error: "Lukkedagene kunne ikke gemmes. Ring til AssensNu, så hjælper vi." }, { status: 500 });
+    return NextResponse.json({ error: `Lukkedagene kunne ikke gemmes. Ring til ${SITE}, så hjælper vi.` }, { status: 500 });
   }
   return NextResponse.json({ ok: true, periods: periods.value });
 }

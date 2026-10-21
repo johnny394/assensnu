@@ -3,19 +3,20 @@ import { AppShell } from "@/components/AppShell";
 import { CompanyLine, LegalPage } from "@/components/LegalPage";
 import { company } from "@/lib/company";
 import { chooseLang, pageT } from "@/lib/translate";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Handelsbetingelser · AssensNu" };
+export const metadata: Metadata = { title: `Handelsbetingelser · ${SITE}` };
 
 export default async function TermsPage() {
   const c = company();
   return (
     <AppShell>
       <LegalPage title="Handelsbetingelser" updated="21. oktober 2026" lang={await chooseLang()} t={await pageT()}>
-        <p>AssensNu er byens side for mad. Vi sender din bestilling videre til restauranten. Det er restauranten, der laver maden og sælger den til dig.</p>
+        <p>{SITE} er byens side for mad. Vi sender din bestilling videre til restauranten. Det er restauranten, der laver maden og sælger den til dig.</p>
 
         <h2>Hvem er hvem</h2>
-        <p>AssensNu drives af:</p>
+        <p>{SITE} drives af:</p>
         <CompanyLine c={c} />
         <p>Sælgeren er den restaurant, du bestiller hos. Restaurantens navn, adresse og telefon står på dens side.</p>
 
@@ -39,7 +40,7 @@ export default async function TermsPage() {
         <p>Har du en allergi, så ring til restauranten og spørg, før du bestiller. Restauranten kan fortælle, hvad der er i maden.</p>
 
         <h2>Klager</h2>
-        <p>Er der noget galt med maden, så kontakt restauranten med det samme. Er der noget galt med AssensNu, så skriv til os{c.email && <> på <a href={`mailto:${c.email}`} className="underline">{c.email}</a></>}. Kan I ikke blive enige, kan du klage til <a href="https://naevneneshus.dk" className="underline">Nævnenes Hus</a>.</p>
+        <p>Er der noget galt med maden, så kontakt restauranten med det samme. Er der noget galt med {SITE}, så skriv til os{c.email && <> på <a href={`mailto:${c.email}`} className="underline">{c.email}</a></>}. Kan I ikke blive enige, kan du klage til <a href="https://naevneneshus.dk" className="underline">Nævnenes Hus</a>.</p>
       </LegalPage>
     </AppShell>
   );

@@ -5,6 +5,7 @@ import { HomeScreenGuide } from "./HomeScreenGuide";
 import { phoneSubscription } from "./phone-push";
 import { useFavorites } from "./useFavorites";
 import { useLang } from "./useLang";
+import { SITE } from "@/lib/site";
 
 const KEY = "assensnu:folger";
 // Steder, hvor man også vil have besked om rester til halv pris
@@ -134,7 +135,7 @@ export function FollowButton({ slug, name, publicKey }: { slug: string; name: st
           <span className="block text-ink-soft">{t("Få besked om dagens tilbud. Højst én om dagen.")}</span>
         </span>
       </button>
-      {state === "denied" && <p className="mt-2 font-bold text-stamp">{t("Telefonen har sagt nej til beskeder fra AssensNu. Det kan ændres under telefonens indstillinger.")}</p>}
+      {state === "denied" && <p className="mt-2 font-bold text-stamp">{t("Telefonen har sagt nej til beskeder fra {site}. Det kan ændres under telefonens indstillinger.", { site: SITE })}</p>}
       {state === "failed" && <p className="mt-2 font-bold text-stamp">{t("Det lykkedes ikke at slå beskeder til på denne telefon. Prøv igen senere.")}</p>}
     </div>
   );

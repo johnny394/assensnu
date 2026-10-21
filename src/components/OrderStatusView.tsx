@@ -11,6 +11,7 @@ import { HomeScreenGuide, type PushFor } from "./HomeScreenGuide";
 import { useLang } from "./useLang";
 import { useNow } from "./useNow";
 import { usePolling } from "./usePolling";
+import { SITE } from "@/lib/site";
 
 const NO_ANSWER_MINUTES = 5;
 
@@ -102,7 +103,7 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
         {noAnswer && placePhone && (
           <div className="mt-5 bg-stamp-soft px-4 py-4 text-lg">
             <p className="font-bold text-stamp">{t("Restauranten har ikke svaret endnu.")}</p>
-            <p>{t("Ring og sig, at du har bestilt gennem AssensNu.")}</p>
+            <p>{t("Ring og sig, at du har bestilt gennem {site}.", { site: SITE })}</p>
             <a href={telLink(placePhone)} className="mt-3 block bg-ink px-5 py-3.5 text-center font-bold text-paper">
               {t("Ring {phone}", { phone: placePhone })}
             </a>

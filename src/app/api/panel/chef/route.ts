@@ -4,6 +4,7 @@ import { cleanChef } from "@/lib/chef";
 import { panelSlug } from "@/lib/panel-auth";
 import { store } from "@/lib/store";
 import { warmTranslations } from "@/lib/translate";
+import { SITE } from "@/lib/site";
 
 // Mød kokken: billede og et par linjer om folkene bag. Tomt navn og tom tekst fjerner det hele.
 export async function POST(request: Request) {
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     await store.setChef(place.slug, result.value.chef, result.value.photo);
   } catch (e) {
     console.error("Kunne ikke gemme Mød kokken", e);
-    return NextResponse.json({ error: "Det kunne ikke gemmes. Ring til AssensNu, så hjælper vi." }, { status: 500 });
+    return NextResponse.json({ error: `Det kunne ikke gemmes. Ring til ${SITE}, så hjælper vi.` }, { status: 500 });
   }
   if (result.value.chef) after(() => warmTranslations(place.slug));
   return NextResponse.json({ ok: true });
