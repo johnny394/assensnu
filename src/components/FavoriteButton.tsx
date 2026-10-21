@@ -1,15 +1,17 @@
 "use client";
 
 import { useFavorites } from "./useFavorites";
+import { useLang } from "./useLang";
 
 export function FavoriteButton({ slug, name }: { slug: string; name: string }) {
   const { favorites, toggle } = useFavorites();
   const on = favorites.includes(slug);
+  const { t } = useLang();
   return (
     <button
       onClick={() => toggle(slug)}
       aria-pressed={on}
-      aria-label={on ? `Fjern ${name} fra favoritter` : `Gem ${name} som favorit`}
+      aria-label={t(on ? "Fjern {navn} fra favoritter" : "Gem {navn} som favorit", { navn: name })}
       className={`grid h-12 w-12 shrink-0 place-items-center border-2 ${on ? "border-stamp text-stamp" : "border-ink text-ink"}`}
     >
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill={on ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden>

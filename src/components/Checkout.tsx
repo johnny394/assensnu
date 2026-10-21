@@ -11,6 +11,7 @@ import { townName } from "@/lib/postcodes";
 import type { OrderLine, Place } from "@/lib/types";
 import { useCart } from "./useCart";
 import { hostKey, leaveGroup } from "./useGroup";
+import { useLang } from "./useLang";
 import { useNow } from "./useNow";
 
 const CUSTOMER_KEY = "assensnu:kunde";
@@ -32,6 +33,7 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
   const [postcode, setPostcode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const { t } = useLang();
 
   // Husk navn og telefon fra sidst, så man ikke skal skrive det igen
   useEffect(() => {
@@ -83,7 +85,7 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
     }).catch(() => null);
     const data = await res?.json().catch(() => null);
     if (!res?.ok || !data?.id) {
-      setError(data?.error ?? "Bestillingen blev ikke sendt. Tjek din forbindelse og prøv igen.");
+      setError(t(data?.error ?? "Bestillingen blev ikke sendt. Tjek din forbindelse og prøv igen."));
       setSending(false);
       return;
     }
@@ -98,9 +100,9 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
   if (lines.length === 0 && group) {
     return (
       <div className="mt-6 border-y-[3px] border-double border-ink px-5 py-8 text-center text-lg">
-        <p>Der er ikke lagt noget mad i fællesbestillingen endnu.</p>
+        <p>{t("Der er ikke lagt noget mad i fællesbestillingen endnu.")}</p>
         <Link href={`/faelles/${group.id}`} className="mt-3 inline-block font-bold text-ink underline decoration-stamp decoration-2 underline-offset-4">
-          Tilbage til fællesbestillingen
+          {t("Tilbage til fællesbestillingen")}
         </Link>
       </div>
     );
@@ -109,9 +111,9 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
   if (lines.length === 0) {
     return (
       <div className="mt-6 border-y-[3px] border-double border-ink px-5 py-8 text-center text-lg">
-        <p>Kurven er tom.</p>
+        <p>{t("Kurven er tom.")}</p>
         <Link href={`/sted/${place.slug}`} className="mt-3 inline-block font-bold text-ink underline decoration-stamp decoration-2 underline-offset-4">
-          Se menuen hos {place.name}
+          {t("Se menuen hos {navn}", { navn: place.name })}
         </Link>
       </div>
     );
@@ -127,31 +129,31 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
                 <span className="w-8 shrink-0 text-lg font-bold">{l.quantity} ×</span>
               ) : (
               <div className="flex shrink-0 items-center gap-1 rounded-full border-2 border-ink">
-                <button type="button" onClick={() => change(l.key, -1)} aria-label={`Fjern en ${l.name}`} className="h-10 w-10 text-xl">
+                <button type="button" onClick={() => change(l.key, -1)} aria-label={t("Fjern en {navn}", { navn: t(l.name) })} className="h-10 w-10 text-xl">
                   −
                 </button>
                 <span className="w-5 text-center font-bold">{l.quantity}</span>
-                <button type="button" onClick={() => change(l.key, 1)} aria-label={`Tilføj en ${l.name}`} className="h-10 w-10 text-xl">
+                <button type="button" onClick={() => change(l.key, 1)} aria-label={t("Læg en {navn} mere i kurven", { navn: t(l.name) })} className="h-10 w-10 text-xl">
                   +
                 </button>
               </div>
               )}
               <span className="min-w-0 flex-1 text-lg">
                 {l.person && <span className="block text-base font-bold">{l.person}</span>}
-                {l.name}
-                {choiceText(l) && <span className="block text-base text-ink-soft">{choiceText(l)}</span>}
+                {t(l.name)}
+                {choiceText(l) && <span className="block text-base text-ink-soft">{choiceText(l, t)}</span>}
               </span>
               <span className="text-lg tabular-nums">{kr(l.price * l.quantity)}</span>
             </li>
           ))}
           {fee > 0 && (
             <li className="flex justify-between border-b border-line px-1 py-3 text-lg">
-              <span>Levering</span>
+              <span>{t("Levering")}</span>
               <span className="tabular-nums">{kr(fee)}</span>
             </li>
           )}
           <li className="flex justify-between border-t-2 border-ink px-1 py-3.5 text-xl font-bold">
-            <span>I alt</span>
+            <span>{t("I alt")}</span>
             <span className="tabular-nums">{kr(total)}</span>
           </li>
         </ul>
@@ -159,34 +161,34 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
 
       {delivery && (
         <fieldset className="min-w-0">
-          <legend className={label}>Henter du, eller skal vi køre ud med det?</legend>
+          <legend className={label}>{t("Henter du, eller skal vi køre ud med det?")}</legend>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setDelivering(false)} aria-pressed={!delivering} className={choice(!delivering)}>
-              Jeg henter
+              {t("Jeg henter")}
             </button>
             <button type="button" onClick={() => setDelivering(true)} aria-pressed={delivering} className={choice(delivering)}>
-              Bring det ud <span className="font-normal">({delivery.fee ? kr(delivery.fee) : "gratis"})</span>
+              {t("Bring det ud")} <span className="font-normal">({delivery.fee ? kr(delivery.fee) : t("gratis")})</span>
             </button>
           </div>
           {delivering && (
             <div className="mt-5 space-y-5">
               <div>
-                <label htmlFor="address" className={label}>Din adresse</label>
-                <input id="address" required autoComplete="street-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Fx Østergade 12, 1. th." className={field} />
+                <label htmlFor="address" className={label}>{t("Din adresse")}</label>
+                <input id="address" required autoComplete="street-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("Fx Østergade 12, 1. th.")} className={field} />
               </div>
               <div>
-                <label htmlFor="postcode" className={label}>By</label>
+                <label htmlFor="postcode" className={label}>{t("By")}</label>
                 <select id="postcode" required value={zip} onChange={(e) => setPostcode(e.target.value)} className={field}>
-                  {!zip && <option value="">Vælg by</option>}
+                  {!zip && <option value="">{t("Vælg by")}</option>}
                   {delivery.postcodes.map((p) => (
                     <option key={p} value={p}>{townName(p)}</option>
                   ))}
                 </select>
-                <p className="mt-1 text-ink-soft">{place.name} kører kun ud til de byer, der står her.</p>
+                <p className="mt-1 text-ink-soft">{t("{navn} kører kun ud til de byer, der står her.", { navn: place.name })}</p>
               </div>
               {missing > 0 && (
                 <p className="bg-stamp-soft px-4 py-3 text-lg text-stamp">
-                  Levering kræver, at du bestiller for mindst {kr(delivery.minimum)}. Du mangler {kr(missing)}.
+                  {t("Levering kræver, at du bestiller for mindst {min}. Du mangler {mangler}.", { min: kr(delivery.minimum), mangler: kr(missing) })}
                 </p>
               )}
             </div>
@@ -195,33 +197,33 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
       )}
 
       <fieldset className="min-w-0">
-        <legend className={label}>{delivering ? "Hvornår vil du have maden?" : "Hvornår vil du hente?"}</legend>
+        <legend className={label}>{t(delivering ? "Hvornår vil du have maden?" : "Hvornår vil du hente?")}</legend>
         {options && options.asapMinutes === null && options.slots.length === 0 ? (
-          <p className="bg-stamp-soft px-4 py-3 text-lg text-stamp">{place.name} tager ikke imod flere bestillinger i dag.</p>
+          <p className="bg-stamp-soft px-4 py-3 text-lg text-stamp">{t("{navn} tager ikke imod flere bestillinger i dag.", { navn: place.name })}</p>
         ) : (
           <>
             {options?.asapMinutes != null && (
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => setPickup("asap")} aria-pressed={chosen === "asap"} className={choice(chosen === "asap")}>
-                  Hurtigst muligt <span className="block font-normal">ca. {options.asapMinutes + (delivering ? 15 : 0)} min</span>
+                  {t("Hurtigst muligt")} <span className="block font-normal">{t("ca. {min} min", { min: options.asapMinutes + (delivering ? 15 : 0) })}</span>
                 </button>
                 <button type="button" onClick={() => setPickup(chosen && chosen !== "asap" ? chosen : later[0])} aria-pressed={chosen !== "asap"} disabled={!later.length} className={`${choice(chosen !== "asap")} disabled:opacity-40`}>
-                  Senere i dag <span className="block font-normal">{chosen && chosen !== "asap" ? `kl. ${chosen}` : "vælg et tidspunkt"}</span>
+                  {t("Senere i dag")} <span className="block font-normal">{chosen && chosen !== "asap" ? t("kl. {tid}", { tid: chosen }) : t("vælg et tidspunkt")}</span>
                 </button>
               </div>
             )}
             {options?.asapMinutes == null && (
-              <p className="mb-3 text-lg">{place.name} har lukket lige nu, men du kan bestille allerede nu til senere i dag.</p>
+              <p className="mb-3 text-lg">{t("{navn} har lukket lige nu, men du kan bestille allerede nu til senere i dag.", { navn: place.name })}</p>
             )}
             {chosen !== "asap" && (
               <div className={options?.asapMinutes != null ? "mt-4 space-y-2" : "space-y-2"}>
                 {slotsByHour(later).map((g) => (
                   <div key={g.hour} className="flex items-center gap-2">
-                    <span className="w-14 shrink-0 text-lg text-ink-soft tabular-nums">kl. {g.hour}</span>
+                    <span className="w-14 shrink-0 text-lg text-ink-soft tabular-nums">{t("kl. {tid}", { tid: g.hour })}</span>
                     <div className="grid flex-1 grid-cols-4 gap-2">
-                      {g.slots.map((t) => (
-                        <button type="button" key={t} onClick={() => setPickup(t)} aria-pressed={chosen === t} className={`${choice(chosen === t).replace("px-4", "px-1")} tabular-nums`}>
-                          {t}
+                      {g.slots.map((slot) => (
+                        <button type="button" key={slot} onClick={() => setPickup(slot)} aria-pressed={chosen === slot} className={`${choice(chosen === slot).replace("px-4", "px-1")} tabular-nums`}>
+                          {slot}
                         </button>
                       ))}
                     </div>
@@ -235,32 +237,32 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
 
       <div className="space-y-5">
         <div>
-          <label htmlFor="name" className={label}>Dit navn</label>
+          <label htmlFor="name" className={label}>{t("Dit navn")}</label>
           <input id="name" required autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={field} />
         </div>
         <div>
-          <label htmlFor="phone" className={label}>Dit telefonnummer</label>
+          <label htmlFor="phone" className={label}>{t("Dit telefonnummer")}</label>
           <input id="phone" required type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={field} />
-          <p className="mt-1 text-ink-soft">Så restauranten kan ringe, hvis der er noget med din bestilling.</p>
+          <p className="mt-1 text-ink-soft">{t("Så restauranten kan ringe, hvis der er noget med din bestilling.")}</p>
         </div>
         <div>
-          <label htmlFor="note" className={label}>Besked til køkkenet <span className="font-normal text-ink-soft">(hvis du vil)</span></label>
-          <input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Fx uden løg" className={field} />
+          <label htmlFor="note" className={label}>{t("Besked til køkkenet")} <span className="font-normal text-ink-soft">{t("(hvis du vil)")}</span></label>
+          <input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("Fx uden løg")} className={field} />
         </div>
       </div>
 
       <p className="border-2 border-ink bg-surface px-5 py-4 text-lg">
         {delivering ? (
-          <><strong>Du betaler, når maden kommer</strong> til {address.trim() || "din adresse"}.</>
+          <><strong>{t("Du betaler, når maden kommer")}</strong> {t("til {adresse}.", { adresse: address.trim() || t("din adresse") })}</>
         ) : (
-          <><strong>Du betaler, når du henter maden</strong> hos {place.name}, {place.address.replace(/, \d{4} .*/, "")}.</>
+          <><strong>{t("Du betaler, når du henter maden")}</strong> {t("hos {navn}, {adresse}.", { navn: place.name, adresse: place.address.replace(/, \d{4} .*/, "") })}</>
         )}
       </p>
 
       {error && <p role="alert" className="bg-stamp-soft px-4 py-3 text-lg text-stamp">{error}</p>}
 
       <button disabled={sending || !chosen || missing > 0} className="w-full bg-stamp px-5 py-4.5 text-xl font-bold text-white disabled:opacity-50">
-        {sending ? "Sender…" : `Send bestilling · ${kr(total)}`}
+        {sending ? t("Sender…") : t("Send bestilling · {pris}", { pris: kr(total) })}
       </button>
     </form>
   );

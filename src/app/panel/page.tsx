@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LangProvider } from "@/components/useLang";
 import { Wordmark } from "@/components/AppShell";
 import { Panel } from "@/components/panel/Panel";
 import { PanelLogin } from "@/components/panel/PanelLogin";
@@ -8,7 +9,7 @@ import { isDemo, store } from "@/lib/store";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Restaurantpanel · AssensNu", robots: { index: false } };
 
-export default async function PanelPage() {
+async function PanelPage() {
   const slug = await panelSlug();
   const place = slug ? await store.getPlace(slug) : null;
 
@@ -32,4 +33,9 @@ export default async function PanelPage() {
       {isDemo && <p className="mt-8 text-center text-ink-soft">Afprøvning: vælg Prøvepizza og koden 1234.</p>}
     </main>
   );
+}
+
+// Panelerne er altid på dansk, uanset telefonens sprog
+export default async function DanishPage() {
+  return <LangProvider lang="da" texts={{}}>{await PanelPage()}</LangProvider>;
 }

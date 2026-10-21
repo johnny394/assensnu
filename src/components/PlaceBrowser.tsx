@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { copenhagenNow, openStatus, pickupOptions } from "@/lib/hours";
 import { clockTime } from "@/lib/live";
+import type { T } from "@/lib/i18n";
 import type { Place } from "@/lib/types";
+import { LangSwitch } from "./LangSwitch";
 import { OfferStrip } from "./Offers";
 import { OpenSign } from "./OpenSign";
 import { offerPrice } from "./TodaysOffer";
+import { useLang } from "./useLang";
 import { useNow } from "./useNow";
 
 type Filter = "open" | "takeaway" | "dineIn";
@@ -20,8 +23,10 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 const RANK = { open: 0, closed: 1, unknown: 2 } as const;
 
-export function PlaceBrowser({ places, title }: { places: Place[]; title?: string }) {
+// languages: sprogknapperne øverst, kun på forsiden
+export function PlaceBrowser({ places, title, languages }: { places: Place[]; title?: string; languages?: boolean }) {
   const now = useNow();
+  const { lang, t } = useLang();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Set<Filter>>(new Set());
   const [cuisine, setCuisine] = useState<string | null>(null);
@@ -64,8 +69,9 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
 
   return (
     <div>
-      <h1 className="font-display text-[2.6rem] font-black leading-[1.02] tracking-tight">{title ?? headline(now)}</h1>
-      <p className="mt-2 min-h-7 text-lg text-ink-soft">{openCount !== null && openLine(openCount)}</p>
+      <h1 className="font-display text-[2.6rem] font-black leading-[1.02] tracking-tight">{title ?? headline(now, t)}</h1>
+      <p className="mt-2 min-h-7 text-lg text-ink-soft">{openCount !== null && openLine(openCount, t, lang === "da")}</p>
+      {languages && <LangSwitch />}
 
       <OfferStrip places={places} />
 
@@ -74,12 +80,12 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-4-4" />
         </svg>
-        <span className="sr-only">Søg</span>
+        <span className="sr-only">{t("Søg")}</span>
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Søg, fx pizza eller durum"
+          placeholder={t("Søg, fx pizza eller durum")}
           className="w-full bg-transparent py-3 text-lg outline-none placeholder:text-ink-soft"
         />
       </label>
@@ -87,12 +93,12 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
       <div className="-mx-5 mt-4 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
         {FILTERS.map((f) => (
           <button key={f.key} onClick={() => toggle(f.key)} aria-pressed={filters.has(f.key)} className={chip(filters.has(f.key))}>
-            {f.label}
+            {t(f.label)}
           </button>
         ))}
         {cuisines.map((c) => (
           <button key={c} onClick={() => setCuisine(cuisine === c ? null : c)} aria-pressed={cuisine === c} className={chip(cuisine === c)}>
-            {c}
+            {t(c)}
           </button>
         ))}
       </div>
@@ -107,20 +113,23 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
                     {p.name}
                   </h2>
                   <p className="mt-1 text-sm uppercase tracking-[0.1em] text-ink-soft">
-                    {[...p.cuisines, p.takeaway && "Takeaway"].filter(Boolean).join(" · ")}
-                    {p.acceptsOrders && <span className="font-bold text-stamp"> · Bestil her</span>}
+                    {[...p.cuisines.map((c) => t(c)), p.takeaway && "Takeaway"].filter(Boolean).join(" · ")}
+                    {p.acceptsOrders && <span className="font-bold text-stamp"> · {t("Bestil her")}</span>}
                     {p.acceptsOrders && now && <WaitText place={p} now={now} />}
                   </p>
                   {p.lastChance && (
                     <p className="mt-1 text-base">
-                      <span className="mr-1.5 bg-stamp px-1.5 py-0.5 text-sm font-black uppercase tracking-[0.08em] text-white">Sidste chance</span>
-                      Halv pris på {p.lastChance.itemIds.length === 1 ? "1 ret" : `${p.lastChance.itemIds.length} retter`} til kl. {clockTime(p.lastChance.until)}
+                      <span className="mr-1.5 bg-stamp px-1.5 py-0.5 text-sm font-black uppercase tracking-[0.08em] text-white">{t("Sidste chance")}</span>
+                      {t(p.lastChance.itemIds.length === 1 ? "Halv pris på 1 ret til kl. {tid}" : "Halv pris på {n} retter til kl. {tid}", {
+                        n: p.lastChance.itemIds.length,
+                        tid: clockTime(p.lastChance.until),
+                      })}
                     </p>
                   )}
                   {p.news && (
                     <p className="mt-1 line-clamp-2 text-base">
-                      <span className="mr-1.5 bg-buoy px-1.5 py-0.5 text-sm font-black uppercase tracking-[0.08em]">Tilbud</span>
-                      {p.news.text}
+                      <span className="mr-1.5 bg-buoy px-1.5 py-0.5 text-sm font-black uppercase tracking-[0.08em]">{t("Tilbud")}</span>
+                      {t(p.news.text)}
                       {p.news.price && <span className="whitespace-nowrap font-bold text-stamp"> · {offerPrice(p.news.price)}</span>}
                     </p>
                   )}
@@ -131,17 +140,17 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
           ) : (
             // Låst, til stedet har sagt ja til AssensNu. Kan ikke åbnes.
             <li key={p.slug} className="border-b border-ink">
-              <div className="flex items-center justify-between gap-3 py-4" aria-label={`${p.name}, kommer snart`}>
+              <div className="flex items-center justify-between gap-3 py-4" aria-label={`${p.name}, ${t("Kommer snart").toLowerCase()}`}>
                 <div className="min-w-0 opacity-55">
                   <h2 className="font-display text-[1.55rem] font-semibold leading-tight text-ink-soft">{p.name}</h2>
-                  <p className="mt-1 text-sm uppercase tracking-[0.1em] text-ink-soft">{p.cuisines.join(" · ")}</p>
+                  <p className="mt-1 text-sm uppercase tracking-[0.1em] text-ink-soft">{p.cuisines.map((c) => t(c)).join(" · ")}</p>
                 </div>
                 <span className="flex shrink-0 items-center gap-1.5 border-2 border-dashed border-ink-soft px-2.5 py-1.5 text-sm font-bold uppercase leading-tight tracking-[0.08em] text-ink-soft">
                   <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
                     <rect x="5" y="11" width="14" height="10" rx="1.5" />
                     <path d="M8 11V8a4 4 0 0 1 8 0v3" />
                   </svg>
-                  Kommer snart
+                  {t("Kommer snart")}
                 </span>
               </div>
             </li>
@@ -149,7 +158,7 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
         )}
         {visible.length === 0 && (
           <li className="border-b border-ink py-10 text-center text-lg text-ink-soft">
-            Ingen steder passer.{" "}
+            {t("Ingen steder passer.")}{" "}
             <button
               className="font-bold text-ink underline"
               onClick={() => {
@@ -158,7 +167,7 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
                 setCuisine(null);
               }}
             >
-              Vis alle
+              {t("Vis alle")}
             </button>
           </li>
         )}
@@ -169,11 +178,12 @@ export function PlaceBrowser({ places, title }: { places: Place[]; title?: strin
 
 // "ca. 35 min" ved steder, man kan bestille fra lige nu. Restauranten skruer op, når der er travlt.
 function WaitText({ place, now }: { place: Place; now: Date }) {
+  const { t } = useLang();
   const minutes = pickupOptions(place, now).asapMinutes;
   if (minutes === null) return null;
   return <span className={place.extraWaitMinutes ? "font-bold text-stamp" : ""}>
       {" "}
-      · <span className="whitespace-nowrap">{place.extraWaitMinutes ? "Travlt, " : ""}ca. {minutes} min</span>
+      · <span className="whitespace-nowrap">{place.extraWaitMinutes ? t("Travlt, ") : ""}{t("ca. {min} min", { min: minutes })}</span>
     </span>;
 }
 
@@ -182,14 +192,15 @@ const TILTS = [-4, 3, -2, 2, -3];
 
 const NUMBERS = ["Ingen", "Ét", "To", "Tre", "Fire", "Fem", "Seks", "Syv", "Otte", "Ni", "Ti", "Elleve", "Tolv"];
 
-function openLine(count: number) {
-  const n = NUMBERS[count] ?? String(count);
-  if (count === 0) return "Ingen har åbent lige nu.";
-  return `${n} ${count === 1 ? "sted har" : "steder har"} åbent lige nu.`;
+function openLine(count: number, t: T, danish: boolean) {
+  if (count === 0) return t("Ingen har åbent lige nu.");
+  if (count === 1) return t("Ét sted har åbent lige nu.");
+  // På dansk skrives tallet med bogstaver, på engelsk og tysk med tal
+  return t("{n} steder har åbent lige nu.", { n: danish ? (NUMBERS[count] ?? String(count)) : count });
 }
 
-function headline(now: Date | null) {
-  if (!now) return "Hvem har åbent?";
+function headline(now: Date | null, t: T) {
+  if (!now) return t("Hvem har åbent?");
   const hour = Math.floor(copenhagenNow(now).minutes / 60);
-  return hour >= 16 || hour < 4 ? "Hvem har åbent i aften?" : "Hvem har åbent i dag?";
+  return t(hour >= 16 || hour < 4 ? "Hvem har åbent i aften?" : "Hvem har åbent i dag?");
 }

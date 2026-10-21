@@ -43,6 +43,9 @@ describe("cleanPhone", () => {
     expect(cleanPhone("+45 12 34 56 78")).toBe("12 34 56 78");
     expect(cleanPhone("12345678")).toBe("12 34 56 78");
     expect(cleanPhone("1234")).toBeNull();
+    expect(cleanPhone("+49 151 2345678")).toBe("+491512345678");
+    expect(cleanPhone("0049 151 2345678")).toBe("+491512345678");
+    expect(cleanPhone("151 2345678")).toBeNull();
   });
 });
 

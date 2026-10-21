@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LangProvider } from "@/components/useLang";
 import { Wordmark } from "@/components/AppShell";
 import { AdminLogin, AdminPanel } from "@/components/admin/AdminPanel";
 import { adminCode, isAdmin } from "@/lib/admin-auth";
@@ -7,7 +8,7 @@ import { isDemo, store } from "@/lib/store";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Dit panel · AssensNu", robots: { index: false } };
 
-export default async function AdminPage() {
+async function AdminPage() {
   if (await isAdmin()) return <AdminPanel places={await store.adminListPlaces()} />;
 
   return (
@@ -23,4 +24,9 @@ export default async function AdminPage() {
       {isDemo && <p className="mt-8 text-center text-ink-soft">Afprøvning: koden er 1234.</p>}
     </main>
   );
+}
+
+// Panelerne er altid på dansk, uanset telefonens sprog
+export default async function DanishPage() {
+  return <LangProvider lang="da" texts={{}}>{await AdminPage()}</LangProvider>;
 }

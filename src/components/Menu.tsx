@@ -127,7 +127,7 @@ export function Menu({ place }: { place: Place }) {
             <span>
               {t(count === 1 ? "{n} vare" : "{n} varer", { n: count })} · {kr(total)}
             </span>
-            <span className="font-bold">{group ? "Til fællesbestillingen ›" : t("Se kurven ›")}</span>
+            <span className="font-bold">{t(group ? "Til fællesbestillingen ›" : "Se kurven ›")}</span>
           </Link>
         </div>
       )}

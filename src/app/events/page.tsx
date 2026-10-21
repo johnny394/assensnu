@@ -1,13 +1,15 @@
 import { AppShell } from "@/components/AppShell";
+import { pageT } from "@/lib/translate";
 
-export default function EventsPage() {
+export default async function EventsPage() {
+  const t = await pageT();
   return (
     <AppShell>
       <main className="mx-auto max-w-2xl px-5 pt-8">
-        <h1 className="font-display text-[2.6rem] font-black leading-[1.02] tracking-tight">Hvad sker der i Assens?</h1>
+        <h1 className="font-display text-[2.6rem] font-black leading-[1.02] tracking-tight">{t("Hvad sker der i Assens?")}</h1>
         <div className="mt-6 border-y-[3px] border-double border-ink px-1 py-6 text-lg">
-          <p>Koncerter, markeder, festivaler og alt det andet, der sker i byen, kommer her snart.</p>
-          <p className="mt-3 text-ink-soft">Indtil da kan du finde noget godt at spise under Mad.</p>
+          <p>{t("Koncerter, markeder, festivaler og alt det andet, der sker i byen, kommer her snart.")}</p>
+          <p className="mt-3 text-ink-soft">{t("Indtil da kan du finde noget godt at spise under Mad.")}</p>
         </div>
       </main>
     </AppShell>

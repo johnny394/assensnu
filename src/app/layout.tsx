@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible, Fraunces } from "next/font/google";
+import { LangProvider } from "@/components/useLang";
+import { chooseLang } from "@/lib/translate";
 import "./globals.css";
 
 // Atkinson Hyperlegible er lavet til at være let at læse for alle, også med dårligt syn
@@ -18,10 +20,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const lang = await chooseLang();
   return (
-    <html lang="da" className={`${atkinson.variable} ${fraunces.variable}`}>
-      <body className="antialiased">{children}</body>
+    <html lang={lang} className={`${atkinson.variable} ${fraunces.variable}`}>
+      <body className="antialiased">
+        <LangProvider lang={lang} texts={{}}>
+          {children}
+        </LangProvider>
+      </body>
     </html>
   );
 }
