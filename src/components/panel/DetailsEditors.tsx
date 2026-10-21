@@ -141,6 +141,7 @@ export function DeliveryEditor({ place, onClose, onSaved, saveUrl }: {
   const [minimum, setMinimum] = useState(place.delivery ? String(place.delivery.minimum) : "");
   const [postcodes, setPostcodes] = useState(place.delivery?.postcodes.join(", ") ?? "5610");
   const [harbour, setHarbour] = useState(Boolean(place.delivery?.harbour));
+  const [camping, setCamping] = useState(Boolean(place.delivery?.camping));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const list = postcodes.split(/[\s,]+/).filter(Boolean);
@@ -148,7 +149,7 @@ export function DeliveryEditor({ place, onClose, onSaved, saveUrl }: {
   async function save() {
     setSaving(true);
     setError(null);
-    const delivery = on ? { fee: toNumber(fee), minimum: minimum.trim() ? toNumber(minimum) : 0, postcodes: list, harbour } : null;
+    const delivery = on ? { fee: toNumber(fee), minimum: minimum.trim() ? toNumber(minimum) : 0, postcodes: list, harbour, camping } : null;
     const problem = await saveDetails({ delivery }, saveUrl);
     setSaving(false);
     if (problem) setError(problem);
@@ -183,7 +184,7 @@ export function DeliveryEditor({ place, onClose, onSaved, saveUrl }: {
           <div>
             <label htmlFor="postcodes" className="mb-1.5 block text-lg font-bold">Postnumre I kører ud til</label>
             <input id="postcodes" inputMode="numeric" value={postcodes} onChange={(e) => setPostcodes(e.target.value)} placeholder="Fx 5610, 5620" className={field} />
-            <p className="mt-1 text-ink-soft">{list.length ? list.map(townName).join(" · ") : harbour ? "Lad feltet stå tomt, hvis I kun kommer ned i havnen." : "Skriv komma imellem."}</p>
+            <p className="mt-1 text-ink-soft">{list.length ? list.map(townName).join(" · ") : harbour || camping ? "Lad feltet stå tomt, hvis I kun kommer i havnen eller på campingpladsen." : "Skriv komma imellem."}</p>
           </div>
           <div>
             <p className="mb-1.5 text-lg font-bold">Mad til bådene i havnen</p>
@@ -192,6 +193,14 @@ export function DeliveryEditor({ place, onClose, onSaved, saveUrl }: {
               <button onClick={() => setHarbour(false)} aria-pressed={!harbour} className={`min-h-14 rounded-2xl border-2 text-lg font-bold ${!harbour ? "border-ink bg-ink text-paper" : "border-line"}`}>Nej</button>
             </div>
             <p className="mt-1 text-ink-soft">Lystsejlerne skriver bro og bådens navn, eller henter ved havnekontoret. Det koster det samme som levering.</p>
+          </div>
+          <div>
+            <p className="mb-1.5 text-lg font-bold">Mad til campingpladsen</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setCamping(true)} aria-pressed={camping} className={`min-h-14 rounded-2xl border-2 text-lg font-bold ${camping ? "border-ink bg-ink text-paper" : "border-line"}`}>Ja, vi kommer</button>
+              <button onClick={() => setCamping(false)} aria-pressed={!camping} className={`min-h-14 rounded-2xl border-2 text-lg font-bold ${!camping ? "border-ink bg-ink text-paper" : "border-line"}`}>Nej</button>
+            </div>
+            <p className="mt-1 text-ink-soft">Gæsterne skriver nummeret på deres plads eller hytte, eller henter i receptionen. Det koster det samme som levering.</p>
           </div>
         </div>
       )}

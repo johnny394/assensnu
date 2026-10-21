@@ -16,7 +16,7 @@ type Raw = {
     items?: { id?: unknown; name?: unknown; description?: unknown; price?: unknown }[];
     options?: { sizes?: { name?: unknown; extra?: unknown }[]; extras?: { name?: unknown; price?: unknown }[] } | null;
   }[];
-  delivery?: { fee?: unknown; minimum?: unknown; postcodes?: unknown; harbour?: unknown } | null;
+  delivery?: { fee?: unknown; minimum?: unknown; postcodes?: unknown; harbour?: unknown; camping?: unknown } | null;
 };
 
 const kroner = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 10000 ? Math.round(v * 100) / 100 : null);
@@ -95,9 +95,10 @@ export function cleanDetails(input: unknown): Result<PlaceDetails> {
       const list = Array.isArray(raw.delivery?.postcodes) ? raw.delivery.postcodes : [];
       const postcodes = [...new Set(list.map((p) => text(p)))];
       const harbour = raw.delivery?.harbour === true;
-      if (postcodes.length === 0 && !harbour) return { ok: false, error: "Skriv mindst ét postnummer, I kører ud til, fx 5610." };
+      const camping = raw.delivery?.camping === true;
+      if (postcodes.length === 0 && !harbour && !camping) return { ok: false, error: "Skriv mindst ét postnummer, I kører ud til, fx 5610." };
       if (postcodes.length > 40 || postcodes.some((p) => !/^\d{4}$/.test(p))) return { ok: false, error: "Et postnummer skal have 4 cifre, fx 5610." };
-      details.delivery = { fee, minimum, postcodes: postcodes.sort(), ...(harbour && { harbour }) } satisfies DeliverySettings;
+      details.delivery = { fee, minimum, postcodes: postcodes.sort(), ...(harbour && { harbour }), ...(camping && { camping }) } satisfies DeliverySettings;
     }
   }
 

@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Skilt · AssensNu", robots: { index:
 type Sign = { kicker?: string; headline: string; da: string; en: string; de: string; path: string };
 
 // Et skilt til receptionen, disken eller billetmailen. Turisterne får siden på deres eget sprog, når de scanner.
-async function sign(q: { sted?: string; navn?: string; event?: string }): Promise<Sign | null> {
+async function sign(q: { sted?: string; navn?: string; event?: string; til?: string }): Promise<Sign | null> {
   const where = q.navn?.trim().slice(0, 60);
   if (q.event) {
     const e = await store.getEvent(q.event);
@@ -37,6 +37,16 @@ async function sign(q: { sted?: string; navn?: string; event?: string }): Promis
       path: `/sted/${p.slug}`,
     };
   }
+  if (q.til === "camping") {
+    return {
+      kicker: where ? `Til gæsterne på ${where}` : "Til gæsterne på campingpladsen",
+      headline: "Sult?",
+      da: "Scan her, og få maden bragt helt ud til jeres plads. I betaler, når den kommer.",
+      en: "Hungry? Scan here and get food brought to your pitch. Menus in English.",
+      de: "Hunger? Hier scannen, Essen kommt zu Ihrem Stellplatz. Speisekarten auf Deutsch.",
+      path: "/?til=camping",
+    };
+  }
   return {
     kicker: where ? `Til gæsterne på ${where}` : "Alle spisesteder i Assens",
     headline: "Sult?",
@@ -47,7 +57,7 @@ async function sign(q: { sted?: string; navn?: string; event?: string }): Promis
   };
 }
 
-export default async function SignPage({ searchParams }: { searchParams: Promise<{ sted?: string; navn?: string; event?: string }> }) {
+export default async function SignPage({ searchParams }: { searchParams: Promise<{ sted?: string; navn?: string; event?: string; til?: string }> }) {
   const s = await sign(await searchParams);
   if (!s) notFound();
   const url = `${await siteOrigin()}${s.path}`;
