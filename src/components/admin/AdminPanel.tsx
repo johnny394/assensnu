@@ -346,7 +346,7 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
         {deliverySaved && <p role="status" className="mt-1 font-bold text-go">Gemt. Kunderne kan se det nu.</p>}
         <p className="mt-2 text-lg">
           {place.delivery
-            ? `${place.delivery.fee} kr. · mindst ${place.delivery.minimum} kr. · ${place.delivery.postcodes.join(", ")}`
+            ? [`${place.delivery.fee} kr.`, `mindst ${place.delivery.minimum} kr.`, place.delivery.postcodes.join(", "), place.delivery.harbour && "også havnen"].filter(Boolean).join(" · ")
             : "Leverer ikke."}
         </p>
         <button onClick={() => setEditDelivery(true)} className="mt-3 min-h-12 w-full rounded-2xl border-2 border-ink px-5 text-lg font-bold">
