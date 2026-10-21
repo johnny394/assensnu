@@ -289,4 +289,8 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "{navn} kommer med maden ned i havnen: {sted}.": { en: "{navn} brings the food down to the harbour: {sted}.", de: "{navn} bringt das Essen zum Hafen: {sted}." },
   "Skriv hvilken bro, I ligger ved, fx 3.": { en: "Write which jetty you are moored at, e.g. 3.", de: "Schreiben Sie, an welchem Steg Sie liegen, z. B. 3." },
   "Skriv bådens navn, så de kan finde jer.": { en: "Write the name of the boat so they can find you.", de: "Schreiben Sie den Namen des Boots, damit man Sie findet." },
+
+  // Sidste chance som besked
+  "Besked om rester til halv pris": { en: "Tell me about leftovers at half price", de: "Nachricht bei Resten zum halben Preis" },
+  "Når {navn} har mad tilbage sidst på dagen.": { en: "When {navn} has food left at the end of the day.", de: "Wenn {navn} am Ende des Tages Essen übrig hat." },
 };

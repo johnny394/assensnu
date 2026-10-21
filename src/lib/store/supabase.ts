@@ -451,14 +451,22 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       const row = check(await db.from("places").select("chef_photo").eq("slug", slug).maybeSingle()) as { chef_photo: string | null } | null;
       return row?.chef_photo ?? null;
     },
-    async follow(slug, subscription) {
-      check(await db.from("followers").upsert({ place_slug: slug, endpoint: subscription.endpoint, push: subscription }));
+    async follow(slug, subscription, leftovers = false) {
+      const row = { place_slug: slug, endpoint: subscription.endpoint, push: subscription, leftovers };
+      let res = await db.from("followers").upsert(row);
+      // Uden tilfoej-rester-besked.sql kan man stadig følge, bare uden besked om rester
+      if (mentions(res.error, "leftovers") && !leftovers) res = await db.from("followers").upsert({ ...row, leftovers: undefined });
+      check(res);
     },
     async unfollow(slug, endpoint) {
       check(await db.from("followers").delete().eq("place_slug", slug).eq("endpoint", endpoint));
     },
-    async listFollowers(slug) {
-      const rows = check(await db.from("followers").select("push").eq("place_slug", slug)) as { push: PushSubscription }[];
+    async listFollowers(slug, only) {
+      let query = db.from("followers").select("push").eq("place_slug", slug);
+      if (only?.leftovers) query = query.eq("leftovers", true);
+      const res = await query;
+      if (only?.leftovers && mentions(res.error, "leftovers")) return [];
+      const rows = check(res) as { push: PushSubscription }[];
       return rows.map((r) => r.push);
     },
 

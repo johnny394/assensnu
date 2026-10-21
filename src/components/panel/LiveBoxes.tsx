@@ -215,7 +215,7 @@ export function LastChanceBox({ place, open, onChange }: { place: Place; open: b
         </>
       ) : !picking ? (
         <>
-          <p className="text-ink-soft">Har I mad tilbage før lukketid? Sæt det til halv pris, så det bliver spist i stedet for smidt ud.</p>
+          <p className="text-ink-soft">Har I mad tilbage før lukketid? Sæt det til halv pris, så det bliver spist i stedet for smidt ud. Jeres følgere kan få en besked, når I starter.</p>
           <button onClick={() => { setChosen([]); setPicking(true); }} disabled={!open || items.length === 0} className="mt-3 min-h-14 w-full rounded-2xl border-2 border-stamp text-lg font-bold text-stamp disabled:opacity-50">
             Vælg retter
           </button>
