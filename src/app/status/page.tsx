@@ -158,6 +158,13 @@ async function runChecks(): Promise<Check[]> {
       ? { ok: false, text: "Databasen kan ikke gemme menuen på engelsk og tysk endnu.", fix: "Kør tilfoej-oversaettelser.sql i Supabase under SQL Editor. Den sletter ingenting." }
       : { ok: true, text: "Databasen kan gemme menuen på engelsk og tysk." },
   );
+
+  const kokken = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("chef, chef_photo").limit(1);
+  checks.push(
+    kokken.error
+      ? { ok: false, text: "Mød kokken (billede og tekst) kan ikke gemmes endnu.", fix: "Kør tilfoej-mod-kokken.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Mød kokken (billede og tekst) kan gemmes." },
+  );
   checks.push(
     process.env.ANTHROPIC_API_KEY?.trim()
       ? { ok: true, text: "ANTHROPIC_API_KEY er sat, så menuen kan oversættes til engelsk og tysk." }

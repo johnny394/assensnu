@@ -3,11 +3,11 @@ import { createHash } from "node:crypto";
 import { todayInCopenhagen } from "../hours";
 import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
-import type { Booking, GroupOrder, Order, Place, PlaceNews } from "../types";
+import type { Booking, Chef, GroupOrder, Order, Place, PlaceNews } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -25,6 +25,7 @@ const state: State = (g.__assensnu ??= {
   groups: new Map(),
   lastChance: new Map(),
   translations: new Map(),
+  chefs: new Map(),
 });
 // Tilstand fra før en genstart af udviklingsserveren mangler måske de nyeste felter
 state.busyUntil ??= new Map();
@@ -33,6 +34,7 @@ state.followers ??= new Map();
 state.groups ??= new Map();
 state.lastChance ??= new Map();
 state.translations ??= new Map();
+state.chefs ??= new Map();
 const pushKey = (t: PushTarget) => `${t.kind}:${t.id}`;
 
 const DEMO_PIN = "1234";
@@ -44,6 +46,7 @@ function withToday(place: Place): Place {
     ...activeWait(place.extraWaitMinutes, state.busyUntil.get(place.slug) ?? null),
     news: todaysNews(news?.text, news?.sentAt, news),
     lastChance: activeLastChance(state.lastChance.get(place.slug)),
+    chef: state.chefs.get(place.slug)?.chef,
     closedToday: state.closedOn.get(place.slug) === todayInCopenhagen(),
     member: state.pins.has(place.slug) || Boolean(place.demo),
   };
@@ -200,6 +203,16 @@ export const memoryStore: Store = {
   async setLastChance(slug, value) {
     if (value) state.lastChance.set(slug, value);
     else state.lastChance.delete(slug);
+  },
+  async setChef(slug, chef, photo) {
+    if (!chef) return void state.chefs.delete(slug);
+    const old = state.chefs.get(slug);
+    const keep = photo === undefined ? (old?.photo ?? null) : photo;
+    const photoAt = photo === undefined ? old?.chef.photoAt : photo ? new Date().toISOString() : undefined;
+    state.chefs.set(slug, { chef: { ...chef, ...(keep && photoAt && { photoAt }) }, photo: keep });
+  },
+  async getChefPhoto(slug) {
+    return state.chefs.get(slug)?.photo ?? null;
   },
   async follow(slug, subscription) {
     if (!state.followers.has(slug)) state.followers.set(slug, new Map());

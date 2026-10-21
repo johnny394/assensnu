@@ -11,6 +11,7 @@ import { copenhagenNow, openStatus, toTime } from "@/lib/hours";
 import { startLater } from "@/lib/later";
 import type { Booking, Order, Place } from "@/lib/types";
 import { DeliveryEditor, HoursEditor, MenuEditor } from "./DetailsEditors";
+import { ChefBox } from "./ChefBox";
 import { LastChanceBox, NewsBox, WaitBar } from "./LiveBoxes";
 import { useAlarm } from "./useAlarm";
 
@@ -352,6 +353,7 @@ function Settings({ place: fromServer, followers, onChange, onLogout }: { place:
           />
         );
       })()}
+      <ChefBox place={fromServer} onChange={onChange} />
 
       <div className="rounded-3xl bg-surface px-5 py-2">
         <Toggle label="Tag imod bestillinger" on={place.acceptsOrders} onClick={() => save({ acceptsOrders: !place.acceptsOrders }, (p) => ({ ...p, acceptsOrders: !p.acceptsOrders }))} />

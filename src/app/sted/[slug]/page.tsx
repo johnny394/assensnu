@@ -15,6 +15,7 @@ import { LangProvider } from "@/components/useLang";
 import { isAdmin } from "@/lib/admin-auth";
 import { telLink } from "@/lib/format";
 import { WEEKDAYS } from "@/lib/hours";
+import { chefPhotoUrl } from "@/lib/chef";
 import { translator } from "@/lib/i18n";
 import { todaysDish } from "@/lib/live";
 import { pushPublicKey } from "@/lib/push";
@@ -132,6 +133,25 @@ export default async function PlacePage({ params }: Props) {
             {!place.acceptsOrders && <p className="mt-1 text-ink-soft">{t("Bestilling her kommer snart. Indtil da kan du ringe.")}</p>}
             {place.acceptsOrders && !preview && <GroupLink slug={place.slug} />}
             <Menu place={place} />
+          </>
+        )}
+
+        {place.chef && (
+          <>
+            <h2 className={heading}>{t("Mød kokken")}</h2>
+            <figure className="mt-3 flex items-start gap-4">
+              {chefPhotoUrl(place.slug, place.chef) && (
+                <img
+                  src={chefPhotoUrl(place.slug, place.chef)!}
+                  alt={place.chef.name}
+                  className="h-32 w-28 shrink-0 border-2 border-ink object-cover grayscale-[35%] sepia-[15%]"
+                />
+              )}
+              <figcaption>
+                <p className="font-display text-xl font-black leading-tight">{place.chef.name}</p>
+                <p className="mt-1 whitespace-pre-line text-lg leading-snug">{t(place.chef.text)}</p>
+              </figcaption>
+            </figure>
           </>
         )}
 

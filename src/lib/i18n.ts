@@ -40,6 +40,7 @@ export const UI: Record<string, { en: string; de: string }> = {
   Menukortet: { en: "Menu", de: "Speisekarte" },
   Åbningstider: { en: "Opening hours", de: "Öffnungszeiten" },
   "Find vej": { en: "Find us", de: "So finden Sie uns" },
+  "Mød kokken": { en: "Meet the chef", de: "Die Menschen in der Küche" },
   Ring: { en: "Call", de: "Anrufen" },
   "Book bord": { en: "Book", de: "Buchen" },
   Kort: { en: "Map", de: "Karte" },
@@ -163,6 +164,7 @@ export function placeTexts(place: Place): string[] {
   const all = [
     place.description,
     place.news?.text,
+    place.chef?.text,
     ...place.cuisines,
     ...place.menu.flatMap((c) => [
       c.name,
