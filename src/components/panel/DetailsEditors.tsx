@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { WEEKDAYS } from "@/lib/hours";
+import { CAMPSITE } from "@/lib/orders";
 import { townName } from "@/lib/postcodes";
 import type { MenuCategory, OpeningPeriod, Place, Weekday } from "@/lib/types";
 
@@ -195,7 +196,7 @@ export function DeliveryEditor({ place, onClose, onSaved, saveUrl }: {
             <p className="mt-1 text-ink-soft">Lystsejlerne skriver bro og bådens navn, eller henter ved havnekontoret. Det koster det samme som levering.</p>
           </div>
           <div>
-            <p className="mb-1.5 text-lg font-bold">Mad til campingpladsen</p>
+            <p className="mb-1.5 text-lg font-bold">Mad til {CAMPSITE}</p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setCamping(true)} aria-pressed={camping} className={`min-h-14 rounded-2xl border-2 text-lg font-bold ${camping ? "border-ink bg-ink text-paper" : "border-line"}`}>Ja, vi kommer</button>
               <button onClick={() => setCamping(false)} aria-pressed={!camping} className={`min-h-14 rounded-2xl border-2 text-lg font-bold ${!camping ? "border-ink bg-ink text-paper" : "border-line"}`}>Nej</button>

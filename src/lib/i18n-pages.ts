@@ -298,12 +298,13 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "Fx 112": { en: "E.g. 112", de: "Z. B. 112" },
   "Står på skiltet ved jeres plads eller hytte.": { en: "It is on the sign at your pitch or cabin.", de: "Steht auf dem Schild an Ihrem Stellplatz oder Ihrer Hütte." },
   "{navn} stiller maden i receptionen, og du henter den der.": { en: "{navn} leaves the food at reception, and you pick it up there.", de: "{navn} stellt das Essen an der Rezeption ab, und Sie holen es dort ab." },
-  "receptionen på campingpladsen": { en: "reception at the campsite", de: "die Rezeption des Campingplatzes" },
-  "plads {plads} på campingpladsen": { en: "pitch {plads} at the campsite", de: "Stellplatz {plads} auf dem Campingplatz" },
+  "receptionen på {camp}": { en: "reception at {camp}", de: "die Rezeption von {camp}" },
+  "plads {plads} på {camp}": { en: "pitch {plads} at {camp}", de: "Stellplatz {plads} auf {camp}" },
+  "{navn} kommer ud til gæsterne på {camp}.": { en: "{navn} delivers to guests at {camp}.", de: "{navn} liefert an die Gäste auf {camp}." },
   "plads {plads}": { en: "pitch {plads}", de: "Stellplatz {plads}" },
   receptionen: { en: "reception", de: "die Rezeption" },
-  "din plads på campingpladsen": { en: "your pitch at the campsite", de: "Ihren Stellplatz auf dem Campingplatz" },
-  "{navn} kommer med maden ud på campingpladsen: {sted}.": { en: "{navn} brings the food to the campsite: {sted}.", de: "{navn} bringt das Essen zum Campingplatz: {sted}." },
+  "din plads på {camp}": { en: "your pitch at {camp}", de: "Ihren Stellplatz auf {camp}" },
+  "{navn} kommer med maden ud på {camp}: {sted}.": { en: "{navn} brings the food to {camp}: {sted}.", de: "{navn} bringt das Essen zu {camp}: {sted}." },
   "Skriv nummeret på jeres plads, fx 112.": { en: "Write your pitch number, e.g. 112.", de: "Schreiben Sie Ihre Stellplatznummer, z. B. 112." },
 
   // Sidste chance som besked

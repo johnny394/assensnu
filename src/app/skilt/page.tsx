@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { longDate } from "@/lib/format";
+import { CAMPSITE } from "@/lib/orders";
 import { qrSvg, siteOrigin } from "@/lib/qr";
 import { store } from "@/lib/store";
 import { PrintButton } from "./PrintButton";
@@ -39,7 +40,7 @@ async function sign(q: { sted?: string; navn?: string; event?: string; til?: str
   }
   if (q.til === "camping") {
     return {
-      kicker: where ? `Til gæsterne på ${where}` : "Til gæsterne på campingpladsen",
+      kicker: where ? `Til gæsterne på ${where}` : `Til gæsterne på ${CAMPSITE}`,
       headline: "Sult?",
       da: "Scan her, og få maden bragt helt ud til jeres plads. I betaler, når den kommer.",
       en: "Hungry? Scan here and get food brought to your pitch. Menus in English.",

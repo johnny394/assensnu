@@ -8,6 +8,7 @@ import { pickupOptions } from "@/lib/hours";
 import { pickupKey } from "./PickupLink";
 import { slotsByHour } from "@/lib/later";
 import { choiceText, parseKey, priceChoice } from "@/lib/menu-options";
+import { CAMPSITE } from "@/lib/orders";
 import { townName } from "@/lib/postcodes";
 import type { OrderLine, Place } from "@/lib/types";
 import { useCart } from "./useCart";
@@ -80,7 +81,7 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
   const missing = delivering && delivery ? delivery.minimum - food : 0;
   const modes: (typeof mode)[] = delivery ? ["pickup", ...(delivery.postcodes.length ? (["door"] as const) : []), ...(delivery.harbour ? (["boat"] as const) : []), ...(delivery.camping ? (["camp"] as const) : [])] : [];
   const boatPlace = spot === "office" ? t("havnekontoret") : jetty.trim() && boat.trim() ? t("bro {bro}, båden {baad}", { bro: jetty.trim().replace(/^bro\s*/i, ""), baad: boat.trim() }) : t("båden");
-  const campPlace = campSpot === "reception" ? t("receptionen på campingpladsen") : pitch.trim() ? t("plads {plads} på campingpladsen", { plads: pitch.trim().replace(/^plads\s*/i, "") }) : t("din plads på campingpladsen");
+  const campPlace = campSpot === "reception" ? t("receptionen på {camp}", { camp: CAMPSITE }) : pitch.trim() ? t("plads {plads} på {camp}", { plads: pitch.trim().replace(/^plads\s*/i, ""), camp: CAMPSITE }) : t("din plads på {camp}", { camp: CAMPSITE });
   const zip = delivery?.postcodes.includes(postcode) ? postcode : delivery?.postcodes.length === 1 ? delivery.postcodes[0] : "";
   const options = now ? pickupOptions(place, now) : null;
   const chosen = pickup ?? (options?.asapMinutes != null ? "asap" : options?.slots[0] ?? null);
@@ -224,6 +225,7 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
           )}
           {mode === "camp" && (
             <div className="mt-5 space-y-5">
+              <p className="text-lg">{t("{navn} kommer ud til gæsterne på {camp}.", { navn: place.name, camp: CAMPSITE })}</p>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => setCampSpot("pitch")} aria-pressed={campSpot === "pitch"} className={choice(campSpot === "pitch")}>{t("Til min plads")}</button>
                 <button type="button" onClick={() => setCampSpot("reception")} aria-pressed={campSpot === "reception"} className={choice(campSpot === "reception")}>{t("Ved receptionen")}</button>
