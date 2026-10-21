@@ -1,3 +1,4 @@
+import { isClosedOn } from "./closed-days";
 import { pickupOptions } from "./hours";
 import { priceChoice } from "./menu-options";
 import type { NewBooking, NewOrder } from "./store/types";
@@ -104,6 +105,7 @@ export function buildBooking(place: Place, input: BookingInput, today: string): 
   if (!place.acceptsBookings) return { ok: false, error: `${place.name} tager ikke imod bordforespørgsler her endnu.` };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date ?? "") || input.date < today) return { ok: false, error: "Vælg en dato fra i dag og frem." };
   if (!/^\d{2}:\d{2}$/.test(input.time ?? "")) return { ok: false, error: "Vælg et tidspunkt." };
+  if (isClosedOn(place.closedDays, input.date)) return { ok: false, error: "Restauranten holder lukket den dag. Vælg en anden dag." };
   if (!Number.isInteger(input.guests) || input.guests < 1 || input.guests > 50) return { ok: false, error: "Vælg hvor mange I er." };
   const name = input.name?.trim();
   if (!name) return { ok: false, error: "Skriv dit navn." };

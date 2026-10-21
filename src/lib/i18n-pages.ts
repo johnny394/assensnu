@@ -293,4 +293,10 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   // Sidste chance som besked
   "Besked om rester til halv pris": { en: "Tell me about leftovers at half price", de: "Nachricht bei Resten zum halben Preis" },
   "Når {navn} har mad tilbage sidst på dagen.": { en: "When {navn} has food left at the end of the day.", de: "Wenn {navn} am Ende des Tages Essen übrig hat." },
+
+  // Lukkedage på forhånd
+  "Holder lukket i dag.": { en: "Closed today.", de: "Heute geschlossen." },
+  "Holder lukket til og med {dato}.": { en: "Closed until {dato}.", de: "Geschlossen bis einschließlich {dato}." },
+  "Holder lukket {dage}.": { en: "Closed {dage}.", de: "Geschlossen am {dage}." },
+  "Restauranten holder lukket den dag. Vælg en anden dag.": { en: "The restaurant is closed that day. Choose another day.", de: "Das Restaurant hat an diesem Tag geschlossen. Wählen Sie einen anderen Tag." },
 };

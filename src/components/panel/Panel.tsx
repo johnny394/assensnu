@@ -7,11 +7,13 @@ import { usePolling } from "@/components/usePolling";
 import { kr, longDate, telLink } from "@/lib/format";
 import { choiceText } from "@/lib/menu-options";
 import { townName } from "@/lib/postcodes";
-import { copenhagenNow, openStatus, toTime } from "@/lib/hours";
+import { copenhagenNow, openStatus, todayInCopenhagen, toTime } from "@/lib/hours";
 import { startLater } from "@/lib/later";
 import type { Booking, Order, Place } from "@/lib/types";
 import { DeliveryEditor, HoursEditor, MenuEditor } from "./DetailsEditors";
+import { isClosedOn } from "@/lib/closed-days";
 import { ChefBox } from "./ChefBox";
+import { ClosedDaysBox } from "./ClosedDaysBox";
 import { LastChanceBox, NewsBox, WaitBar } from "./LiveBoxes";
 import { useAlarm } from "./useAlarm";
 
@@ -361,8 +363,9 @@ function Settings({ place: fromServer, followers, onChange, onLogout }: { place:
 
       <div className="rounded-3xl bg-surface px-5 py-2">
         <Toggle label="Tag imod bestillinger" on={place.acceptsOrders} onClick={() => save({ acceptsOrders: !place.acceptsOrders }, (p) => ({ ...p, acceptsOrders: !p.acceptsOrders }))} />
-        <Toggle label="Lukket i dag" hint="Vises som lukket indtil i morgen" on={!!place.closedToday} onClick={() => save({ closedToday: !place.closedToday }, (p) => ({ ...p, closedToday: !p.closedToday }))} />
+        <Toggle label="Lukket i dag" hint={isClosedOn(place.closedDays, todayInCopenhagen()) ? "I dag er en lukkedag, I har sat herunder" : "Vises som lukket indtil i morgen"} on={!!place.closedToday} onClick={() => save({ closedToday: !place.closedToday }, (p) => ({ ...p, closedToday: !p.closedToday }))} />
       </div>
+      <ClosedDaysBox place={fromServer} onChange={onChange} />
 
       {place.menu.length > 0 && (
         <div className="rounded-3xl bg-surface px-5 py-2">

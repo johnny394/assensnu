@@ -1,3 +1,4 @@
+import { addDays, isClosedOn } from "./closed-days";
 import { translator, type T } from "./i18n";
 import type { OpeningPeriod, Place, Weekday } from "./types";
 
@@ -35,7 +36,7 @@ export type OpenStatus =
   | { state: "open"; closesAt: string }
   | { state: "closed"; opensAt?: { day: Weekday; time: string } };
 
-export function openStatus(place: Pick<Place, "hours" | "closedToday">, date = new Date()): OpenStatus {
+export function openStatus(place: Pick<Place, "hours" | "closedToday"> & { closedDays?: Place["closedDays"] }, date = new Date()): OpenStatus {
   if (place.hours.length === 0) return { state: "unknown" };
   const now = copenhagenNow(date);
 
@@ -54,17 +55,19 @@ export function openStatus(place: Pick<Place, "hours" | "closedToday">, date = n
     }
   }
 
-  return { state: "closed", opensAt: nextOpening(place.hours, now, place.closedToday) };
+  const today = todayInCopenhagen(date);
+  return { state: "closed", opensAt: nextOpening(place.hours, now, (offset) => (offset === 0 && !!place.closedToday) || isClosedOn(place.closedDays, addDays(today, offset))) };
 }
 
 function nextOpening(
   hours: OpeningPeriod[],
   now: { day: Weekday; minutes: number },
-  closedToday?: boolean,
+  closedOn: (offset: number) => boolean,
 ): { day: Weekday; time: string } | undefined {
-  for (let offset = 0; offset < 8; offset++) {
+  // Højst en uge frem, ellers står der bare "Lukket"
+  for (let offset = 0; offset < 7; offset++) {
     const day = ((now.day + offset) % 7) as Weekday;
-    if (offset === 0 && closedToday) continue;
+    if (closedOn(offset)) continue;
     const candidates = hours
       .filter((p) => p.day === day && (offset > 0 || toMinutes(p.open) > now.minutes))
       .sort((a, b) => toMinutes(a.open) - toMinutes(b.open));

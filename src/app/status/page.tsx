@@ -174,6 +174,13 @@ async function runChecks(): Promise<Check[]> {
       : { ok: true, text: "Databasen kan gemme events." },
   );
 
+  const lukkedage = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("closed_days").limit(1);
+  checks.push(
+    lukkedage.error
+      ? { ok: false, text: "Restauranterne kan ikke sætte lukkedage på forhånd endnu.", fix: "Kør tilfoej-lukkedage.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Restauranterne kan sætte lukkedage på forhånd." },
+  );
+
   const rester = await createClient(url, key, { auth: { persistSession: false } }).from("followers").select("leftovers").limit(1);
   checks.push(
     rester.error

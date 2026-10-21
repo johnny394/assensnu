@@ -1,6 +1,6 @@
 import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
 import type { AssensEvent } from "../events";
-import type { Booking, BookingStatus, CartItem, Chef, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
+import type { Booking, BookingStatus, CartItem, Chef, ClosedPeriod, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
 
 export type NewOrder = Omit<Order, "id" | "number" | "status" | "createdAt" | "readyAt">;
 export type NewBooking = Omit<Booking, "id" | "status" | "createdAt" | "suggestedTime">;
@@ -59,6 +59,8 @@ export type Store = {
   postNews(slug: string, text: string, price: number | null, wasPrice: number | null): Promise<void>;
   /** Sidste chance: retter til halv pris indtil until. null stopper det. */
   setLastChance(slug: string, value: { itemIds: string[]; until: string } | null): Promise<void>;
+  /** Lukkedage sat på forhånd. Tom liste fjerner dem. */
+  setClosedDays(slug: string, periods: ClosedPeriod[]): Promise<void>;
   /** Mød kokken. photo: undefined beholder billedet, null fjerner det. chef null fjerner det hele. */
   setChef(slug: string, chef: Omit<Chef, "photoAt"> | null, photo: string | null | undefined): Promise<void>;
   /** Billedet som data-URL, eller null */

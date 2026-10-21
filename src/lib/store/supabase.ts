@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
 import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
-import type { Booking, Chef, GroupEntry, GroupOrder, MenuCategory, Order, Place, Weekday } from "../types";
+import type { Booking, Chef, ClosedPeriod, GroupEntry, GroupOrder, MenuCategory, Order, Place, Weekday } from "../types";
 import type { AssensEvent } from "../events";
 import type { PushSubscription, Store } from "./types";
 
@@ -31,6 +32,7 @@ type PlaceRow = {
   last_chance?: { itemIds: string[]; until: string } | null;
   chef?: Chef | null;
   closed_on: string | null;
+  closed_days?: ClosedPeriod[] | null;
   panel_pin_hash: string | null;
   opening_hours: { day: number; open: string; close: string }[];
   menu_categories: {
@@ -42,14 +44,14 @@ type PlaceRow = {
 };
 
 const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, description, takeaway, dine_in,
-  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, last_chance, chef, closed_on, panel_pin_hash,
+  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, last_chance, chef, closed_on, closed_days, panel_pin_hash,
   opening_hours (day, open, close),
   menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))`;
 
 // Indtil tilfoej-levering.sql, tilfoej-tilvalg.sql, tilfoej-folg.sql, tilfoej-dagens-ret.sql, tilfoej-tilbud.sql og tilfoej-sidste-chance.sql er kørt, findes de nyere kolonner ikke.
 // Så spørger vi uden dem, så siden virker som før, bare uden levering, tilvalg, dagens tilbud og travlt-tid.
 type Res = { data: unknown; error: unknown };
-const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["last_chance"], ["chef"]];
+const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["last_chance"], ["chef"], ["closed_days"]];
 const mentions = (error: unknown, column: string) => new RegExp(`\\b${column}\\b`).test(String((error as { message?: string } | null)?.message));
 async function withFallback(select: string, run: (select: string) => PromiseLike<Res>): Promise<Res> {
   let res = await run(select);
@@ -83,7 +85,8 @@ function toPlace(r: PlaceRow): Place {
     news: todaysNews(r.news, r.news_at, { price: r.news_price, wasPrice: r.news_was_price }),
     lastChance: activeLastChance(r.last_chance),
     chef: r.chef ?? undefined,
-    closedToday: r.closed_on === todayInCopenhagen(),
+    closedToday: r.closed_on === todayInCopenhagen() || isClosedOn(r.closed_days ?? undefined, todayInCopenhagen()),
+    closedDays: currentClosed(r.closed_days, todayInCopenhagen()),
     demo: r.slug === "proevepizza" || undefined,
     // Kun ja/nej sendes videre, aldrig selve fingeraftrykket af koden
     member: Boolean(r.panel_pin_hash),
@@ -429,6 +432,9 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     },
     async setLastChance(slug, value) {
       check(await db.from("places").update({ last_chance: value }).eq("slug", slug));
+    },
+    async setClosedDays(slug, periods) {
+      check(await db.from("places").update({ closed_days: periods }).eq("slug", slug));
     },
     async setChef(slug, chef, photo) {
       // Billedet ligger i sin egen kolonne, så listen over steder ikke bliver tung

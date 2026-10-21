@@ -1,3 +1,4 @@
+import { nextClosed, periodText } from "@/lib/closed-days";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -14,7 +15,7 @@ import { TodaysOffer } from "@/components/TodaysOffer";
 import { LangProvider } from "@/components/useLang";
 import { isAdmin } from "@/lib/admin-auth";
 import { telLink } from "@/lib/format";
-import { WEEKDAYS } from "@/lib/hours";
+import { todayInCopenhagen, WEEKDAYS } from "@/lib/hours";
 import { chefPhotoUrl } from "@/lib/chef";
 import { translator } from "@/lib/i18n";
 import { todaysDish } from "@/lib/live";
@@ -48,6 +49,8 @@ export default async function PlacePage({ params }: Props) {
   const translation = await translatePlace(place, lang);
   const t = translator(lang, translation.texts);
   const tourist = lang !== "da";
+  const today = todayInCopenhagen();
+  const closed = nextClosed(place.closedDays, today);
 
   return (
     <LangProvider lang={lang} texts={translation.texts}>
@@ -66,6 +69,16 @@ export default async function PlacePage({ params }: Props) {
         <div className="mt-4">
           <LiveOpenSign place={place} large />
           <TakeawayWait place={place} />
+          {closed && (
+            <p className="mt-3 border-2 border-dashed border-stamp px-4 py-3 text-lg font-bold text-stamp">
+              {closed.from <= today
+                ? closed.from === closed.to || closed.to === today
+                  ? t("Holder lukket i dag.")
+                  : t("Holder lukket til og med {dato}.", { dato: periodText({ from: closed.to, to: closed.to }, lang) })
+                : t("Holder lukket {dage}.", { dage: periodText(closed, lang) })}
+              {closed.note && !tourist && <span className="font-normal"> {closed.note}.</span>}
+            </p>
+          )}
         </div>
         <LangSwitch />
 

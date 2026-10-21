@@ -1,14 +1,15 @@
 import { seedPlaces } from "@/data/places";
 import type { AssensEvent } from "../events";
 import { createHash } from "node:crypto";
+import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
 import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
-import type { Booking, Chef, GroupOrder, Order, Place, PlaceNews } from "../types";
+import type { Booking, Chef, ClosedPeriod, GroupOrder, Order, Place, PlaceNews } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { leftovers?: boolean }>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[] };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { leftovers?: boolean }>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -22,6 +23,7 @@ const state: State = (g.__assensnu ??= {
   pins: new Map(),
   busyUntil: new Map(),
   news: new Map(),
+  closedDays: new Map(),
   followers: new Map(),
   groups: new Map(),
   lastChance: new Map(),
@@ -33,6 +35,7 @@ const state: State = (g.__assensnu ??= {
 state.busyUntil ??= new Map();
 state.news ??= new Map();
 state.followers ??= new Map();
+state.closedDays ??= new Map();
 state.groups ??= new Map();
 state.lastChance ??= new Map();
 state.translations ??= new Map();
@@ -50,7 +53,8 @@ function withToday(place: Place): Place {
     news: todaysNews(news?.text, news?.sentAt, news),
     lastChance: activeLastChance(state.lastChance.get(place.slug)),
     chef: state.chefs.get(place.slug)?.chef,
-    closedToday: state.closedOn.get(place.slug) === todayInCopenhagen(),
+    closedToday: state.closedOn.get(place.slug) === todayInCopenhagen() || isClosedOn(state.closedDays.get(place.slug), todayInCopenhagen()),
+    closedDays: currentClosed(state.closedDays.get(place.slug), todayInCopenhagen()),
     member: state.pins.has(place.slug) || Boolean(place.demo),
   };
 }
@@ -217,6 +221,9 @@ export const memoryStore: Store = {
 
   async postNews(slug, text, price, wasPrice) {
     state.news.set(slug, { text, sentAt: new Date().toISOString(), ...(price && { price }), ...(wasPrice && { wasPrice }) });
+  },
+  async setClosedDays(slug, periods) {
+    state.closedDays.set(slug, periods);
   },
   async setLastChance(slug, value) {
     if (value) state.lastChance.set(slug, value);
