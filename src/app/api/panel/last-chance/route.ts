@@ -4,6 +4,7 @@ import { toTime, copenhagenNow } from "@/lib/hours";
 import { notifyFollowers } from "@/lib/push";
 import { panelSlug } from "@/lib/panel-auth";
 import { store } from "@/lib/store";
+import { SITE } from "@/lib/site";
 
 // Sidste chance: halv pris på de retter, der er tilbage, indtil lukketid. Tom liste stopper det.
 export async function POST(request: Request) {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     await store.setLastChance(place.slug, { itemIds: items.value, until: end.toISOString() });
   } catch (e) {
     console.error("Kunne ikke gemme sidste chance", e);
-    return NextResponse.json({ error: "Det kunne ikke gemmes. Ring til AssensNu, så hjælper vi." }, { status: 500 });
+    return NextResponse.json({ error: `Det kunne ikke gemmes. Ring til ${SITE}, så hjælper vi.` }, { status: 500 });
   }
   // Kun når det starter, ikke når retterne bagefter rettes til
   if (!place.lastChance) {

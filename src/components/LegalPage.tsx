@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { T } from "@/lib/i18n";
+import { SITE } from "@/lib/site";
 
 // Ramme til privatlivspolitik og handelsbetingelser. Selve teksten står på dansk.
 export function LegalPage({ title, updated, lang, t, children }: { title: string; updated: string; lang: string; t: T; children: React.ReactNode }) {
@@ -22,7 +23,7 @@ export function LegalPage({ title, updated, lang, t, children }: { title: string
 export function CompanyLine({ c }: { c: { name: string | null; cvr: string | null; address: string | null; email: string | null } }) {
   return (
     <p>
-      {c.name ?? "AssensNu"}
+      {c.name ?? `${SITE}`}
       {c.cvr && <>, CVR {c.cvr}</>}
       {c.address && <>, {c.address}</>}
       {c.email && (

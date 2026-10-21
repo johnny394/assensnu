@@ -10,6 +10,7 @@ import { todayInCopenhagen } from "@/lib/hours";
 import { translator } from "@/lib/i18n";
 import { store } from "@/lib/store";
 import { chooseLang, translateEvents } from "@/lib/translate";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
         <h2 className="mt-6 border-t-[3px] border-double border-ink pt-2.5 font-display text-[1.7rem] font-black tracking-tight">{t("Spis før")}</h2>
         {options.length === 0 ? (
-          <p className="mt-2 text-lg text-ink-soft">{t("Ingen af stederne på AssensNu har åbent i timerne før. Se alle steder under Mad.")}</p>
+          <p className="mt-2 text-lg text-ink-soft">{t("Ingen af stederne på {site} har åbent i timerne før. Se alle steder under Mad.", { site: SITE })}</p>
         ) : (
           <>
             <p className="mt-1 text-lg text-ink-soft">{t("Bordet er i god tid, så I når det. Restauranten svarer ja eller nej.")}</p>

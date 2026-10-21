@@ -12,6 +12,7 @@ import { AdminEvents } from "./AdminEvents";
 import { AdminOrders } from "./AdminOrders";
 import { AdminSigns } from "./AdminSigns";
 import { WEEKDAYS } from "@/lib/hours";
+import { SITE } from "@/lib/site";
 
 async function post(url: string, body: unknown): Promise<{ ok: boolean; error?: string; pin?: string; slug?: string }> {
   const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
@@ -306,7 +307,7 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
       <section className="mt-5 rounded-3xl border-2 border-line px-5 py-2">
         <Toggle label="Tag imod bestillinger" hint="Kunderne kan bestille takeaway her" on={place.acceptsOrders} onClick={() => toggle("acceptsOrders")} />
         <Toggle label="Tag imod bordforespørgsler" on={place.acceptsBookings} onClick={() => toggle("acceptsBookings")} />
-        <Toggle label="Vis på AssensNu" hint="Slået fra er stedet skjult for kunderne" on={place.published} onClick={() => toggle("published")} />
+        <Toggle label={`Vis på ${SITE}`} hint="Slået fra er stedet skjult for kunderne" on={place.published} onClick={() => toggle("published")} />
       </section>
       <section className="mt-5 rounded-3xl border-2 border-line px-5 py-4">
         <h3 className="font-display text-xl font-black tracking-tight">Åbningstider</h3>
@@ -369,7 +370,7 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
           <div className="rounded-3xl border-2 border-stamp bg-stamp-soft px-5 py-5">
             <p className="text-lg font-bold">Slet {place.name} for altid?</p>
             <p className="mt-2 text-lg">
-              Stedet forsvinder fra AssensNu sammen med åbningstider, menukort og gamle bestillinger. Det kan ikke fortrydes.
+              Stedet forsvinder fra {SITE} sammen med åbningstider, menukort og gamle bestillinger. Det kan ikke fortrydes.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button onClick={remove} className="min-h-12 rounded-2xl bg-stamp text-lg font-bold text-white">Ja, slet</button>
@@ -381,7 +382,7 @@ function PlaceSheet({ place, onClose }: { place: AdminPlace; onClose: () => void
             <button onClick={() => setConfirmDelete(true)} className="min-h-12 w-full rounded-2xl border-2 border-stamp px-5 text-lg font-bold text-stamp">
               Slet spisested
             </button>
-            <p className="mt-2 px-1 text-ink-soft">Kun hvis stedet er lukket for altid. Holder det bare lukket en periode, så slå &quot;Vis på AssensNu&quot; fra.</p>
+            <p className="mt-2 px-1 text-ink-soft">Kun hvis stedet er lukket for altid. Holder det bare lukket en periode, så slå &quot;Vis på {SITE}&quot; fra.</p>
           </>
         )}
       </section>

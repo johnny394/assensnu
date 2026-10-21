@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { phoneSubscription } from "@/components/phone-push";
+import { SITE } from "@/lib/site";
 
 const KEY = "assensnu:panel-besked";
 
@@ -61,7 +62,7 @@ export function PanelPushBox({ publicKey }: { publicKey: string | null }) {
           {state === "working" ? "Et øjeblik …" : "Slå til på denne telefon"}
         </button>
       )}
-      {state === "ios" && <p className="mt-2 text-lg">På iPhone og iPad: tryk på Del-knappen i Safari, vælg &quot;Føj til hjemmeskærm&quot;, åbn AssensNu fra det nye ikon, gå til panelet, og tryk her igen.</p>}
+      {state === "ios" && <p className="mt-2 text-lg">På iPhone og iPad: tryk på Del-knappen i Safari, vælg &quot;Føj til hjemmeskærm&quot;, åbn {SITE} fra det nye ikon, gå til panelet, og tryk her igen.</p>}
       {state === "denied" && <p className="mt-2 font-bold text-signal">Telefonen har sagt nej til beskeder. Det kan ændres under telefonens indstillinger.</p>}
       {state === "failed" && <p className="mt-2 font-bold text-signal">Det lykkedes ikke på denne telefon. Prøv igen senere.</p>}
     </div>

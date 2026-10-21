@@ -3,10 +3,11 @@ import { GroupBoard } from "@/components/group/GroupBoard";
 import { PlaceLang } from "@/components/PlaceLang";
 import { groupView } from "@/lib/groups";
 import { store } from "@/lib/store";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Fællesbestilling · AssensNu" };
+export const metadata = { title: `Fællesbestilling · ${SITE}` };
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
   const group = await store.getGroup((await params).id);

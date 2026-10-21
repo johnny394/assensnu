@@ -5,6 +5,7 @@ import { panelSlug } from "@/lib/panel-auth";
 import { notifyFollowers } from "@/lib/push";
 import { store } from "@/lib/store";
 import { warmTranslations } from "@/lib/translate";
+import { SITE } from "@/lib/site";
 
 // Dagens tilbud. Første gang om dagen får følgerne en besked. Rettes teksten senere
 // samme dag, ændres den bare på siden, så ingen får to beskeder på én dag.
@@ -27,11 +28,11 @@ export async function POST(request: Request) {
     await store.postNews(place.slug, text, price, wasPrice);
   } catch (e) {
     console.error("Kunne ikke gemme dagens tilbud", e);
-    return NextResponse.json({ error: "Det kunne ikke gemmes. Ring til AssensNu, så hjælper vi." }, { status: 500 });
+    return NextResponse.json({ error: `Det kunne ikke gemmes. Ring til ${SITE}, så hjælper vi.` }, { status: 500 });
   }
   if (firstToday) after(() => notifyFollowers(place.slug, {
         title: `Dagens tilbud hos ${place.name}`,
-        body: price ? `${text} · ${wasPrice ? `Nu ${kr(price)} (før ${kr(wasPrice)})` : kr(price)}${place.acceptsOrders ? " · Bestil i AssensNu" : ""}` : text,
+        body: price ? `${text} · ${wasPrice ? `Nu ${kr(price)} (før ${kr(wasPrice)})` : kr(price)}${place.acceptsOrders ? ` · Bestil i ${SITE}` : ""}` : text,
         url: `/sted/${place.slug}#dagens-tilbud`,
       }));
   after(() => warmTranslations(place.slug));

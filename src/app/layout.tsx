@@ -3,6 +3,7 @@ import { Atkinson_Hyperlegible, Fraunces } from "next/font/google";
 import { LangProvider } from "@/components/useLang";
 import { chooseLang } from "@/lib/translate";
 import "./globals.css";
+import { CITY, SITE } from "@/lib/site";
 
 // Atkinson Hyperlegible er lavet til at være let at læse for alle, også med dårligt syn
 const atkinson = Atkinson_Hyperlegible({ variable: "--font-atkinson", subsets: ["latin"], weight: ["400", "700"] });
@@ -10,9 +11,9 @@ const atkinson = Atkinson_Hyperlegible({ variable: "--font-atkinson", subsets: [
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], axes: ["opsz"] });
 
 export const metadata: Metadata = {
-  title: "AssensNu · Hvem har åbent i Assens?",
-  description: "Alle spisesteder i Assens ét sted. Se hvem der har åbent, find menuen, bestil takeaway og book bord.",
-  appleWebApp: { title: "AssensNu", capable: true, statusBarStyle: "default" },
+  title: `${SITE} · Hvem har åbent i ${CITY}?`,
+  description: `Alle spisesteder i ${CITY} ét sted. Se hvem der har åbent, find menuen, bestil takeaway og book bord.`,
+  appleWebApp: { title: `${SITE}`, capable: true, statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

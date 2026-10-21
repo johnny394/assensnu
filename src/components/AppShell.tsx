@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { copenhagenNow, toTime } from "@/lib/hours";
 import { useLang } from "./useLang";
 import { useNow } from "./useNow";
+import { BRAND, SITE } from "@/lib/site";
 
 const tabs = [
   { href: "/", label: "Mad" },
@@ -19,7 +20,7 @@ const dateline = (lang: keyof typeof LOCALES) => new Intl.DateTimeFormat(LOCALES
 export function Wordmark() {
   return (
     <Link href="/" className="font-display text-2xl font-black tracking-tight text-ink">
-      AssensNu
+      {SITE}
     </Link>
   );
 }
@@ -38,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-dvh pb-[calc(5rem+env(safe-area-inset-bottom))]">
       <header className="mx-auto max-w-2xl px-5 pt-5">
         <Link href="/" className="block text-center font-display text-[2.1rem] font-black leading-none tracking-tight text-ink">
-          AssensNu
+          {SITE}
         </Link>
         <div className="mt-3 h-[7px] border-y border-t-[3px] border-ink" aria-hidden />
         <p className="flex min-h-9 items-center justify-between border-b border-ink text-sm uppercase tracking-[0.12em]">
@@ -54,6 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <footer className="mx-auto mt-12 flex max-w-2xl flex-wrap gap-x-5 gap-y-1 border-t border-ink px-5 pt-3 text-ink-soft">
         <Link href="/privatliv" className="underline">{t("Privatlivspolitik")}</Link>
         <Link href="/handelsbetingelser" className="underline">{t("Handelsbetingelser")}</Link>
+        <p className="w-full pt-2 text-sm">{t("{site} er en del af {brand}", { site: SITE, brand: BRAND })}</p>
       </footer>
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t-[3px] border-double border-ink bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         <ul className="mx-auto grid max-w-2xl grid-cols-3">

@@ -22,6 +22,7 @@ import { todaysDish } from "@/lib/live";
 import { pushPublicKey } from "@/lib/push";
 import { store } from "@/lib/store";
 import { chooseLang, translatePlace } from "@/lib/translate";
+import { CITY, SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const place = await store.getPlace((await params).slug);
-  return place ? { title: `${place.name} · AssensNu`, description: `${place.cuisines.join(", ")} i Assens. Åbningstider, menu og telefon.` } : {};
+  return place ? { title: `${place.name} · ${SITE}`, description: `${place.cuisines.join(", ")} i ${CITY}. Åbningstider, menu og telefon.` } : {};
 }
 
 const button = "flex min-h-14 items-center justify-center gap-2 whitespace-nowrap px-2 text-center text-lg font-bold";

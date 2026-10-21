@@ -2,9 +2,10 @@ import { createClient } from "@supabase/supabase-js";
 import { company, companyComplete } from "@/lib/company";
 import webpush from "web-push";
 import { supabaseOrigin } from "@/lib/store/url";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Opsætning · AssensNu", robots: { index: false } };
+export const metadata = { title: `Opsætning · ${SITE}`, robots: { index: false } };
 
 type Check = { ok: boolean; text: string; fix?: string; copy?: { name: string; value: string }[] };
 

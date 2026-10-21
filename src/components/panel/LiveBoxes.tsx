@@ -5,6 +5,7 @@ import { kr } from "@/lib/format";
 import { lastChancePrice } from "@/lib/last-chance";
 import { clockTime, NEWS_MAX, WAIT_STEPS } from "@/lib/live";
 import type { Place } from "@/lib/types";
+import { SITE } from "@/lib/site";
 
 async function post(url: string, body: unknown) {
   const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
@@ -86,7 +87,7 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
   return (
     <div className="rounded-3xl bg-surface px-5 py-4">
       <p className="text-lg font-bold">Dagens tilbud</p>
-      <p className="text-ink-soft">{who ? `${who} på AssensNu.` : "Kunderne kan følge jer på AssensNu."} De får en besked på telefonen.</p>
+      <p className="text-ink-soft">{who ? `${who} på ${SITE}.` : `Kunderne kan følge jer på ${SITE}.`} De får en besked på telefonen.</p>
 
       {place.news && !editing ? (
         <>

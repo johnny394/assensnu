@@ -4,16 +4,17 @@ import { CompanyLine, LegalPage } from "@/components/LegalPage";
 import { company } from "@/lib/company";
 import { KEEP_DAYS } from "@/lib/privacy";
 import { chooseLang, pageT } from "@/lib/translate";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Privatlivspolitik · AssensNu" };
+export const metadata: Metadata = { title: `Privatlivspolitik · ${SITE}` };
 
 export default async function PrivacyPage() {
   const c = company();
   return (
     <AppShell>
       <LegalPage title="Privatlivspolitik" updated="21. oktober 2026" lang={await chooseLang()} t={await pageT()}>
-        <p>Her står, hvad AssensNu gemmer om dig, hvorfor, og hvor længe. Vi gemmer så lidt som muligt, og vi sælger aldrig dine oplysninger.</p>
+        <p>Her står, hvad {SITE} gemmer om dig, hvorfor, og hvor længe. Vi gemmer så lidt som muligt, og vi sælger aldrig dine oplysninger.</p>
 
         <h2>Hvem er ansvarlig</h2>
         <CompanyLine c={c} />

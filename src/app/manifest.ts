@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { CITY, SITE } from "@/lib/site";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "AssensNu",
-    short_name: "AssensNu",
-    description: "Hvem har åbent i Assens? Mad, takeaway og bordbooking.",
+    name: `${SITE}`,
+    short_name: `${SITE}`,
+    description: `Hvem har åbent i ${CITY}? Mad, takeaway og bordbooking.`,
     start_url: "/",
     display: "standalone",
     background_color: "#f3eee2",

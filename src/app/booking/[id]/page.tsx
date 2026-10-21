@@ -5,9 +5,10 @@ import { BookingStatusView } from "@/components/BookingStatusView";
 import { pushPublicKey } from "@/lib/push";
 import { store } from "@/lib/store";
 import { pageT } from "@/lib/translate";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Din bordforespørgsel · AssensNu", robots: { index: false } };
+export const metadata: Metadata = { title: `Din bordforespørgsel · ${SITE}`, robots: { index: false } };
 
 export default async function BookingStatusPage({ params }: { params: Promise<{ id: string }> }) {
   const booking = await store.getBooking((await params).id);
