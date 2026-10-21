@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { panelSlug } from "@/lib/panel-auth";
 import { notify } from "@/lib/push";
 import { store } from "@/lib/store";
+import type { T } from "@/lib/i18n";
 import type { BookingStatus } from "@/lib/types";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -16,12 +17,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   await store.setBookingStatus(booking.id, status, status === "suggested" ? suggestedTime : undefined);
 
-  const name = booking.placeName;
-  const message = {
-    confirmed: { title: `${name}: bordet er bekræftet`, body: `I er ventet kl. ${booking.time}.` },
-    declined: { title: `${name} har desværre ikke plads`, body: "Prøv en anden dag eller tid." },
-    suggested: { title: `${name} foreslår kl. ${suggestedTime}`, body: "Ring og sig ja, så er det på plads." },
-  }[status as "confirmed" | "declined" | "suggested"];
-  after(() => notify({ kind: "booking", id: booking.id }, { ...message, url: `/booking/${booking.id}` }));
+  const navn = booking.placeName;
+  const message = (t: T) =>
+    ({
+      confirmed: { title: t("{navn}: bordet er bekræftet", { navn }), body: t("I er ventet kl. {tid}.", { tid: booking.time }) },
+      declined: { title: t("{navn} har desværre ikke plads", { navn }), body: t("Prøv en anden dag eller tid.") },
+      suggested: { title: t("{navn} foreslår kl. {tid}", { navn, tid: suggestedTime! }), body: t("Ring og sig ja, så er det på plads.") },
+    })[status as "confirmed" | "declined" | "suggested"];
+  after(() => notify({ kind: "booking", id: booking.id }, (t) => ({ ...message(t), url: `/booking/${booking.id}` })));
   return NextResponse.json({ ok: true });
 }

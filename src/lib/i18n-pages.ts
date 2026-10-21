@@ -299,4 +299,19 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "Holder lukket til og med {dato}.": { en: "Closed until {dato}.", de: "Geschlossen bis einschließlich {dato}." },
   "Holder lukket {dage}.": { en: "Closed {dage}.", de: "Geschlossen am {dage}." },
   "Restauranten holder lukket den dag. Vælg en anden dag.": { en: "The restaurant is closed that day. Choose another day.", de: "Das Restaurant hat an diesem Tag geschlossen. Wählen Sie einen anderen Tag." },
+
+  // Beskeder på telefonen om bestilling og bord
+  "{navn}: maden er på vej": { en: "{navn}: your food is on its way", de: "{navn}: Ihr Essen ist unterwegs" },
+  "{navn}: maden er klar": { en: "{navn}: your food is ready", de: "{navn}: Ihr Essen ist fertig" },
+  "{navn} har fået din bestilling": { en: "{navn} has your order", de: "{navn} hat Ihre Bestellung" },
+  "Den er klar ca. kl. {tid}.": { en: "It will be ready at about {tid}.", de: "Sie ist gegen {tid} Uhr fertig." },
+  "Du får besked, når den er klar.": { en: "We will let you know when it is ready.", de: "Sie bekommen Bescheid, wenn sie fertig ist." },
+  "{navn} kan ikke lave din bestilling": { en: "{navn} cannot make your order", de: "{navn} kann Ihre Bestellung nicht zubereiten" },
+  "Tryk for at se mere.": { en: "Tap to see more.", de: "Tippen für mehr." },
+  "{navn}: bordet er bekræftet": { en: "{navn}: your table is confirmed", de: "{navn}: Ihr Tisch ist bestätigt" },
+  "I er ventet kl. {tid}.": { en: "They expect you at {tid}.", de: "Man erwartet Sie um {tid} Uhr." },
+  "{navn} har desværre ikke plads": { en: "{navn} has no table free, sorry", de: "{navn} hat leider keinen Platz" },
+  "Prøv en anden dag eller tid.": { en: "Try another day or time.", de: "Versuchen Sie einen anderen Tag oder eine andere Zeit." },
+  "{navn} foreslår kl. {tid}": { en: "{navn} suggests {tid}", de: "{navn} schlägt {tid} Uhr vor" },
+  "Ring og sig ja, så er det på plads.": { en: "Call and say yes, and it is booked.", de: "Rufen Sie an und sagen Sie ja, dann ist es gebucht." },
 };

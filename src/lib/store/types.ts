@@ -22,7 +22,8 @@ export type PlaceDetails = {
 
 // En kundes telefon, som vi kan sende en besked til, når restauranten svarer
 export type PushTarget = { kind: "order" | "booking"; id: string };
-export type PushSubscription = { endpoint: string; keys: { p256dh: string; auth: string } };
+// lang: kundens sprog, så "maden er klar" kommer på engelsk eller tysk til turister
+export type PushSubscription = { endpoint: string; keys: { p256dh: string; auth: string }; lang?: "en" | "de" };
 
 // Alt, appen gemmer og henter. Der er to udgaver: i hukommelsen (til afprøvning)
 // og Supabase (til drift). Hvilken der bruges, afgøres i ./index.ts.

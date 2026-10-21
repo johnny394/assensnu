@@ -3,6 +3,7 @@ import { copenhagenNow, toTime } from "@/lib/hours";
 import { panelSlug } from "@/lib/panel-auth";
 import { notify } from "@/lib/push";
 import { store } from "@/lib/store";
+import type { T } from "@/lib/i18n";
 import type { OrderStatus } from "@/lib/types";
 
 const STATUSES: OrderStatus[] = ["accepted", "ready", "picked_up", "rejected"];
@@ -19,16 +20,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     status !== "accepted" ? undefined : order.pickup !== "asap" ? order.pickup : readyInMinutes ? toTime(copenhagenNow().minutes + readyInMinutes) : undefined;
   await store.setOrderStatus(order.id, status, readyAt);
 
-  const message =
+  const navn = order.placeName;
+  const n = order.number;
+  const message = (t: T) =>
     status === "ready"
       ? order.delivery
-        ? { title: `${order.placeName}: maden er på vej`, body: `Ordre ${order.number} kører ud til dig nu.` }
-        : { title: `${order.placeName}: maden er klar`, body: `Ordre ${order.number} kan hentes nu.` }
+        ? { title: t("{navn}: maden er på vej", { navn }), body: t("Ordre {n} kører ud til dig nu.", { n }) }
+        : { title: t("{navn}: maden er klar", { navn }), body: t("Ordre {n} kan hentes nu.", { n }) }
       : status === "accepted"
-        ? { title: `${order.placeName} har fået din bestilling`, body: readyAt ? `Den er klar ca. kl. ${readyAt}.` : "Du får besked, når den er klar." }
-        : status === "rejected"
-          ? { title: `${order.placeName} kan ikke lave din bestilling`, body: "Tryk for at se mere." }
-          : null;
-  if (message) after(() => notify({ kind: "order", id: order.id }, { ...message, url: `/ordre/${order.id}` }));
+        ? { title: t("{navn} har fået din bestilling", { navn }), body: readyAt ? t("Den er klar ca. kl. {tid}.", { tid: readyAt }) : t("Du får besked, når den er klar.") }
+        : { title: t("{navn} kan ikke lave din bestilling", { navn }), body: t("Tryk for at se mere.") };
+  if (status !== "picked_up") after(() => notify({ kind: "order", id: order.id }, (t) => ({ ...message(t), url: `/ordre/${order.id}` })));
   return NextResponse.json({ ok: true });
 }
