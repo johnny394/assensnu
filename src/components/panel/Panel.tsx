@@ -182,6 +182,8 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
         <p className="mt-2 rounded-xl bg-ink px-3 py-2 text-lg text-paper">
           {o.delivery.harbour ? (
             <><strong>HAVNEN</strong> · {o.delivery.address}</>
+          ) : o.delivery.camping ? (
+            <><strong>CAMPING</strong> · {o.delivery.address.replace(/^Campingpladsen, /, "")}</>
           ) : (
             <><strong>LEVERING</strong> til {o.delivery.address}, {townName(o.delivery.postcode)}</>
           )}

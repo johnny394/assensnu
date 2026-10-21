@@ -290,6 +290,22 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "Skriv hvilken bro, I ligger ved, fx 3.": { en: "Write which jetty you are moored at, e.g. 3.", de: "Schreiben Sie, an welchem Steg Sie liegen, z. B. 3." },
   "Skriv bådens navn, så de kan finde jer.": { en: "Write the name of the boat so they can find you.", de: "Schreiben Sie den Namen des Boots, damit man Sie findet." },
 
+  // Mad til campingpladsen
+  "Til campingpladsen": { en: "To the campsite", de: "Zum Campingplatz" },
+  "Til min plads": { en: "To my pitch", de: "Zu meinem Stellplatz" },
+  "Ved receptionen": { en: "At reception", de: "An der Rezeption" },
+  Pladsnummer: { en: "Pitch number", de: "Stellplatznummer" },
+  "Fx 112": { en: "E.g. 112", de: "Z. B. 112" },
+  "Står på skiltet ved jeres plads eller hytte.": { en: "It is on the sign at your pitch or cabin.", de: "Steht auf dem Schild an Ihrem Stellplatz oder Ihrer Hütte." },
+  "{navn} stiller maden i receptionen, og du henter den der.": { en: "{navn} leaves the food at reception, and you pick it up there.", de: "{navn} stellt das Essen an der Rezeption ab, und Sie holen es dort ab." },
+  "receptionen på campingpladsen": { en: "reception at the campsite", de: "die Rezeption des Campingplatzes" },
+  "plads {plads} på campingpladsen": { en: "pitch {plads} at the campsite", de: "Stellplatz {plads} auf dem Campingplatz" },
+  "plads {plads}": { en: "pitch {plads}", de: "Stellplatz {plads}" },
+  receptionen: { en: "reception", de: "die Rezeption" },
+  "din plads på campingpladsen": { en: "your pitch at the campsite", de: "Ihren Stellplatz auf dem Campingplatz" },
+  "{navn} kommer med maden ud på campingpladsen: {sted}.": { en: "{navn} brings the food to the campsite: {sted}.", de: "{navn} bringt das Essen zum Campingplatz: {sted}." },
+  "Skriv nummeret på jeres plads, fx 112.": { en: "Write your pitch number, e.g. 112.", de: "Schreiben Sie Ihre Stellplatznummer, z. B. 112." },
+
   // Sidste chance som besked
   "Besked om rester til halv pris": { en: "Tell me about leftovers at half price", de: "Nachricht bei Resten zum halben Preis" },
   "Når {navn} har mad tilbage sidst på dagen.": { en: "When {navn} has food left at the end of the day.", de: "Wenn {navn} am Ende des Tages Essen übrig hat." },

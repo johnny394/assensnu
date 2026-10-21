@@ -31,8 +31,9 @@ export type MenuCategory = {
 export type DeliverySettings = {
   fee: number; // kroner for at køre ud
   minimum: number; // mindste beløb for maden, før der kan bestilles levering
-  postcodes: string[]; // fx ["5610", "5620"]. Kan være tom, hvis stedet kun kommer ned i havnen
+  postcodes: string[]; // fx ["5610", "5620"]. Kan være tom, hvis stedet kun kommer ned i havnen eller på campingpladsen
   harbour?: boolean; // kommer også ned i havnen med mad til bådene
+  camping?: boolean; // kommer også ud på campingpladsen
 };
 
 export type Place = {
@@ -107,7 +108,8 @@ export type Order = {
 };
 
 // harbour: maden skal ned i havnen, og address er fx "Bro 3, båd Frida" eller "Havnekontoret"
-export type OrderDelivery = { address: string; postcode: string; fee: number; harbour?: true };
+// camping: maden skal ud på campingpladsen, og address er fx "Campingpladsen, plads 112"
+export type OrderDelivery = { address: string; postcode: string; fee: number; harbour?: true; camping?: true };
 
 export type BookingStatus = "requested" | "confirmed" | "declined" | "suggested";
 

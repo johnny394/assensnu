@@ -10,7 +10,7 @@ export type OrderInput = {
   phone: string;
   pickup: string;
   note?: string;
-  delivery?: { address?: string; postcode?: string; harbour?: "jetty" | "office"; jetty?: string; boat?: string } | null;
+  delivery?: { address?: string; postcode?: string; harbour?: "jetty" | "office"; jetty?: string; boat?: string; camping?: "pitch" | "reception"; pitch?: string } | null;
 };
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -32,6 +32,14 @@ function harbourSpot(d: { harbour?: string; jetty?: string; boat?: string }): Re
   if (!jetty) return { ok: false, error: "Skriv hvilken bro, I ligger ved, fx 3." };
   if (!boat) return { ok: false, error: "Skriv bådens navn, så de kan finde jer." };
   return { ok: true, value: `Bro ${jetty}, båd ${boat}` };
+}
+
+// Campingpladsen. Gæsterne skriver pladsnummeret, eller henter i receptionen.
+function campingSpot(d: { camping?: string; pitch?: string }): Result<string> {
+  if (d.camping === "reception") return { ok: true, value: "Receptionen på campingpladsen" };
+  const pitch = d.pitch?.trim().replace(/^plads\s*/i, "").slice(0, 20) ?? "";
+  if (!pitch) return { ok: false, error: "Skriv nummeret på jeres plads, fx 112." };
+  return { ok: true, value: `Campingpladsen, plads ${pitch}` };
 }
 
 // Tjekker en bestilling og regner prisen ud fra menuen, så kunden ikke selv kan sætte prisen
@@ -63,7 +71,13 @@ export function buildOrder(place: Place, input: OrderInput, now = new Date()): R
   if (input.delivery) {
     const d = place.delivery;
     if (!d) return { ok: false, error: `${place.name} leverer ikke. Vælg at hente maden.` };
-    if (input.delivery.harbour) {
+    if (input.delivery.camping) {
+      if (!d.camping) return { ok: false, error: `${place.name} kommer ikke ud på campingpladsen. Vælg at hente maden.` };
+      const where = campingSpot(input.delivery);
+      if (!where.ok) return where;
+      if (food < d.minimum) return { ok: false, error: `Levering kræver, at du bestiller for mindst ${d.minimum} kr.` };
+      delivery = { address: where.value, postcode: HARBOUR_POSTCODE, fee: d.fee, camping: true };
+    } else if (input.delivery.harbour) {
       if (!d.harbour) return { ok: false, error: `${place.name} kommer ikke ned i havnen. Vælg at hente maden.` };
       const where = harbourSpot(input.delivery);
       if (!where.ok) return where;

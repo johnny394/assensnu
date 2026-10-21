@@ -7,7 +7,7 @@ export function AdminSigns({ places }: { places: { slug: string; name: string }[
   const [where, setWhere] = useState("");
   const [place, setPlace] = useState("");
   const field = "w-full rounded-2xl border-2 border-line bg-surface px-4 py-3 text-lg";
-  const href = `/skilt?${new URLSearchParams({ ...(place && { sted: place }), ...(where.trim() && { navn: where.trim() }) })}`;
+  const href = `/skilt?${new URLSearchParams({ ...(place === "camping" ? { til: "camping" } : place && { sted: place }), ...(where.trim() && { navn: where.trim() }) })}`;
   return (
     <section className="mt-10">
       <h2 className="font-display text-[1.8rem] font-extrabold tracking-tight">Skilte med QR-kode</h2>
@@ -21,6 +21,7 @@ export function AdminSigns({ places }: { places: { slug: string; name: string }[
           <span className="mb-1 block text-lg font-bold">Hvad skal de se, når de scanner?</span>
           <select value={place} onChange={(e) => setPlace(e.target.value)} className={field}>
             <option value="">Alle spisesteder i Assens</option>
+            <option value="camping">Dem, der kommer ud på campingpladsen</option>
             {places.map((p) => (
               <option key={p.slug} value={p.slug}>Kun {p.name}</option>
             ))}

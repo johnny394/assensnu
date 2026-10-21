@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { copenhagenNow, openStatus, pickupOptions } from "@/lib/hours";
 import { clockTime } from "@/lib/live";
 import type { T } from "@/lib/i18n";
@@ -13,13 +13,14 @@ import { offerPrice } from "./TodaysOffer";
 import { useLang } from "./useLang";
 import { useNow } from "./useNow";
 
-type Filter = "open" | "takeaway" | "dineIn" | "boat";
+type Filter = "open" | "takeaway" | "dineIn" | "boat" | "camp";
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "open", label: "Åben nu" },
   { key: "takeaway", label: "Takeaway" },
   { key: "dineIn", label: "Spis på stedet" },
   { key: "boat", label: "Til båden" },
+  { key: "camp", label: "Til campingpladsen" },
 ];
 
 const RANK = { open: 0, closed: 1, unknown: 2 } as const;
@@ -31,6 +32,15 @@ export function PlaceBrowser({ places, title, languages }: { places: Place[]; ti
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Set<Filter>>(new Set());
   const [cuisine, setCuisine] = useState<string | null>(null);
+
+  // Fra QR-skiltet på campingpladsen eller i havnen: /?til=camping viser dem, der kommer derud
+  useEffect(() => {
+    const til = new URLSearchParams(window.location.search).get("til");
+    if (til === "camping" && places.some((p) => p.member && p.acceptsOrders && p.delivery?.camping)) setFilters(new Set(["camp"]));
+    if (til === "havnen" && places.some((p) => p.member && p.acceptsOrders && p.delivery?.harbour)) setFilters(new Set(["boat"]));
+    // Knappen kan ligge uden for skærmen til højre, så den rulles frem
+    requestAnimationFrame(() => document.querySelector("[data-filter][aria-pressed=true]")?.scrollIntoView({ block: "nearest", inline: "center" }));
+  }, [places]);
 
   const cuisines = useMemo(() => {
     const counts = new Map<string, number>();
@@ -52,6 +62,7 @@ export function PlaceBrowser({ places, title, languages }: { places: Place[]; ti
       if (filters.has("takeaway") && !p.takeaway) return false;
       if (filters.has("dineIn") && !p.dineIn) return false;
       if (filters.has("boat") && !(p.acceptsOrders && p.delivery?.harbour)) return false;
+      if (filters.has("camp") && !(p.acceptsOrders && p.delivery?.camping)) return false;
       if (filters.has("open") && state(p) !== "open") return false;
       return true;
     })
@@ -93,9 +104,9 @@ export function PlaceBrowser({ places, title, languages }: { places: Place[]; ti
       </label>
 
       <div className="-mx-5 mt-4 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
-        {/* "Til båden" vises kun, når mindst ét sted kommer ned i havnen */}
-        {FILTERS.filter((f) => f.key !== "boat" || places.some((p) => p.member && p.acceptsOrders && p.delivery?.harbour)).map((f) => (
-          <button key={f.key} onClick={() => toggle(f.key)} aria-pressed={filters.has(f.key)} className={chip(filters.has(f.key))}>
+        {/* "Til båden" og "Til campingpladsen" vises kun, når mindst ét sted kommer derud */}
+        {FILTERS.filter((f) => (f.key !== "boat" || places.some((p) => p.member && p.acceptsOrders && p.delivery?.harbour)) && (f.key !== "camp" || places.some((p) => p.member && p.acceptsOrders && p.delivery?.camping))).map((f) => (
+          <button key={f.key} data-filter={f.key} onClick={() => toggle(f.key)} aria-pressed={filters.has(f.key)} className={chip(filters.has(f.key))}>
             {t(f.label)}
           </button>
         ))}

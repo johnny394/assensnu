@@ -40,6 +40,17 @@ describe("buildOrder", () => {
     expect(buildOrder({ ...place, delivery: { ...place.delivery, harbour: false } }, { ...input, delivery: { harbour: "office" } }, friday).ok).toBe(false);
   });
 
+  it("bringer maden ud på campingpladsen", () => {
+    const place = { ...demoPlace, delivery: { fee: 25, minimum: 0, postcodes: [], camping: true } };
+    const r = buildOrder(place, { ...input, delivery: { camping: "pitch", pitch: "Plads 112" } }, friday);
+    expect(r.ok && r.value.delivery).toEqual({ address: "Campingpladsen, plads 112", postcode: "5610", fee: 25, camping: true });
+    const reception = buildOrder(place, { ...input, delivery: { camping: "reception" } }, friday);
+    expect(reception.ok && reception.value.delivery?.address).toBe("Receptionen på campingpladsen");
+    expect(buildOrder(place, { ...input, delivery: { camping: "pitch" } }, friday).ok).toBe(false);
+    expect(buildOrder(place, { ...input, delivery: { harbour: "office" } }, friday).ok).toBe(false);
+    expect(buildOrder({ ...place, delivery: { ...place.delivery, camping: false } }, { ...input, delivery: { camping: "reception" } }, friday).ok).toBe(false);
+  });
+
   it("lægger leveringsgebyret oven i og tjekker by og minimum", () => {
     const place = { ...demoPlace, delivery: { fee: 39, minimum: 200, postcodes: ["5610"] } };
     const r = buildOrder(place, { ...input, delivery: { address: "Østergade 12", postcode: "5610" } }, friday);
