@@ -10,7 +10,7 @@ describe("nabobyer", () => {
     vi.stubEnv("NEXT_PUBLIC_BY", "Glamsbjerg");
     const { NEARBY, SITE } = await import("./site");
     expect(SITE).toBe("GlamsbjergNu");
-    expect(NEARBY).toEqual([{ name: "Assens", url: "https://assensnu-xiku.vercel.app" }]);
+    expect(NEARBY).toEqual([{ name: "Assens", url: "https://assens.bynu.dk" }]);
   });
 
   it("Assens viser ingen boks", async () => {
