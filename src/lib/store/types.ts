@@ -1,4 +1,5 @@
 import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
+import type { AssensEvent } from "../events";
 import type { Booking, BookingStatus, CartItem, Chef, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
 
 export type NewOrder = Omit<Order, "id" | "number" | "status" | "createdAt" | "readyAt">;
@@ -73,6 +74,13 @@ export type Store = {
   /** Menuen på engelsk og tysk: de oversættelser, der allerede er lavet, som dansk tekst → oversat */
   getTranslations(lang: string, sources: string[]): Promise<Record<string, string>>;
   saveTranslations(lang: string, translations: Record<string, string>): Promise<void>;
+
+  /** Events i byen. listEvents giver dem fra den dag og frem. */
+  listEvents(fromDate: string): Promise<AssensEvent[]>;
+  getEvent(id: string): Promise<AssensEvent | null>;
+  /** Opretter et nyt event, eller retter det med samme id */
+  saveEvent(event: Omit<AssensEvent, "id">, id?: string): Promise<AssensEvent>;
+  deleteEvent(id: string): Promise<void>;
 
   savePush(target: PushTarget, subscription: PushSubscription | null): Promise<void>;
   getPush(target: PushTarget): Promise<PushSubscription | null>;

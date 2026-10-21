@@ -165,6 +165,13 @@ async function runChecks(): Promise<Check[]> {
       ? { ok: false, text: "Mød kokken (billede og tekst) kan ikke gemmes endnu.", fix: "Kør tilfoej-mod-kokken.sql i Supabase under SQL Editor. Den sletter ingenting." }
       : { ok: true, text: "Mød kokken (billede og tekst) kan gemmes." },
   );
+
+  const events = await createClient(url, key, { auth: { persistSession: false } }).from("events").select("id").limit(1);
+  checks.push(
+    events.error
+      ? { ok: false, text: "Databasen kan ikke gemme events endnu.", fix: "Kør tilfoej-events.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan gemme events." },
+  );
   checks.push(
     process.env.ANTHROPIC_API_KEY?.trim()
       ? { ok: true, text: "ANTHROPIC_API_KEY er sat, så menuen kan oversættes til engelsk og tysk." }

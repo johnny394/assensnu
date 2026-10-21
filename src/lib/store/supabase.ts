@@ -4,6 +4,7 @@ import { todayInCopenhagen } from "../hours";
 import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import type { Booking, Chef, GroupEntry, GroupOrder, MenuCategory, Order, Place, Weekday } from "../types";
+import type { AssensEvent } from "../events";
 import type { PushSubscription, Store } from "./types";
 
 type PlaceRow = {
@@ -500,6 +501,29 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       if (rows.length) check(await db.from("translations").upsert(rows));
     },
 
+    async listEvents(fromDate) {
+      const res = await db.from("events").select("id, title, date, time, venue, text, link").gte("date", fromDate).order("date").order("time");
+      // Uden tabellen (tilfoej-events.sql ikke kørt) er der bare ingen events endnu
+      if (res.error) return [];
+      return (res.data as EventRow[]).map(toEvent);
+    },
+    async getEvent(id) {
+      const res = await db.from("events").select("id, title, date, time, venue, text, link").eq("id", id).maybeSingle();
+      return res.error || !res.data ? null : toEvent(res.data as EventRow);
+    },
+    async saveEvent(event, id) {
+      const row = { title: event.title, date: event.date, time: event.time, venue: event.venue, text: event.text ?? null, link: event.link ?? null };
+      const saved = check(
+        id
+          ? await db.from("events").update(row).eq("id", id).select("id, title, date, time, venue, text, link").single()
+          : await db.from("events").insert(row).select("id, title, date, time, venue, text, link").single(),
+      ) as EventRow;
+      return toEvent(saved);
+    },
+    async deleteEvent(id) {
+      check(await db.from("events").delete().eq("id", id));
+    },
+
     async savePush({ kind, id }, subscription) {
       check(await db.from(kind === "order" ? "orders" : "bookings").update({ push: subscription }).eq("id", id));
     },
@@ -509,3 +533,6 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     },
   };
 }
+
+type EventRow = { id: string; title: string; date: string; time: string; venue: string; text: string | null; link: string | null };
+const toEvent = (r: EventRow): AssensEvent => ({ id: r.id, title: r.title, date: r.date, time: r.time.slice(0, 5), venue: r.venue, text: r.text ?? undefined, link: r.link ?? undefined });
