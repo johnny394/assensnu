@@ -7,18 +7,20 @@ import { useFavorites } from "./useFavorites";
 import { useLang } from "./useLang";
 
 const KEY = "assensnu:folger";
+// Steder, hvor man også vil have besked om rester til halv pris
+const LEFTOVERS_KEY = "assensnu:rester";
 
-function readFollowing(): string[] {
+function readFollowing(key = KEY): string[] {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "[]");
+    return JSON.parse(localStorage.getItem(key) ?? "[]");
   } catch {
     return [];
   }
 }
 
-function writeFollowing(list: string[]) {
+function writeFollowing(list: string[], key = KEY) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(list));
+    localStorage.setItem(key, JSON.stringify(list));
   } catch {}
 }
 
@@ -28,22 +30,25 @@ type State = "loading" | "idle" | "working" | "following" | "ios" | "denied" | "
 // Ingen profil: telefonen husker selv, hvem man følger.
 export function FollowButton({ slug, name, publicKey }: { slug: string; name: string; publicKey: string | null }) {
   const [state, setState] = useState<State>("loading");
+  const [leftovers, setLeftovers] = useState(false);
+  const [savingLeftovers, setSavingLeftovers] = useState(false);
   const { favorites, toggle } = useFavorites();
   const { t } = useLang();
 
   useEffect(() => {
     setState(readFollowing().includes(slug) ? "following" : "idle");
+    setLeftovers(readFollowing(LEFTOVERS_KEY).includes(slug));
   }, [slug]);
 
   if (!publicKey || state === "loading") return null;
 
-  const send = async (stop: boolean) => {
+  const send = async (stop: boolean, wantLeftovers = false) => {
     const subscription = await phoneSubscription(publicKey);
     if (typeof subscription === "string") return false;
     const res = await fetch("/api/follow", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ slug, subscription, stop }),
+      body: JSON.stringify({ slug, subscription, stop, leftovers: wantLeftovers }),
     }).catch(() => null);
     return !!res?.ok;
   };
@@ -65,7 +70,19 @@ export function FollowButton({ slug, name, publicKey }: { slug: string; name: st
     setState("working");
     await send(true);
     writeFollowing(readFollowing().filter((s) => s !== slug));
+    writeFollowing(readFollowing(LEFTOVERS_KEY).filter((s) => s !== slug), LEFTOVERS_KEY);
+    setLeftovers(false);
     setState("idle");
+  };
+
+  const toggleLeftovers = async () => {
+    setSavingLeftovers(true);
+    const ok = await send(false, !leftovers);
+    setSavingLeftovers(false);
+    if (!ok) return;
+    const others = readFollowing(LEFTOVERS_KEY).filter((s) => s !== slug);
+    writeFollowing(leftovers ? others : [...others, slug], LEFTOVERS_KEY);
+    setLeftovers(!leftovers);
   };
 
   if (state === "ios") {
@@ -83,12 +100,22 @@ export function FollowButton({ slug, name, publicKey }: { slug: string; name: st
 
   if (state === "following") {
     return (
-      <p className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-2 border-ink px-4 py-3 text-lg">
-        <span className="font-bold">{t("✓ Du følger {navn}", { navn: name })}</span>
-        <button onClick={unfollow} className="text-ink-soft underline">
-          {t("Stop")}
+      <div className="mt-5 border-2 border-ink px-4 py-3 text-lg">
+        <p className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <span className="font-bold">{t("✓ Du følger {navn}", { navn: name })}</span>
+          <button onClick={unfollow} className="text-ink-soft underline">
+            {t("Stop")}
+          </button>
+        </p>
+        {/* Too Good To Go, men for Assens: besked når der er rester til halv pris */}
+        <button onClick={toggleLeftovers} disabled={savingLeftovers} aria-pressed={leftovers} className="mt-3 flex w-full items-start gap-3 border-t border-line pt-3 text-left disabled:opacity-60">
+          <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center border-2 border-ink ${leftovers ? "bg-ink text-paper" : ""}`} aria-hidden>{leftovers && "✓"}</span>
+          <span>
+            <span className="block font-bold">{t("Besked om rester til halv pris")}</span>
+            <span className="block text-ink-soft">{t("Når {navn} har mad tilbage sidst på dagen.", { navn: name })}</span>
+          </span>
         </button>
-      </p>
+      </div>
     );
   }
 

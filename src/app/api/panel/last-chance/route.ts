@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { cleanLastChanceItems, lastChanceEnd } from "@/lib/last-chance";
+import { toTime, copenhagenNow } from "@/lib/hours";
+import { notifyFollowers } from "@/lib/push";
 import { panelSlug } from "@/lib/panel-auth";
 import { store } from "@/lib/store";
 
@@ -23,6 +25,18 @@ export async function POST(request: Request) {
   } catch (e) {
     console.error("Kunne ikke gemme sidste chance", e);
     return NextResponse.json({ error: "Det kunne ikke gemmes. Ring til AssensNu, så hjælper vi." }, { status: 500 });
+  }
+  // Kun når det starter, ikke når retterne bagefter rettes til
+  if (!place.lastChance) {
+    const names = place.menu.flatMap((c) => c.items).filter((i) => items.value.includes(i.id)).map((i) => i.name);
+    const list = names.length > 3 ? `${names.slice(0, 3).join(", ")} og mere` : names.join(" og ");
+    after(() =>
+      notifyFollowers(
+        place.slug,
+        { title: `${place.name}: halv pris til lukketid`, body: `${list}. Til kl. ${toTime(copenhagenNow(end).minutes)}, så længe der er.`, url: `/sted/${place.slug}` },
+        { leftovers: true },
+      ),
+    );
   }
   return NextResponse.json({ ok: true });
 }

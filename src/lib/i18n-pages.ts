@@ -272,4 +272,25 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "Allergier? Ring og spørg {navn}, før du bestiller.": { en: "Allergies? Call {navn} and ask before you order.", de: "Allergien? Rufen Sie {navn} an und fragen Sie vor der Bestellung." },
   "Allergier? Spørg {navn}, før du bestiller.": { en: "Allergies? Ask {navn} before you order.", de: "Allergien? Fragen Sie {navn} vor der Bestellung." },
   "Der er sendt mange bestillinger fra dit nummer den sidste time. Ring til restauranten, så hjælper de dig.": { en: "Many orders have been sent from your number in the last hour. Call the restaurant and they will help you.", de: "In der letzten Stunde wurden viele Bestellungen von Ihrer Nummer gesendet. Rufen Sie das Restaurant an, dort hilft man Ihnen." },
+
+  // Mad til båden
+  "Til båden": { en: "To the boat", de: "Zum Boot" },
+  "Ned på broen": { en: "Down to the jetty", de: "Zum Steg" },
+  "Ved havnekontoret": { en: "At the harbour office", de: "Am Hafenbüro" },
+  Bro: { en: "Jetty", de: "Steg" },
+  "Bådens navn": { en: "Boat name", de: "Name des Boots" },
+  "Fx 3": { en: "E.g. 3", de: "Z. B. 3" },
+  "Fx Frida": { en: "E.g. Frida", de: "Z. B. Frida" },
+  havnekontoret: { en: "the harbour office", de: "das Hafenbüro" },
+  Havnekontoret: { en: "The harbour office", de: "Das Hafenbüro" },
+  båden: { en: "your boat", de: "Ihr Boot" },
+  "bro {bro}, båden {baad}": { en: "jetty {bro}, the boat {baad}", de: "Steg {bro}, Boot {baad}" },
+  "{navn} stiller maden ved havnekontoret, og du henter den der.": { en: "{navn} leaves the food at the harbour office, and you pick it up there.", de: "{navn} stellt das Essen am Hafenbüro ab, und Sie holen es dort ab." },
+  "{navn} kommer med maden ned i havnen: {sted}.": { en: "{navn} brings the food down to the harbour: {sted}.", de: "{navn} bringt das Essen zum Hafen: {sted}." },
+  "Skriv hvilken bro, I ligger ved, fx 3.": { en: "Write which jetty you are moored at, e.g. 3.", de: "Schreiben Sie, an welchem Steg Sie liegen, z. B. 3." },
+  "Skriv bådens navn, så de kan finde jer.": { en: "Write the name of the boat so they can find you.", de: "Schreiben Sie den Namen des Boots, damit man Sie findet." },
+
+  // Sidste chance som besked
+  "Besked om rester til halv pris": { en: "Tell me about leftovers at half price", de: "Nachricht bei Resten zum halben Preis" },
+  "Når {navn} har mad tilbage sidst på dagen.": { en: "When {navn} has food left at the end of the day.", de: "Wenn {navn} am Ende des Tages Essen übrig hat." },
 };

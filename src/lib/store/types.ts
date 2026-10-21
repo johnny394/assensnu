@@ -63,9 +63,10 @@ export type Store = {
   setChef(slug: string, chef: Omit<Chef, "photoAt"> | null, photo: string | null | undefined): Promise<void>;
   /** Billedet som data-URL, eller null */
   getChefPhoto(slug: string): Promise<string | null>;
-  follow(slug: string, subscription: PushSubscription): Promise<void>;
+  /** leftovers: vil også have besked, når stedet sætter rester til halv pris */
+  follow(slug: string, subscription: PushSubscription, leftovers?: boolean): Promise<void>;
   unfollow(slug: string, endpoint: string): Promise<void>;
-  listFollowers(slug: string): Promise<PushSubscription[]>;
+  listFollowers(slug: string, only?: { leftovers: true }): Promise<PushSubscription[]>;
 
   /** Fællesbestilling. Koderne (hostKey, entryKey) gemmes kun som fingeraftryk. */
   createGroup(slug: string, hostName: string, hostKey: string): Promise<GroupOrder>;

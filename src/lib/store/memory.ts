@@ -8,7 +8,7 @@ import type { Booking, Chef, GroupOrder, Order, Place, PlaceNews } from "../type
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[] };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { leftovers?: boolean }>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[] };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -232,15 +232,15 @@ export const memoryStore: Store = {
   async getChefPhoto(slug) {
     return state.chefs.get(slug)?.photo ?? null;
   },
-  async follow(slug, subscription) {
+  async follow(slug, subscription, leftovers = false) {
     if (!state.followers.has(slug)) state.followers.set(slug, new Map());
-    state.followers.get(slug)!.set(subscription.endpoint, subscription);
+    state.followers.get(slug)!.set(subscription.endpoint, { ...subscription, leftovers });
   },
   async unfollow(slug, endpoint) {
     state.followers.get(slug)?.delete(endpoint);
   },
-  async listFollowers(slug) {
-    return [...(state.followers.get(slug)?.values() ?? [])];
+  async listFollowers(slug, only) {
+    return [...(state.followers.get(slug)?.values() ?? [])].filter((f) => !only?.leftovers || f.leftovers).map(({ leftovers: _l, ...s }) => s); // eslint-disable-line @typescript-eslint/no-unused-vars
   },
 
   async createGroup(slug, hostName, hostKey) {

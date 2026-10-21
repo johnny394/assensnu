@@ -101,6 +101,7 @@ function EventSheet({ event, onClose }: { event: AssensEvent | null; onClose: ()
           <span className="mb-1 block text-lg font-bold">Link til billetter <span className="font-normal text-ink-soft">(hvis du vil)</span></span>
           <input type="url" inputMode="url" value={form.link} onChange={set("link")} placeholder="https://" className={field} />
         </label>
+        {event && <ForOrganizer event={event} />}
         {event && (
           <button onClick={remove} className="w-full py-3 text-lg text-signal underline">
             Slet event
@@ -108,5 +109,33 @@ function EventSheet({ event, onClose }: { event: AssensEvent | null; onClose: ()
         )}
       </div>
     </Sheet>
+  );
+}
+
+// Arrangøren kan sætte linket i billetmailen eller på plakaten, så gæsterne selv finder et sted at spise før
+function ForOrganizer({ event }: { event: AssensEvent }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${typeof window === "undefined" ? "" : window.location.origin}/events/${event.id}`;
+  const text = `Skal I spise før ${event.title}? Se hvor der er bord eller takeaway klar i god tid: ${url}`;
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch {}
+  }
+  return (
+    <div className="rounded-2xl bg-buoy-soft p-4">
+      <p className="text-lg font-bold">Til arrangøren</p>
+      <p className="mt-1 text-lg">Send teksten til {event.venue || "arrangøren"}, så de kan sætte den i billetmailen.</p>
+      <p className="mt-2 break-words rounded-xl bg-surface px-3 py-2">{text}</p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" onClick={copy} className="min-h-12 rounded-2xl bg-ink px-3 text-lg font-bold text-paper">
+          {copied ? "Kopieret" : "Kopiér teksten"}
+        </button>
+        <a href={`/skilt?event=${event.id}`} target="_blank" className="flex min-h-12 items-center justify-center rounded-2xl border-2 border-ink px-3 text-lg font-bold">
+          Plakat med QR
+        </a>
+      </div>
+    </div>
   );
 }

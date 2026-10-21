@@ -9,7 +9,7 @@ export type OrderInput = {
   phone: string;
   pickup: string;
   note?: string;
-  delivery?: { address?: string; postcode?: string } | null;
+  delivery?: { address?: string; postcode?: string; harbour?: "jetty" | "office"; jetty?: string; boat?: string } | null;
 };
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -20,6 +20,17 @@ export function cleanPhone(phone: string): string | null {
   const digits = phone.replace(/\D/g, "").replace(/^00/, "").replace(/^45(?=\d{8}$)/, "");
   if (/^\d{8}$/.test(digits)) return digits.replace(/(\d{2})(?=\d)/g, "$1 ");
   return abroad && /^[1-9]\d{7,14}$/.test(digits) ? `+${digits}` : null;
+}
+
+// Assens Havn. Lystsejlerne skriver bro og båd i stedet for en adresse.
+export const HARBOUR_POSTCODE = "5610";
+function harbourSpot(d: { harbour?: string; jetty?: string; boat?: string }): Result<string> {
+  if (d.harbour === "office") return { ok: true, value: "Havnekontoret" };
+  const jetty = d.jetty?.trim().replace(/^bro\s*/i, "").slice(0, 10) ?? "";
+  const boat = d.boat?.trim().slice(0, 40) ?? "";
+  if (!jetty) return { ok: false, error: "Skriv hvilken bro, I ligger ved, fx 3." };
+  if (!boat) return { ok: false, error: "Skriv bådens navn, så de kan finde jer." };
+  return { ok: true, value: `Bro ${jetty}, båd ${boat}` };
 }
 
 // Tjekker en bestilling og regner prisen ud fra menuen, så kunden ikke selv kan sætte prisen
@@ -51,12 +62,20 @@ export function buildOrder(place: Place, input: OrderInput, now = new Date()): R
   if (input.delivery) {
     const d = place.delivery;
     if (!d) return { ok: false, error: `${place.name} leverer ikke. Vælg at hente maden.` };
-    const address = input.delivery.address?.trim().slice(0, 120) ?? "";
-    const postcode = input.delivery.postcode?.trim() ?? "";
-    if (!address) return { ok: false, error: "Skriv din adresse, så de ved, hvor de skal køre hen." };
-    if (!d.postcodes.includes(postcode)) return { ok: false, error: `${place.name} kører kun ud til ${d.postcodes.join(", ")}.` };
-    if (food < d.minimum) return { ok: false, error: `Levering kræver, at du bestiller for mindst ${d.minimum} kr.` };
-    delivery = { address, postcode, fee: d.fee };
+    if (input.delivery.harbour) {
+      if (!d.harbour) return { ok: false, error: `${place.name} kommer ikke ned i havnen. Vælg at hente maden.` };
+      const where = harbourSpot(input.delivery);
+      if (!where.ok) return where;
+      if (food < d.minimum) return { ok: false, error: `Levering kræver, at du bestiller for mindst ${d.minimum} kr.` };
+      delivery = { address: where.value, postcode: HARBOUR_POSTCODE, fee: d.fee, harbour: true };
+    } else {
+      const address = input.delivery.address?.trim().slice(0, 120) ?? "";
+      const postcode = input.delivery.postcode?.trim() ?? "";
+      if (!address) return { ok: false, error: "Skriv din adresse, så de ved, hvor de skal køre hen." };
+      if (!d.postcodes.includes(postcode)) return { ok: false, error: `${place.name} kører kun ud til ${d.postcodes.join(", ")}.` };
+      if (food < d.minimum) return { ok: false, error: `Levering kræver, at du bestiller for mindst ${d.minimum} kr.` };
+      delivery = { address, postcode, fee: d.fee };
+    }
   }
 
   const options = pickupOptions(place, now);

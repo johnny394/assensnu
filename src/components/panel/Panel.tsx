@@ -156,7 +156,11 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
       )}
       {o.delivery && (
         <p className="mt-2 rounded-xl bg-ink px-3 py-2 text-lg text-paper">
-          <strong>LEVERING</strong> til {o.delivery.address}, {townName(o.delivery.postcode)}
+          {o.delivery.harbour ? (
+            <><strong>HAVNEN</strong> · {o.delivery.address}</>
+          ) : (
+            <><strong>LEVERING</strong> til {o.delivery.address}, {townName(o.delivery.postcode)}</>
+          )}
         </p>
       )}
       {o.status === "new" && <p className="font-bold text-buoy-deep">NY ORDRE · {toTime(copenhagenNow(new Date(o.createdAt)).minutes)}</p>}

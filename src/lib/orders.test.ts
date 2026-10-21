@@ -27,6 +27,19 @@ describe("buildOrder", () => {
     expect(buildOrder(demoPlace, { ...input, pickup: "03:00" }, friday).ok).toBe(false);
   });
 
+  it("bringer maden ned til båden i havnen", () => {
+    const place = { ...demoPlace, delivery: { fee: 25, minimum: 0, postcodes: [], harbour: true } };
+    const r = buildOrder(place, { ...input, delivery: { harbour: "jetty", jetty: "Bro 3", boat: "Frida" } }, friday);
+    expect(r.ok && r.value.delivery).toEqual({ address: "Bro 3, båd Frida", postcode: "5610", fee: 25, harbour: true });
+    expect(r.ok && r.value.total).toBe(2 * 75 + 70 + 25);
+    const office = buildOrder(place, { ...input, delivery: { harbour: "office" } }, friday);
+    expect(office.ok && office.value.delivery?.address).toBe("Havnekontoret");
+    expect(buildOrder(place, { ...input, delivery: { harbour: "jetty", jetty: "3" } }, friday).ok).toBe(false);
+    // Kun havnen: almindelig levering kan ikke vælges
+    expect(buildOrder(place, { ...input, delivery: { address: "Østergade 12", postcode: "5610" } }, friday).ok).toBe(false);
+    expect(buildOrder({ ...place, delivery: { ...place.delivery, harbour: false } }, { ...input, delivery: { harbour: "office" } }, friday).ok).toBe(false);
+  });
+
   it("lægger leveringsgebyret oven i og tjekker by og minimum", () => {
     const place = { ...demoPlace, delivery: { fee: 39, minimum: 200, postcodes: ["5610"] } };
     const r = buildOrder(place, { ...input, delivery: { address: "Østergade 12", postcode: "5610" } }, friday);

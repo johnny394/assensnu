@@ -29,7 +29,12 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
-  const [delivering, setDelivering] = useState(false);
+  // Hent selv, kør ud til en adresse, eller ned til båden i havnen
+  const [mode, setMode] = useState<"pickup" | "door" | "boat">("pickup");
+  const delivering = mode !== "pickup";
+  const [spot, setSpot] = useState<"jetty" | "office">("jetty");
+  const [jetty, setJetty] = useState("");
+  const [boat, setBoat] = useState("");
   const [address, setAddress] = useState("");
   const [postcode, setPostcode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +49,8 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
       setPhone(saved.phone ?? "");
       setAddress(saved.address ?? "");
       setPostcode(saved.postcode ?? "");
+      setJetty(saved.jetty ?? "");
+      setBoat(saved.boat ?? "");
     } catch {}
   }, []);
 
@@ -68,6 +75,8 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
   const fee = delivering && delivery ? delivery.fee : 0;
   const total = food + fee;
   const missing = delivering && delivery ? delivery.minimum - food : 0;
+  const modes: (typeof mode)[] = delivery ? ["pickup", ...(delivery.postcodes.length ? (["door"] as const) : []), ...(delivery.harbour ? (["boat"] as const) : [])] : [];
+  const boatPlace = spot === "office" ? t("havnekontoret") : jetty.trim() && boat.trim() ? t("bro {bro}, båden {baad}", { bro: jetty.trim().replace(/^bro\s*/i, ""), baad: boat.trim() }) : t("båden");
   const zip = delivery?.postcodes.includes(postcode) ? postcode : delivery?.postcodes.length === 1 ? delivery.postcodes[0] : "";
   const options = now ? pickupOptions(place, now) : null;
   const chosen = pickup ?? (options?.asapMinutes != null ? "asap" : options?.slots[0] ?? null);
@@ -92,7 +101,7 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
         phone,
         pickup: chosen,
         note,
-        delivery: delivering ? { address, postcode: zip } : null,
+        delivery: mode === "door" ? { address, postcode: zip } : mode === "boat" ? { harbour: spot, jetty, boat } : null,
       }),
     }).catch(() => null);
     const data = await res?.json().catch(() => null);
@@ -102,7 +111,7 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
       return;
     }
     try {
-      localStorage.setItem(CUSTOMER_KEY, JSON.stringify({ name, phone, address, postcode: zip || postcode }));
+      localStorage.setItem(CUSTOMER_KEY, JSON.stringify({ name, phone, address, postcode: zip || postcode, jetty, boat }));
     } catch {}
     if (group) leaveGroup(place.slug, group.id);
     else clear();
@@ -174,15 +183,42 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
       {delivery && (
         <fieldset className="min-w-0">
           <legend className={label}>{t("Henter du, eller skal vi køre ud med det?")}</legend>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => setDelivering(false)} aria-pressed={!delivering} className={choice(!delivering)}>
-              {t("Jeg henter")}
-            </button>
-            <button type="button" onClick={() => setDelivering(true)} aria-pressed={delivering} className={choice(delivering)}>
-              {t("Bring det ud")} <span className="font-normal">({delivery.fee ? kr(delivery.fee) : t("gratis")})</span>
-            </button>
+          <div className={`grid gap-2 ${modes.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+            {modes.map((m) => (
+              <button key={m} type="button" onClick={() => setMode(m)} aria-pressed={mode === m} className={choice(mode === m)}>
+                {t(m === "pickup" ? "Jeg henter" : m === "door" ? "Bring det ud" : "Til båden")}
+                {m !== "pickup" && <span className="block font-normal">({delivery.fee ? kr(delivery.fee) : t("gratis")})</span>}
+              </button>
+            ))}
           </div>
-          {delivering && (
+          {mode === "boat" && (
+            <div className="mt-5 space-y-5">
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setSpot("jetty")} aria-pressed={spot === "jetty"} className={choice(spot === "jetty")}>{t("Ned på broen")}</button>
+                <button type="button" onClick={() => setSpot("office")} aria-pressed={spot === "office"} className={choice(spot === "office")}>{t("Ved havnekontoret")}</button>
+              </div>
+              {spot === "jetty" ? (
+                <div className="grid grid-cols-[6rem_1fr] gap-3">
+                  <div>
+                    <label htmlFor="jetty" className={label}>{t("Bro")}</label>
+                    <input id="jetty" required inputMode="numeric" value={jetty} onChange={(e) => setJetty(e.target.value)} placeholder={t("Fx 3")} className={field} />
+                  </div>
+                  <div>
+                    <label htmlFor="boat" className={label}>{t("Bådens navn")}</label>
+                    <input id="boat" required value={boat} onChange={(e) => setBoat(e.target.value)} placeholder={t("Fx Frida")} className={field} />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-lg">{t("{navn} stiller maden ved havnekontoret, og du henter den der.", { navn: place.name })}</p>
+              )}
+              {missing > 0 && (
+                <p className="bg-stamp-soft px-4 py-3 text-lg text-stamp">
+                  {t("Levering kræver, at du bestiller for mindst {min}. Du mangler {mangler}.", { min: kr(delivery.minimum), mangler: kr(missing) })}
+                </p>
+              )}
+            </div>
+          )}
+          {mode === "door" && (
             <div className="mt-5 space-y-5">
               <div>
                 <label htmlFor="address" className={label}>{t("Din adresse")}</label>
@@ -265,7 +301,7 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
 
       <p className="border-2 border-ink bg-surface px-5 py-4 text-lg">
         {delivering ? (
-          <><strong>{t("Du betaler, når maden kommer")}</strong> {t("til {adresse}.", { adresse: address.trim() || t("din adresse") })}</>
+          <><strong>{t("Du betaler, når maden kommer")}</strong> {t("til {adresse}.", { adresse: mode === "boat" ? boatPlace : address.trim() || t("din adresse") })}</>
         ) : (
           <><strong>{t("Du betaler, når du henter maden")}</strong> {t("hos {navn}, {adresse}.", { navn: place.name, adresse: place.address.replace(/, \d{4} .*/, "") })}</>
         )}

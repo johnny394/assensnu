@@ -52,7 +52,9 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
         <p className="font-display text-6xl font-black tracking-tight tabular-nums">{order.number}</p>
         <p className="mt-1 text-lg">
           {delivery
-            ? t("{navn} kører maden ud til {adresse}.", { navn: order.placeName, adresse: `${delivery.address}, ${townName(delivery.postcode)}` })
+            ? delivery.harbour
+              ? t("{navn} kommer med maden ned i havnen: {sted}.", { navn: order.placeName, sted: t(delivery.address) })
+              : t("{navn} kører maden ud til {adresse}.", { navn: order.placeName, adresse: `${delivery.address}, ${townName(delivery.postcode)}` })
             : t("Sig nummeret, når du henter hos {navn}.", { navn: order.placeName })}
         </p>
 
@@ -77,7 +79,7 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
               {t(delivery ? (order.status === "picked_up" ? "Maden er leveret" : "Maden er på vej!") : "Maden er klar!")}
             </p>
             <p className="mt-3 text-lg">
-              {delivery ? t("{navn} kører maden ud til {adresse}.", { navn: order.placeName, adresse: delivery.address }) : t("Hent den hos {navn}.", { navn: order.placeName })}
+              {delivery ? (delivery.harbour ? t("{navn} kommer med maden ned i havnen: {sted}.", { navn: order.placeName, sted: t(delivery.address) }) : t("{navn} kører maden ud til {adresse}.", { navn: order.placeName, adresse: delivery.address })) : t("Hent den hos {navn}.", { navn: order.placeName })}
             </p>
           </div>
         ) : (

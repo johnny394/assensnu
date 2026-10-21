@@ -22,3 +22,13 @@ describe("kundedata", () => {
     expect(kept?.note).toBeUndefined();
   });
 });
+
+describe("følgere", () => {
+  it("giver kun besked om rester til dem, der har sagt ja", async () => {
+    const sub = (n: string) => ({ endpoint: `https://push.example/${n}`, keys: { p256dh: "p", auth: "a" } });
+    await store.follow("proevepizza", sub("a"));
+    await store.follow("proevepizza", sub("b"), true);
+    expect((await store.listFollowers("proevepizza")).length).toBe(2);
+    expect((await store.listFollowers("proevepizza", { leftovers: true })).map((s) => s.endpoint)).toEqual(["https://push.example/b"]);
+  });
+});

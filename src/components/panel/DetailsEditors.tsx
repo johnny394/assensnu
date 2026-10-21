@@ -140,6 +140,7 @@ export function DeliveryEditor({ place, onClose, onSaved, saveUrl }: {
   const [fee, setFee] = useState(place.delivery ? String(place.delivery.fee) : "");
   const [minimum, setMinimum] = useState(place.delivery ? String(place.delivery.minimum) : "");
   const [postcodes, setPostcodes] = useState(place.delivery?.postcodes.join(", ") ?? "5610");
+  const [harbour, setHarbour] = useState(Boolean(place.delivery?.harbour));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const list = postcodes.split(/[\s,]+/).filter(Boolean);
@@ -147,7 +148,7 @@ export function DeliveryEditor({ place, onClose, onSaved, saveUrl }: {
   async function save() {
     setSaving(true);
     setError(null);
-    const delivery = on ? { fee: toNumber(fee), minimum: minimum.trim() ? toNumber(minimum) : 0, postcodes: list } : null;
+    const delivery = on ? { fee: toNumber(fee), minimum: minimum.trim() ? toNumber(minimum) : 0, postcodes: list, harbour } : null;
     const problem = await saveDetails({ delivery }, saveUrl);
     setSaving(false);
     if (problem) setError(problem);
@@ -182,7 +183,15 @@ export function DeliveryEditor({ place, onClose, onSaved, saveUrl }: {
           <div>
             <label htmlFor="postcodes" className="mb-1.5 block text-lg font-bold">Postnumre I kører ud til</label>
             <input id="postcodes" inputMode="numeric" value={postcodes} onChange={(e) => setPostcodes(e.target.value)} placeholder="Fx 5610, 5620" className={field} />
-            <p className="mt-1 text-ink-soft">{list.length ? list.map(townName).join(" · ") : "Skriv komma imellem."}</p>
+            <p className="mt-1 text-ink-soft">{list.length ? list.map(townName).join(" · ") : harbour ? "Lad feltet stå tomt, hvis I kun kommer ned i havnen." : "Skriv komma imellem."}</p>
+          </div>
+          <div>
+            <p className="mb-1.5 text-lg font-bold">Mad til bådene i havnen</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setHarbour(true)} aria-pressed={harbour} className={`min-h-14 rounded-2xl border-2 text-lg font-bold ${harbour ? "border-ink bg-ink text-paper" : "border-line"}`}>Ja, vi kommer</button>
+              <button onClick={() => setHarbour(false)} aria-pressed={!harbour} className={`min-h-14 rounded-2xl border-2 text-lg font-bold ${!harbour ? "border-ink bg-ink text-paper" : "border-line"}`}>Nej</button>
+            </div>
+            <p className="mt-1 text-ink-soft">Lystsejlerne skriver bro og bådens navn, eller henter ved havnekontoret. Det koster det samme som levering.</p>
           </div>
         </div>
       )}
