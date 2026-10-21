@@ -35,11 +35,12 @@ function harbourSpot(d: { harbour?: string; jetty?: string; boat?: string }): Re
 }
 
 // Campingpladsen. Gæsterne skriver pladsnummeret, eller henter i receptionen.
+export const CAMPSITE = "CityCamp Assens Strand";
 function campingSpot(d: { camping?: string; pitch?: string }): Result<string> {
-  if (d.camping === "reception") return { ok: true, value: "Receptionen på campingpladsen" };
+  if (d.camping === "reception") return { ok: true, value: `Receptionen på ${CAMPSITE}` };
   const pitch = d.pitch?.trim().replace(/^plads\s*/i, "").slice(0, 20) ?? "";
   if (!pitch) return { ok: false, error: "Skriv nummeret på jeres plads, fx 112." };
-  return { ok: true, value: `Campingpladsen, plads ${pitch}` };
+  return { ok: true, value: `${CAMPSITE}, plads ${pitch}` };
 }
 
 // Tjekker en bestilling og regner prisen ud fra menuen, så kunden ikke selv kan sætte prisen
@@ -72,7 +73,7 @@ export function buildOrder(place: Place, input: OrderInput, now = new Date()): R
     const d = place.delivery;
     if (!d) return { ok: false, error: `${place.name} leverer ikke. Vælg at hente maden.` };
     if (input.delivery.camping) {
-      if (!d.camping) return { ok: false, error: `${place.name} kommer ikke ud på campingpladsen. Vælg at hente maden.` };
+      if (!d.camping) return { ok: false, error: `${place.name} kommer ikke ud på ${CAMPSITE}. Vælg at hente maden.` };
       const where = campingSpot(input.delivery);
       if (!where.ok) return where;
       if (food < d.minimum) return { ok: false, error: `Levering kræver, at du bestiller for mindst ${d.minimum} kr.` };

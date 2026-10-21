@@ -6,6 +6,7 @@ import { Wordmark } from "@/components/AppShell";
 import { usePolling } from "@/components/usePolling";
 import { kr, longDate, telLink } from "@/lib/format";
 import { choiceText } from "@/lib/menu-options";
+import { CAMPSITE } from "@/lib/orders";
 import { townName } from "@/lib/postcodes";
 import { copenhagenNow, openStatus, todayInCopenhagen, toTime } from "@/lib/hours";
 import { startLater } from "@/lib/later";
@@ -183,7 +184,7 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
           {o.delivery.harbour ? (
             <><strong>HAVNEN</strong> · {o.delivery.address}</>
           ) : o.delivery.camping ? (
-            <><strong>CAMPING</strong> · {o.delivery.address.replace(/^Campingpladsen, /, "")}</>
+            <><strong>CAMPING</strong> · {o.delivery.address.replace(`${CAMPSITE}, `, "")}</>
           ) : (
             <><strong>LEVERING</strong> til {o.delivery.address}, {townName(o.delivery.postcode)}</>
           )}

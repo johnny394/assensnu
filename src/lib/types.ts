@@ -108,7 +108,7 @@ export type Order = {
 };
 
 // harbour: maden skal ned i havnen, og address er fx "Bro 3, båd Frida" eller "Havnekontoret"
-// camping: maden skal ud på campingpladsen, og address er fx "Campingpladsen, plads 112"
+// camping: maden skal ud på campingpladsen, og address er fx "CityCamp Assens Strand, plads 112"
 export type OrderDelivery = { address: string; postcode: string; fee: number; harbour?: true; camping?: true };
 
 export type BookingStatus = "requested" | "confirmed" | "declined" | "suggested";

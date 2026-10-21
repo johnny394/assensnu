@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { kr, telLink } from "@/lib/format";
 import type { T } from "@/lib/i18n";
 import { choiceText } from "@/lib/menu-options";
+import { CAMPSITE } from "@/lib/orders";
 import { townName } from "@/lib/postcodes";
 import type { Order } from "@/lib/types";
 import { HomeScreenGuide, type PushFor } from "./HomeScreenGuide";
@@ -56,7 +57,7 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
             ? delivery.harbour
               ? t("{navn} kommer med maden ned i havnen: {sted}.", { navn: order.placeName, sted: t(delivery.address) })
               : delivery.camping
-              ? t("{navn} kommer med maden ud på campingpladsen: {sted}.", { navn: order.placeName, sted: campingText(delivery.address, t) })
+              ? t("{navn} kommer med maden ud på {camp}: {sted}.", { navn: order.placeName, camp: CAMPSITE, sted: campingText(delivery.address, t) })
               : t("{navn} kører maden ud til {adresse}.", { navn: order.placeName, adresse: `${delivery.address}, ${townName(delivery.postcode)}` })
             : t("Sig nummeret, når du henter hos {navn}.", { navn: order.placeName })}
         </p>
@@ -82,7 +83,7 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
               {t(delivery ? (order.status === "picked_up" ? "Maden er leveret" : "Maden er på vej!") : "Maden er klar!")}
             </p>
             <p className="mt-3 text-lg">
-              {delivery ? (delivery.harbour ? t("{navn} kommer med maden ned i havnen: {sted}.", { navn: order.placeName, sted: t(delivery.address) }) : delivery.camping ? t("{navn} kommer med maden ud på campingpladsen: {sted}.", { navn: order.placeName, sted: campingText(delivery.address, t) }) : t("{navn} kører maden ud til {adresse}.", { navn: order.placeName, adresse: delivery.address })) : t("Hent den hos {navn}.", { navn: order.placeName })}
+              {delivery ? (delivery.harbour ? t("{navn} kommer med maden ned i havnen: {sted}.", { navn: order.placeName, sted: t(delivery.address) }) : delivery.camping ? t("{navn} kommer med maden ud på {camp}: {sted}.", { navn: order.placeName, camp: CAMPSITE, sted: campingText(delivery.address, t) }) : t("{navn} kører maden ud til {adresse}.", { navn: order.placeName, adresse: delivery.address })) : t("Hent den hos {navn}.", { navn: order.placeName })}
             </p>
           </div>
         ) : (
@@ -142,8 +143,8 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
   );
 }
 
-// "Campingpladsen, plads 112" bliver til "plads 112" på kundens sprog
+// "CityCamp Assens Strand, plads 112" bliver til "plads 112" på kundens sprog
 function campingText(address: string, t: T) {
-  const pitch = address.match(/^Campingpladsen, plads (.+)$/)?.[1];
+  const pitch = address.match(/, plads (.+)$/)?.[1];
   return pitch ? t("plads {plads}", { plads: pitch }) : t("receptionen");
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CAMPSITE } from "@/lib/orders";
 
 // Skilte med QR-kode til campingpladsen, hotellet, havnen eller restaurantens disk
 export function AdminSigns({ places }: { places: { slug: string; name: string }[] }) {
@@ -21,7 +22,7 @@ export function AdminSigns({ places }: { places: { slug: string; name: string }[
           <span className="mb-1 block text-lg font-bold">Hvad skal de se, når de scanner?</span>
           <select value={place} onChange={(e) => setPlace(e.target.value)} className={field}>
             <option value="">Alle spisesteder i Assens</option>
-            <option value="camping">Dem, der kommer ud på campingpladsen</option>
+            <option value="camping">Dem, der kommer ud på {CAMPSITE}</option>
             {places.map((p) => (
               <option key={p.slug} value={p.slug}>Kun {p.name}</option>
             ))}
