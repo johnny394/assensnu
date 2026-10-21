@@ -133,6 +133,9 @@ export default async function PlacePage({ params }: Props) {
             {!place.acceptsOrders && <p className="mt-1 text-ink-soft">{t("Bestilling her kommer snart. Indtil da kan du ringe.")}</p>}
             {place.acceptsOrders && !preview && <GroupLink slug={place.slug} />}
             <Menu place={place} />
+            <p className="mt-4 border-l-4 border-signal pl-3 text-lg text-ink-soft">
+              {place.phone ? t("Allergier? Ring og spørg {navn}, før du bestiller.", { navn: place.name }) : t("Allergier? Spørg {navn}, før du bestiller.", { navn: place.name })}
+            </p>
           </>
         )}
 

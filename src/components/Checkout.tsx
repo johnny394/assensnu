@@ -276,6 +276,10 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
       <button disabled={sending || !chosen || missing > 0} className="w-full bg-stamp px-5 py-4.5 text-xl font-bold text-white disabled:opacity-50">
         {sending ? t("Sender…") : t("Send bestilling · {pris}", { pris: kr(total) })}
       </button>
+      <p className="text-center text-ink-soft">
+        {t("Når du bestiller, accepterer du")} <Link href="/handelsbetingelser" className="underline">{t("handelsbetingelserne")}</Link>.{" "}
+        {t("Sådan passer vi på dine oplysninger:")} <Link href="/privatliv" className="underline">{t("privatlivspolitikken")}</Link>.
+      </p>
     </form>
   );
 }
