@@ -1,6 +1,7 @@
 import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
 import type { AssensEvent } from "../events";
-import type { Booking, BookingStatus, CartItem, Chef, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
+import type { BookingFact, OrderFact } from "../stats";
+import type { Booking, BookingStatus, CartItem, Chef, ClosedPeriod, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
 
 export type NewOrder = Omit<Order, "id" | "number" | "status" | "createdAt" | "readyAt">;
 export type NewBooking = Omit<Booking, "id" | "status" | "createdAt" | "suggestedTime">;
@@ -22,7 +23,8 @@ export type PlaceDetails = {
 
 // En kundes telefon, som vi kan sende en besked til, når restauranten svarer
 export type PushTarget = { kind: "order" | "booking"; id: string };
-export type PushSubscription = { endpoint: string; keys: { p256dh: string; auth: string } };
+// lang: kundens sprog, så "maden er klar" kommer på engelsk eller tysk til turister
+export type PushSubscription = { endpoint: string; keys: { p256dh: string; auth: string }; lang?: "en" | "de" };
 
 // Alt, appen gemmer og henter. Der er to udgaver: i hukommelsen (til afprøvning)
 // og Supabase (til drift). Hvilken der bruges, afgøres i ./index.ts.
@@ -36,6 +38,11 @@ export type Store = {
   createOrder(order: NewOrder): Promise<Order>;
   getOrder(id: string): Promise<Order | null>;
   listOrders(slug: string): Promise<Order[]>;
+  /** Til tal og fakturering: ordrer siden sinceIso, for ét sted eller alle */
+  orderFacts(sinceIso: string, slug?: string): Promise<OrderFact[]>;
+  bookingFacts(sinceIso: string, slug: string): Promise<BookingFact[]>;
+  /** Hvornår hver følger begyndte at følge stedet (ISO) */
+  followerDates(slug: string): Promise<string[]>;
   setOrderStatus(id: string, status: OrderStatus, readyAt?: string): Promise<void>;
 
   /** Hvor mange bestillinger et telefonnummer har sendt siden et tidspunkt, på tværs af steder */
@@ -59,6 +66,8 @@ export type Store = {
   postNews(slug: string, text: string, price: number | null, wasPrice: number | null): Promise<void>;
   /** Sidste chance: retter til halv pris indtil until. null stopper det. */
   setLastChance(slug: string, value: { itemIds: string[]; until: string } | null): Promise<void>;
+  /** Lukkedage sat på forhånd. Tom liste fjerner dem. */
+  setClosedDays(slug: string, periods: ClosedPeriod[]): Promise<void>;
   /** Mød kokken. photo: undefined beholder billedet, null fjerner det. chef null fjerner det hele. */
   setChef(slug: string, chef: Omit<Chef, "photoAt"> | null, photo: string | null | undefined): Promise<void>;
   /** Billedet som data-URL, eller null */
@@ -90,4 +99,7 @@ export type Store = {
 
   savePush(target: PushTarget, subscription: PushSubscription | null): Promise<void>;
   getPush(target: PushTarget): Promise<PushSubscription | null>;
+  /** Restaurantens egne telefoner, der får besked om ordrer uden svar. stop fjerner den. */
+  savePlacePush(slug: string, subscription: PushSubscription, stop?: boolean): Promise<void>;
+  listPlacePush(slug: string): Promise<PushSubscription[]>;
 };

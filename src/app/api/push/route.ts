@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cleanSubscription } from "@/lib/push";
 import { store } from "@/lib/store";
+import { chooseLang } from "@/lib/translate";
 
 // Kundens telefon melder sig til beskeder om én bestilling eller bordforespørgsel
 export async function POST(request: Request) {
@@ -13,7 +14,8 @@ export async function POST(request: Request) {
   const exists = kind === "order" ? await store.getOrder(id) : await store.getBooking(id);
   if (!exists) return NextResponse.json({ error: "Findes ikke." }, { status: 404 });
   try {
-    await store.savePush({ kind, id }, subscription);
+    const lang = await chooseLang();
+    await store.savePush({ kind, id }, { ...subscription, ...(lang !== "da" && { lang }) });
   } catch (e) {
     console.error("Kunne ikke gemme push", e);
     return NextResponse.json({ error: "Kunne ikke slå beskeder til." }, { status: 500 });

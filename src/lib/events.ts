@@ -1,3 +1,4 @@
+import { addDays, isClosedOn } from "./closed-days";
 import type { Result } from "./orders";
 import type { Place } from "./types";
 
@@ -44,15 +45,10 @@ const toTime = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${
 // Mandag = 0, som i resten af appen
 export const weekdayOf = (iso: string) => (new Date(`${iso}T12:00:00Z`).getUTCDay() + 6) % 7;
 
-function addDays(iso: string, days: number) {
-  const d = new Date(`${iso}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
 // De tider, man kan bede om bord. Sidste bord en time før lukketid.
-export function bookingTimes(place: Pick<Place, "hours">, date: string): string[] {
+export function bookingTimes(place: Pick<Place, "hours"> & { closedDays?: Place["closedDays"] }, date: string): string[] {
   const times: string[] = [];
+  if (isClosedOn(place.closedDays, date)) return times;
   for (const p of place.hours.filter((h) => h.day === weekdayOf(date))) {
     const open = toMinutes(p.open);
     const close = toMinutes(p.close) <= open ? 24 * 60 : toMinutes(p.close);

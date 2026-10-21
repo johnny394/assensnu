@@ -47,7 +47,8 @@ export type Place = {
   takeaway: boolean | null; // null = ukendt
   dineIn: boolean | null;
   hours: OpeningPeriod[];
-  closedToday?: boolean;
+  closedToday?: boolean; // "Lukket i dag" eller en lukkedag sat på forhånd
+  closedDays?: ClosedPeriod[]; // juleaften, vinterferie og den slags
   menu: MenuCategory[];
   acceptsOrders: boolean; // kan bestilles gennem AssensNu
   acceptsBookings: boolean;
@@ -61,6 +62,9 @@ export type Place = {
   demo?: boolean;
   member?: boolean; // stedet har sagt ja til AssensNu og har en kode til panelet
 };
+
+// Lukket fra og med from til og med to, fx { from: "2026-12-24", to: "2026-12-26", note: "Jul" }
+export type ClosedPeriod = { from: string; to: string; note?: string };
 
 // Restauranten skriver det i panelet, og følgerne får det som besked på telefonen
 // sentAt er ISO. Med pris kan tilbuddet bestilles. wasPrice er normalprisen, som vises overstreget.

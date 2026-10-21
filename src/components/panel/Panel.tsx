@@ -7,16 +7,20 @@ import { usePolling } from "@/components/usePolling";
 import { kr, longDate, telLink } from "@/lib/format";
 import { choiceText } from "@/lib/menu-options";
 import { townName } from "@/lib/postcodes";
-import { copenhagenNow, openStatus, toTime } from "@/lib/hours";
+import { copenhagenNow, openStatus, todayInCopenhagen, toTime } from "@/lib/hours";
 import { startLater } from "@/lib/later";
 import type { Booking, Order, Place } from "@/lib/types";
 import { DeliveryEditor, HoursEditor, MenuEditor } from "./DetailsEditors";
+import { isClosedOn } from "@/lib/closed-days";
 import { ChefBox } from "./ChefBox";
+import { PanelPushBox } from "./PanelPushBox";
+import { StatsTab } from "./StatsTab";
+import { ClosedDaysBox } from "./ClosedDaysBox";
 import { LastChanceBox, NewsBox, WaitBar } from "./LiveBoxes";
 import { useAlarm } from "./useAlarm";
 
 type Data = { place: Place; orders: Order[]; bookings: Booking[]; followers: number | null };
-type Tab = "orders" | "bookings" | "settings";
+type Tab = "orders" | "bookings" | "stats" | "settings";
 
 async function post(url: string, body: unknown) {
   const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
@@ -24,12 +28,20 @@ async function post(url: string, body: unknown) {
 }
 
 // Restaurantens skærm: nye ordrer og bordforespørgsler øverst, med lyd
-export function Panel({ initial, noDatabase }: { initial: Data; noDatabase?: boolean }) {
+export function Panel({ initial, noDatabase, pushKey = null }: { initial: Data; noDatabase?: boolean; pushKey?: string | null }) {
   const router = useRouter();
   const [version, setVersion] = useState(0);
   const data = usePolling<Data>(`/api/panel?v=${version}`, initial, 4000);
   const refresh = () => setVersion((v) => v + 1);
   const [tab, setTab] = useState<Tab>("orders");
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const update = () => setWide(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
 
   const newOrders = data.orders.filter((o) => o.status === "new");
   const newBookings = data.bookings.filter((b) => b.status === "requested");
@@ -43,6 +55,7 @@ export function Panel({ initial, noDatabase }: { initial: Data; noDatabase?: boo
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "orders", label: "Ordrer", count: newOrders.length },
     { key: "bookings", label: "Borde", count: newBookings.length },
+    { key: "stats", label: "Tal" },
     { key: "settings", label: "Indstillinger" },
   ];
 
@@ -92,11 +105,22 @@ export function Panel({ initial, noDatabase }: { initial: Data; noDatabase?: boo
           <h2 className="mb-3 hidden font-display text-2xl font-extrabold tracking-tight lg:block">Borde</h2>
           <Bookings bookings={data.bookings} onChange={refresh} />
         </section>
+        {/* På den store skærm står tallene øverst i højre side, over indstillingerne */}
+        <section className={tab === "stats" ? "lg:hidden" : "hidden"}>
+          <StatsTab visible={tab === "stats" && !wide} />
+        </section>
         <section className={tab === "settings" ? "" : "hidden lg:block"}>
+          {wide && (
+            <div className="mb-6">
+              <h2 className="mb-3 font-display text-2xl font-extrabold tracking-tight">Tal</h2>
+              <StatsTab visible />
+            </div>
+          )}
           <h2 className="mb-3 hidden font-display text-2xl font-extrabold tracking-tight lg:block">Indstillinger</h2>
           <Settings
             place={data.place}
             followers={data.followers}
+            pushKey={pushKey}
             onChange={refresh}
             onLogout={async () => {
               await post("/api/panel/logout", {});
@@ -311,7 +335,7 @@ function Bookings({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
   );
 }
 
-function Settings({ place: fromServer, followers, onChange, onLogout }: { place: Place; followers: number | null; onChange: () => void; onLogout: () => void }) {
+function Settings({ place: fromServer, followers, pushKey, onChange, onLogout }: { place: Place; followers: number | null; pushKey: string | null; onChange: () => void; onLogout: () => void }) {
   // Valget vises med det samme; serveren gemmer i baggrunden
   const [place, setPlace] = useState(fromServer);
   const [editing, setEditing] = useState<"hours" | "menu" | "delivery" | null>(null);
@@ -331,6 +355,7 @@ function Settings({ place: fromServer, followers, onChange, onLogout }: { place:
 
   return (
     <div className="space-y-3">
+      <PanelPushBox publicKey={pushKey} />
       <NewsBox place={fromServer} followers={followers} onChange={onChange} />
       <LastChanceBox place={fromServer} open={openStatus(fromServer).state === "open"} onChange={onChange} />
       <div className="rounded-3xl bg-surface px-5 py-4">
@@ -361,8 +386,9 @@ function Settings({ place: fromServer, followers, onChange, onLogout }: { place:
 
       <div className="rounded-3xl bg-surface px-5 py-2">
         <Toggle label="Tag imod bestillinger" on={place.acceptsOrders} onClick={() => save({ acceptsOrders: !place.acceptsOrders }, (p) => ({ ...p, acceptsOrders: !p.acceptsOrders }))} />
-        <Toggle label="Lukket i dag" hint="Vises som lukket indtil i morgen" on={!!place.closedToday} onClick={() => save({ closedToday: !place.closedToday }, (p) => ({ ...p, closedToday: !p.closedToday }))} />
+        <Toggle label="Lukket i dag" hint={isClosedOn(place.closedDays, todayInCopenhagen()) ? "I dag er en lukkedag, I har sat herunder" : "Vises som lukket indtil i morgen"} on={!!place.closedToday} onClick={() => save({ closedToday: !place.closedToday }, (p) => ({ ...p, closedToday: !p.closedToday }))} />
       </div>
+      <ClosedDaysBox place={fromServer} onChange={onChange} />
 
       {place.menu.length > 0 && (
         <div className="rounded-3xl bg-surface px-5 py-2">

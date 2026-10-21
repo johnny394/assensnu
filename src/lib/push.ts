@@ -1,5 +1,6 @@
 import "server-only";
 import webpush from "web-push";
+import { translator, type T } from "./i18n";
 import { store } from "./store";
 import type { PushSubscription, PushTarget } from "./store/types";
 
@@ -33,13 +34,15 @@ export function cleanSubscription(input: unknown): PushSubscription | null {
 
 export type PushMessage = { title: string; body: string; url: string };
 
-export async function notify(target: PushTarget, message: PushMessage) {
+// message får en t, der oversætter til det sprog, kunden havde, da beskeder blev slået til
+export async function notify(target: PushTarget, message: (t: T) => PushMessage) {
   if (!setup()) return;
   try {
     const subscription = await store.getPush(target);
     if (!subscription) return;
+    const { lang, ...push } = subscription;
     const tag = `${target.kind}-${target.id}`;
-    await webpush.sendNotification(subscription, JSON.stringify({ ...message, tag }), { TTL: 3600, urgency: "high" });
+    await webpush.sendNotification(push, JSON.stringify({ ...message(translator(lang ?? "da")), tag }), { TTL: 3600, urgency: "high" });
   } catch (e) {
     // Telefonen har sagt nej tak eller er nulstillet: glem den
     const code = (e as { statusCode?: number }).statusCode;
@@ -62,6 +65,23 @@ export async function notifyFollowers(slug: string, message: PushMessage, only?:
         const code = (e as { statusCode?: number }).statusCode;
         if (code === 404 || code === 410) await store.unfollow(slug, subscription.endpoint).catch(() => {});
         else console.error("Besked til følger kunne ikke sendes", e);
+      }
+    }),
+  );
+}
+
+// Til restaurantens egne telefoner, fx når en ordre har ventet på svar
+export async function notifyPlace(slug: string, message: PushMessage) {
+  if (!setup()) return;
+  const phones = await store.listPlacePush(slug);
+  await Promise.all(
+    phones.map(async (subscription) => {
+      try {
+        await webpush.sendNotification(subscription, JSON.stringify({ ...message, tag: `panel-${slug}` }), { TTL: 600, urgency: "high" });
+      } catch (e) {
+        const code = (e as { statusCode?: number }).statusCode;
+        if (code === 404 || code === 410) await store.savePlacePush(slug, subscription, true).catch(() => {});
+        else console.error("Besked til restauranten kunne ikke sendes", e);
       }
     }),
   );
