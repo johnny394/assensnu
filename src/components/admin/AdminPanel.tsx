@@ -9,6 +9,7 @@ import { Toggle } from "@/components/panel/Panel";
 import type { AdminPlace } from "@/lib/admin";
 import type { AssensEvent } from "@/lib/events";
 import { AdminEvents } from "./AdminEvents";
+import { AdminSigns } from "./AdminSigns";
 import { WEEKDAYS } from "@/lib/hours";
 
 async function post(url: string, body: unknown): Promise<{ ok: boolean; error?: string; pin?: string; slug?: string }> {
@@ -99,6 +100,7 @@ export function AdminPanel({ places, events }: { places: AdminPlace[]; events: A
       </ul>
 
       <AdminEvents events={events} />
+      <AdminSigns places={places.filter((p) => p.published)} />
 
       {open === "new" && (
         <BasicsSheet
