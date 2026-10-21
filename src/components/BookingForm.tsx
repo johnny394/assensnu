@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { longDate } from "@/lib/format";
+import { BOOKING_DAYS, bookingTimes } from "@/lib/events";
 import { todayInCopenhagen } from "@/lib/hours";
 import type { Place } from "@/lib/types";
 import { field, label } from "./Checkout";
@@ -17,25 +18,7 @@ function addDays(iso: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
-// Mandag = 0, som i resten af appen
-const weekdayOf = (iso: string) => (new Date(`${iso}T12:00:00Z`).getUTCDay() + 6) % 7;
-
-function timesFor(place: Place, date: string): string[] {
-  const periods = place.hours.filter((h) => h.day === weekdayOf(date));
-  const times: string[] = [];
-  for (const p of periods) {
-    const [oh, om] = p.open.split(":").map(Number);
-    const [ch, cm] = p.close.split(":").map(Number);
-    const close = ch * 60 + cm <= oh * 60 + om ? 24 * 60 : ch * 60 + cm;
-    // Sidste bord en time før lukketid
-    for (let t = Math.ceil((oh * 60 + om) / 30) * 30; t <= close - 60; t += 30) {
-      times.push(`${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`);
-    }
-  }
-  return times;
-}
-
-export function BookingForm({ place }: { place: Place }) {
+export function BookingForm({ place, initial }: { place: Place; initial?: { date?: string; time?: string; note?: string } }) {
   const router = useRouter();
   const [today, setToday] = useState<string | null>(null);
   const [date, setDate] = useState<string | null>(null);
@@ -43,7 +26,7 @@ export function BookingForm({ place }: { place: Place }) {
   const [guests, setGuests] = useState(2);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(initial?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const { lang, t } = useLang();
@@ -51,16 +34,19 @@ export function BookingForm({ place }: { place: Place }) {
   useEffect(() => {
     const day = todayInCopenhagen();
     setToday(day);
-    setDate(day);
+    // En dag og tid fra "Spis før koncerten", hvis den kan vælges
+    const wanted = initial?.date && initial.date >= day && initial.date < addDays(day, BOOKING_DAYS) ? initial.date : null;
+    setDate(wanted ?? day);
+    if (wanted && initial?.time && bookingTimes(place, wanted).includes(initial.time)) setTime(initial.time);
     try {
       const saved = JSON.parse(localStorage.getItem(CUSTOMER_KEY) ?? "{}");
       setName(saved.name ?? "");
       setPhone(saved.phone ?? "");
     } catch {}
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const days = useMemo(() => (today ? Array.from({ length: 14 }, (_, i) => addDays(today, i)) : []), [today]);
-  const times = date ? timesFor(place, date) : [];
+  const days = useMemo(() => (today ? Array.from({ length: BOOKING_DAYS }, (_, i) => addDays(today, i)) : []), [today]);
+  const times = date ? bookingTimes(place, date) : [];
 
   async function send(e: React.FormEvent) {
     e.preventDefault();

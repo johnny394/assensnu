@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { kr } from "@/lib/format";
 import { pickupOptions } from "@/lib/hours";
+import { pickupKey } from "./PickupLink";
 import { slotsByHour } from "@/lib/later";
 import { choiceText, parseKey, priceChoice } from "@/lib/menu-options";
 import { townName } from "@/lib/postcodes";
@@ -46,6 +47,14 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
     } catch {}
   }, []);
 
+  // Fra "Spis før koncerten": maden skal være klar til et bestemt tidspunkt
+  const [wantedPickup, setWantedPickup] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      setWantedPickup(sessionStorage.getItem(pickupKey(place.slug)));
+    } catch {}
+  }, [place.slug]);
+
   const lines: (OrderLine & { key: string })[] = group
     ? group.lines.map((l, i) => ({ ...l, key: String(i) }))
     : Object.entries(cart).flatMap(([key, quantity]) => {
@@ -63,6 +72,9 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
   const options = now ? pickupOptions(place, now) : null;
   const chosen = pickup ?? (options?.asapMinutes != null ? "asap" : options?.slots[0] ?? null);
   const later = options?.slots ?? [];
+  useEffect(() => {
+    if (wantedPickup && pickup === null && later.includes(wantedPickup)) setPickup(wantedPickup);
+  }, [wantedPickup, pickup, later]);
 
   async function send(e: React.FormEvent) {
     e.preventDefault();

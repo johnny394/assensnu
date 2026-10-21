@@ -3,13 +3,14 @@ import { LangProvider } from "@/components/useLang";
 import { Wordmark } from "@/components/AppShell";
 import { AdminLogin, AdminPanel } from "@/components/admin/AdminPanel";
 import { adminCode, isAdmin } from "@/lib/admin-auth";
+import { todayInCopenhagen } from "@/lib/hours";
 import { isDemo, store } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Dit panel · AssensNu", robots: { index: false } };
 
 async function AdminPage() {
-  if (await isAdmin()) return <AdminPanel places={await store.adminListPlaces()} />;
+  if (await isAdmin()) return <AdminPanel places={await store.adminListPlaces()} events={await store.listEvents(todayInCopenhagen())} />;
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-8">

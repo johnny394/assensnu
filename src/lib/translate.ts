@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { after } from "next/server";
 import { langFromHeader, parseLang, placeTexts, translator, type Lang } from "./i18n";
 import { store } from "./store";
+import type { AssensEvent } from "./events";
 import type { Place } from "./types";
 
 // Menukortet på engelsk og tysk. Claude oversætter hver tekst én gang, og den gemmes i databasen,
@@ -35,8 +36,14 @@ export async function pageT(texts?: Record<string, string>) {
 export const translatePlace = (place: Place, lang: Lang) => translateTexts(placeTexts(place), lang);
 
 // Forsiden: køkkentyper og dagens tilbud fra alle steder
-export function translateFrontPage(places: Place[], lang: Lang) {
-  const sources = places.flatMap((p) => [...p.cuisines, ...(p.news ? [p.news.text] : [])]);
+export function translateFrontPage(places: Place[], lang: Lang, events: AssensEvent[] = []) {
+  const sources = [...places.flatMap((p) => [...p.cuisines, ...(p.news ? [p.news.text] : [])]), ...events.map((e) => e.title)];
+  return translateTexts([...new Set(sources.map((s) => s.trim()).filter(Boolean))], lang);
+}
+
+// Events: titel og tekst, og køkkentyperne på de steder, man kan spise før
+export function translateEvents(events: AssensEvent[], places: Place[], lang: Lang) {
+  const sources = [...events.flatMap((e) => [e.title, ...(e.text ? [e.text] : [])]), ...places.flatMap((p) => p.cuisines)];
   return translateTexts([...new Set(sources.map((s) => s.trim()).filter(Boolean))], lang);
 }
 
@@ -106,7 +113,7 @@ async function askClaude(lang: Exclude<Lang, "da">, texts: string[]): Promise<st
       output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
       system:
         `You translate restaurant menus in Assens, Denmark, from Danish into ${NAMES[lang]} for tourists. ` +
-        "The texts are dish names, descriptions, menu categories, sizes, extras, cuisine types and short notes the restaurant wrote. " +
+        "The texts are dish names, descriptions, menu categories, sizes, extras, cuisine types, short notes the restaurant wrote, and names of local events such as concerts. " +
         "Translate so a tourist understands what the food is. Keep names that are already international (Pizza Margherita, Carbonara, Burger) as they are, " +
         "and keep numbers, prices and units exactly. Keep the tone short and plain, like a menu. Do not add explanations. " +
         "Return one translation per input text, in the same order.",

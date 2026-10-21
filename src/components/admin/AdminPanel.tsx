@@ -7,6 +7,8 @@ import { Wordmark } from "@/components/AppShell";
 import { DeliveryEditor, HoursEditor, MenuEditor, Sheet } from "@/components/panel/DetailsEditors";
 import { Toggle } from "@/components/panel/Panel";
 import type { AdminPlace } from "@/lib/admin";
+import type { AssensEvent } from "@/lib/events";
+import { AdminEvents } from "./AdminEvents";
 import { WEEKDAYS } from "@/lib/hours";
 
 async function post(url: string, body: unknown): Promise<{ ok: boolean; error?: string; pin?: string; slug?: string }> {
@@ -46,7 +48,7 @@ export function AdminLogin() {
 }
 
 // Johnnys overblik over alle spisesteder
-export function AdminPanel({ places }: { places: AdminPlace[] }) {
+export function AdminPanel({ places, events }: { places: AdminPlace[]; events: AssensEvent[] }) {
   const router = useRouter();
   const [open, setOpen] = useState<string | "new" | null>(null);
   const selected = places.find((p) => p.slug === open);
@@ -95,6 +97,8 @@ export function AdminPanel({ places }: { places: AdminPlace[] }) {
           </li>
         ))}
       </ul>
+
+      <AdminEvents events={events} />
 
       {open === "new" && (
         <BasicsSheet

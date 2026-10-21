@@ -2,6 +2,18 @@
 // Hører sammen med UI i i18n.ts.
 export const PAGES: Record<string, { en: string; de: string }> = {
   // Fælles
+  // Events og Spis før koncerten
+  "Kl. {tid}": { en: "{tid}", de: "{tid} Uhr" },
+  "Spis før ›": { en: "Eat before ›", de: "Vorher essen ›" },
+  "Spis før": { en: "Eat before", de: "Vorher essen" },
+  Billetter: { en: "Tickets", de: "Tickets" },
+  "I aften kl. {tid}": { en: "Tonight {tid}", de: "Heute Abend {tid} Uhr" },
+  "‹ Alle events": { en: "‹ All events", de: "‹ Alle Veranstaltungen" },
+  "Tryk på Spis før, så finder vi et sted at spise inden.": { en: "Tap Eat before, and we will find a place to eat first.", de: "Tippen Sie auf Vorher essen, dann finden wir ein Lokal für vorher." },
+  "Bordet er i god tid, så I når det. Restauranten svarer ja eller nej.": { en: "The table is early enough for you to make it. The restaurant will say yes or no.", de: "Der Tisch ist früh genug, damit Sie es rechtzeitig schaffen. Das Restaurant sagt ja oder nein." },
+  "Ingen af stederne på AssensNu har åbent i timerne før. Se alle steder under Mad.": { en: "None of the places on AssensNu are open in the hours before. See all places under Food.", de: "Keines der Lokale auf AssensNu hat vorher geöffnet. Alle Lokale finden Sie unter Essen." },
+  "Bord kl. {tid}": { en: "Table at {tid}", de: "Tisch um {tid}" },
+  "Mad klar kl. {tid}": { en: "Food ready at {tid}", de: "Essen fertig um {tid}" },
   "Dit navn": { en: "Your name", de: "Ihr Name" },
   "Dit telefonnummer": { en: "Your phone number", de: "Ihre Telefonnummer" },
   "(hvis du vil)": { en: "(optional)", de: "(optional)" },

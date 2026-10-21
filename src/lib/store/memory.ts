@@ -1,4 +1,5 @@
 import { seedPlaces } from "@/data/places";
+import type { AssensEvent } from "../events";
 import { createHash } from "node:crypto";
 import { todayInCopenhagen } from "../hours";
 import { activeLastChance } from "../last-chance";
@@ -7,7 +8,7 @@ import type { Booking, Chef, GroupOrder, Order, Place, PlaceNews } from "../type
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[] };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -26,6 +27,7 @@ const state: State = (g.__assensnu ??= {
   lastChance: new Map(),
   translations: new Map(),
   chefs: new Map(),
+  events: [],
 });
 // Tilstand fra før en genstart af udviklingsserveren mangler måske de nyeste felter
 state.busyUntil ??= new Map();
@@ -35,6 +37,7 @@ state.groups ??= new Map();
 state.lastChance ??= new Map();
 state.translations ??= new Map();
 state.chefs ??= new Map();
+state.events ??= [];
 const pushKey = (t: PushTarget) => `${t.kind}:${t.id}`;
 
 const DEMO_PIN = "1234";
@@ -263,6 +266,22 @@ export const memoryStore: Store = {
   },
   async saveTranslations(lang, translations) {
     for (const [source, text] of Object.entries(translations)) state.translations.set(`${lang}:${source}`, text);
+  },
+
+  async listEvents(fromDate) {
+    return state.events.filter((e) => e.date >= fromDate).map((e) => ({ ...e }));
+  },
+  async getEvent(id) {
+    const e = state.events.find((x) => x.id === id);
+    return e ? { ...e } : null;
+  },
+  async saveEvent(event, id) {
+    const saved = { ...event, id: id ?? crypto.randomUUID() };
+    state.events = [...state.events.filter((e) => e.id !== saved.id), saved];
+    return saved;
+  },
+  async deleteEvent(id) {
+    state.events = state.events.filter((e) => e.id !== id);
   },
 
   async savePush(target, subscription) {
