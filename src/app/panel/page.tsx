@@ -4,6 +4,7 @@ import { Wordmark } from "@/components/AppShell";
 import { Panel } from "@/components/panel/Panel";
 import { PanelLogin } from "@/components/panel/PanelLogin";
 import { panelSlug } from "@/lib/panel-auth";
+import { pushPublicKey } from "@/lib/push";
 import { isDemo, store } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ async function PanelPage() {
       store.listBookings(place.slug),
       store.listFollowers(place.slug).then((f) => f.length, () => null),
     ]);
-    return <Panel initial={{ place, orders, bookings, followers }} noDatabase={isDemo && !!process.env.VERCEL} />;
+    return <Panel initial={{ place, orders, bookings, followers }} noDatabase={isDemo && !!process.env.VERCEL} pushKey={pushPublicKey()} />;
   }
 
   // Alle steder kan logge ind og rette deres oplysninger, når AssensNu har givet dem en kode

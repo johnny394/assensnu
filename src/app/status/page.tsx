@@ -181,6 +181,13 @@ async function runChecks(): Promise<Check[]> {
       : { ok: true, text: "Restauranterne kan sætte lukkedage på forhånd." },
   );
 
+  const panelBesked = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("panel_push").limit(1);
+  checks.push(
+    panelBesked.error
+      ? { ok: false, text: "Restauranterne kan ikke få besked om ordrer uden svar endnu.", fix: "Kør tilfoej-panel-besked.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Restauranterne kan få besked om ordrer uden svar." },
+  );
+
   const rester = await createClient(url, key, { auth: { persistSession: false } }).from("followers").select("leftovers").limit(1);
   checks.push(
     rester.error

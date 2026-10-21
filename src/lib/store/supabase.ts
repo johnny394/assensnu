@@ -299,6 +299,28 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       const row = check(await db.from("orders").select().eq("id", id).maybeSingle());
       return row ? toOrder(row as OrderRow) : null;
     },
+    async orderFacts(sinceIso, slug) {
+      // Supabase giver højst 1000 rækker ad gangen, så de hentes i bidder
+      type Row = { place_slug: string; place_name: string; created_at: string; status: string; total_kr: number; lines: { name: string; quantity: number }[] };
+      const rows: Row[] = [];
+      for (let from = 0; from < 50_000; from += 1000) {
+        let query = db.from("orders").select("place_slug, place_name, created_at, status, total_kr, lines").gte("created_at", sinceIso).order("created_at").range(from, from + 999);
+        if (slug) query = query.eq("place_slug", slug);
+        const page = check(await query) as Row[];
+        rows.push(...page);
+        if (page.length < 1000) break;
+      }
+      return rows.map((r) => ({ placeSlug: r.place_slug, placeName: r.place_name, createdAt: r.created_at, status: r.status, total: r.total_kr, lines: r.lines ?? [] }));
+    },
+    async bookingFacts(sinceIso, slug) {
+      const rows = check(await db.from("bookings").select("place_slug, created_at, status, guests").eq("place_slug", slug).gte("created_at", sinceIso)) as { place_slug: string; created_at: string; status: string; guests: number }[];
+      return rows.map((r) => ({ placeSlug: r.place_slug, createdAt: r.created_at, status: r.status, guests: r.guests }));
+    },
+    async followerDates(slug) {
+      const res = await db.from("followers").select("created_at").eq("place_slug", slug);
+      if (res.error) return [];
+      return (res.data as { created_at: string }[]).map((r) => r.created_at);
+    },
     async listOrders(slug) {
       const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const rows = check(await db.from("orders").select().eq("place_slug", slug).gte("created_at", since).order("created_at", { ascending: false }));
@@ -552,6 +574,16 @@ export function supabaseStore(url: string, serviceKey: string): Store {
 
     async savePush({ kind, id }, subscription) {
       check(await db.from(kind === "order" ? "orders" : "bookings").update({ push: subscription }).eq("id", id));
+    },
+    async savePlacePush(slug, subscription, stop) {
+      const others = (await this.listPlacePush(slug)).filter((s) => s.endpoint !== subscription.endpoint);
+      // Højst fem telefoner pr. sted
+      check(await db.from("places").update({ panel_push: stop ? others : [...others, subscription].slice(-5) }).eq("slug", slug));
+    },
+    async listPlacePush(slug) {
+      const res = await db.from("places").select("panel_push").eq("slug", slug).maybeSingle();
+      if (mentions(res.error, "panel_push")) return [];
+      return ((check(res) as { panel_push: PushSubscription[] | null } | null)?.panel_push ?? []);
     },
     async getPush({ kind, id }) {
       const row = check(await db.from(kind === "order" ? "orders" : "bookings").select("push").eq("id", id).maybeSingle()) as { push: PushSubscription | null } | null;

@@ -1,8 +1,13 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { groupIsOpen, groupOrderItems } from "@/lib/groups";
 import { buildOrder } from "@/lib/orders";
 import { tooManyOrders } from "@/lib/privacy";
+import { notifyPlace } from "@/lib/push";
 import { store } from "@/lib/store";
+
+// Så længe må siden leve efter svaret, så den kan minde restauranten om ordren
+export const maxDuration = 300;
+const UNANSWERED_MINUTES = 3;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -27,5 +32,16 @@ export async function POST(request: Request) {
   }
   const order = await store.createOrder(result.value);
   if (groupId) await store.closeGroup(groupId, order.id);
+  // Har ingen svaret efter 3 minutter, får restaurantens telefon en besked
+  after(async () => {
+    await new Promise((r) => setTimeout(r, UNANSWERED_MINUTES * 60_000));
+    const now = await store.getOrder(order.id).catch(() => null);
+    if (now?.status !== "new") return;
+    await notifyPlace(place.slug, {
+      title: `Ordre ${order.number} venter på svar`,
+      body: `${order.customerName} har ventet i ${UNANSWERED_MINUTES} minutter. Tryk for at svare.`,
+      url: "/panel",
+    });
+  });
   return NextResponse.json({ id: order.id });
 }

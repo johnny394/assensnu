@@ -1,5 +1,6 @@
 import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
 import type { AssensEvent } from "../events";
+import type { BookingFact, OrderFact } from "../stats";
 import type { Booking, BookingStatus, CartItem, Chef, ClosedPeriod, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
 
 export type NewOrder = Omit<Order, "id" | "number" | "status" | "createdAt" | "readyAt">;
@@ -37,6 +38,11 @@ export type Store = {
   createOrder(order: NewOrder): Promise<Order>;
   getOrder(id: string): Promise<Order | null>;
   listOrders(slug: string): Promise<Order[]>;
+  /** Til tal og fakturering: ordrer siden sinceIso, for ét sted eller alle */
+  orderFacts(sinceIso: string, slug?: string): Promise<OrderFact[]>;
+  bookingFacts(sinceIso: string, slug: string): Promise<BookingFact[]>;
+  /** Hvornår hver følger begyndte at følge stedet (ISO) */
+  followerDates(slug: string): Promise<string[]>;
   setOrderStatus(id: string, status: OrderStatus, readyAt?: string): Promise<void>;
 
   /** Hvor mange bestillinger et telefonnummer har sendt siden et tidspunkt, på tværs af steder */
@@ -93,4 +99,7 @@ export type Store = {
 
   savePush(target: PushTarget, subscription: PushSubscription | null): Promise<void>;
   getPush(target: PushTarget): Promise<PushSubscription | null>;
+  /** Restaurantens egne telefoner, der får besked om ordrer uden svar. stop fjerner den. */
+  savePlacePush(slug: string, subscription: PushSubscription, stop?: boolean): Promise<void>;
+  listPlacePush(slug: string): Promise<PushSubscription[]>;
 };

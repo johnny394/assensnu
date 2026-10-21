@@ -9,7 +9,7 @@ import type { Booking, Chef, ClosedPeriod, GroupOrder, Order, Place, PlaceNews }
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { leftovers?: boolean }>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { leftovers?: boolean; createdAt?: string }>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -24,6 +24,7 @@ const state: State = (g.__assensnu ??= {
   busyUntil: new Map(),
   news: new Map(),
   closedDays: new Map(),
+  placePush: new Map(),
   followers: new Map(),
   groups: new Map(),
   lastChance: new Map(),
@@ -36,6 +37,7 @@ state.busyUntil ??= new Map();
 state.news ??= new Map();
 state.followers ??= new Map();
 state.closedDays ??= new Map();
+state.placePush ??= new Map();
 state.groups ??= new Map();
 state.lastChance ??= new Map();
 state.translations ??= new Map();
@@ -116,6 +118,15 @@ export const memoryStore: Store = {
   },
   async getOrder(id) {
     return state.orders.find((o) => o.id === id) ?? null;
+  },
+  async orderFacts(sinceIso, slug) {
+    return state.orders.filter((o) => o.createdAt >= sinceIso && (!slug || o.placeSlug === slug)).map((o) => ({ placeSlug: o.placeSlug, placeName: o.placeName, createdAt: o.createdAt, status: o.status, total: o.total, lines: o.lines }));
+  },
+  async bookingFacts(sinceIso, slug) {
+    return state.bookings.filter((b) => b.createdAt >= sinceIso && b.placeSlug === slug).map((b) => ({ placeSlug: b.placeSlug, createdAt: b.createdAt, status: b.status, guests: b.guests }));
+  },
+  async followerDates(slug) {
+    return [...(state.followers.get(slug)?.values() ?? [])].map((f) => f.createdAt ?? new Date().toISOString());
   },
   async listOrders(slug) {
     return state.orders.filter((o) => o.placeSlug === slug).sort(byNewest);
@@ -241,13 +252,13 @@ export const memoryStore: Store = {
   },
   async follow(slug, subscription, leftovers = false) {
     if (!state.followers.has(slug)) state.followers.set(slug, new Map());
-    state.followers.get(slug)!.set(subscription.endpoint, { ...subscription, leftovers });
+    state.followers.get(slug)!.set(subscription.endpoint, { ...subscription, leftovers, createdAt: state.followers.get(slug)!.get(subscription.endpoint)?.createdAt ?? new Date().toISOString() });
   },
   async unfollow(slug, endpoint) {
     state.followers.get(slug)?.delete(endpoint);
   },
   async listFollowers(slug, only) {
-    return [...(state.followers.get(slug)?.values() ?? [])].filter((f) => !only?.leftovers || f.leftovers).map(({ leftovers: _l, ...s }) => s); // eslint-disable-line @typescript-eslint/no-unused-vars
+    return [...(state.followers.get(slug)?.values() ?? [])].filter((f) => !only?.leftovers || f.leftovers).map(({ leftovers: _l, createdAt: _c, ...s }) => s); // eslint-disable-line @typescript-eslint/no-unused-vars
   },
 
   async createGroup(slug, hostName, hostKey) {
@@ -309,6 +320,13 @@ export const memoryStore: Store = {
   async savePush(target, subscription) {
     if (subscription) state.push.set(pushKey(target), subscription);
     else state.push.delete(pushKey(target));
+  },
+  async savePlacePush(slug, subscription, stop) {
+    const others = (state.placePush.get(slug) ?? []).filter((s) => s.endpoint !== subscription.endpoint);
+    state.placePush.set(slug, stop ? others : [...others, subscription].slice(-5));
+  },
+  async listPlacePush(slug) {
+    return state.placePush.get(slug) ?? [];
   },
   async getPush(target) {
     return state.push.get(pushKey(target)) ?? null;

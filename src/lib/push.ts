@@ -69,3 +69,20 @@ export async function notifyFollowers(slug: string, message: PushMessage, only?:
     }),
   );
 }
+
+// Til restaurantens egne telefoner, fx når en ordre har ventet på svar
+export async function notifyPlace(slug: string, message: PushMessage) {
+  if (!setup()) return;
+  const phones = await store.listPlacePush(slug);
+  await Promise.all(
+    phones.map(async (subscription) => {
+      try {
+        await webpush.sendNotification(subscription, JSON.stringify({ ...message, tag: `panel-${slug}` }), { TTL: 600, urgency: "high" });
+      } catch (e) {
+        const code = (e as { statusCode?: number }).statusCode;
+        if (code === 404 || code === 410) await store.savePlacePush(slug, subscription, true).catch(() => {});
+        else console.error("Besked til restauranten kunne ikke sendes", e);
+      }
+    }),
+  );
+}
