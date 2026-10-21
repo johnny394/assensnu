@@ -38,6 +38,11 @@ export type Store = {
   listOrders(slug: string): Promise<Order[]>;
   setOrderStatus(id: string, status: OrderStatus, readyAt?: string): Promise<void>;
 
+  /** Hvor mange bestillinger et telefonnummer har sendt siden et tidspunkt, på tværs af steder */
+  countOrdersByPhone(phone: string, sinceIso: string): Promise<number>;
+  /** Fjerner navn, telefon, adresse og besked fra bestillinger, borde og fællesbestillinger, der er ældre end beforeIso */
+  forgetCustomers(beforeIso: string): Promise<void>;
+
   createBooking(booking: NewBooking): Promise<Booking>;
   getBooking(id: string): Promise<Booking | null>;
   listBookings(slug: string): Promise<Booking[]>;

@@ -51,6 +51,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </p>
       </header>
       {children}
+      <footer className="mx-auto mt-12 flex max-w-2xl flex-wrap gap-x-5 gap-y-1 border-t border-ink px-5 pt-3 text-ink-soft">
+        <Link href="/privatliv" className="underline">{t("Privatlivspolitik")}</Link>
+        <Link href="/handelsbetingelser" className="underline">{t("Handelsbetingelser")}</Link>
+      </footer>
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t-[3px] border-double border-ink bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         <ul className="mx-auto grid max-w-2xl grid-cols-3">
           {tabs.map((tab) => (

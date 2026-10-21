@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { company, companyComplete } from "@/lib/company";
 import webpush from "web-push";
 import { supabaseOrigin } from "@/lib/store/url";
 
@@ -196,6 +197,19 @@ async function runChecks(): Promise<Check[]> {
         { name: "VAPID_PRIVATE_KEY", value: fresh.privateKey },
       ],
     });
+  }
+  {
+    const c = company();
+    const missing = (["FIRMA_NAVN", "FIRMA_CVR", "FIRMA_ADRESSE", "FIRMA_MAIL"] as const).filter((_, i) => !Object.values(c)[i]);
+    checks.push(
+      companyComplete()
+        ? { ok: true, text: "Firmaoplysningerne står i privatlivspolitik og handelsbetingelser." }
+        : {
+            ok: false,
+            text: `Privatlivspolitik og handelsbetingelser mangler firmaoplysninger: ${missing.join(", ")}.`,
+            fix: "Tilføj dem på Vercel under Settings og Environment Variables (navn, CVR-nummer, adresse og mail), og tryk Redeploy.",
+          },
+    );
   }
   return checks;
 }

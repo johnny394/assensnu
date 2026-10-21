@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { panelSlug } from "@/lib/panel-auth";
+import { forgetOldCustomers } from "@/lib/privacy";
 import { store } from "@/lib/store";
 
 // Alt, panelet viser. Hentes igen med få sekunders mellemrum.
@@ -13,5 +14,6 @@ export async function GET() {
     // Uden tilfoej-folg.sql er der ingen følgere, men resten af panelet virker
     store.listFollowers(place.slug).then((f) => f.length, () => null),
   ]);
+  after(forgetOldCustomers);
   return NextResponse.json({ place, orders, bookings, followers });
 }

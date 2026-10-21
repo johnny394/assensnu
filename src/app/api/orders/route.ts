@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { groupIsOpen, groupOrderItems } from "@/lib/groups";
 import { buildOrder } from "@/lib/orders";
+import { tooManyOrders } from "@/lib/privacy";
 import { store } from "@/lib/store";
 
 export async function POST(request: Request) {
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
 
   const result = buildOrder(place, body);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+  if (await tooManyOrders(result.value.customerPhone)) {
+    return NextResponse.json({ error: "Der er sendt mange bestillinger fra dit nummer den sidste time. Ring til restauranten, så hjælper de dig." }, { status: 429 });
+  }
   const order = await store.createOrder(result.value);
   if (groupId) await store.closeGroup(groupId, order.id);
   return NextResponse.json({ id: order.id });

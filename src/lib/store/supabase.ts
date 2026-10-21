@@ -305,6 +305,18 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       check(await db.from("orders").update(readyAt ? { status, ready_at: readyAt } : { status }).eq("id", id));
     },
 
+    async countOrdersByPhone(phone, sinceIso) {
+      const res = await db.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", phone).gte("created_at", sinceIso);
+      check(res);
+      return res.count ?? 0;
+    },
+    async forgetCustomers(beforeIso) {
+      // Ordrenumre, beløb og retter bliver, så restauranten stadig kan se sin omsætning
+      check(await db.from("orders").update({ customer_name: "Slettet", customer_phone: "", note: null, delivery: null, push: null }).lt("created_at", beforeIso).neq("customer_phone", ""));
+      check(await db.from("bookings").update({ customer_name: "Slettet", customer_phone: "", note: null, push: null }).lt("created_at", beforeIso).neq("customer_phone", ""));
+      check(await db.from("group_orders").delete().lt("created_at", beforeIso));
+    },
+
     async createBooking(b) {
       const row = check(
         await db

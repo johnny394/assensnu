@@ -123,6 +123,21 @@ export const memoryStore: Store = {
     if (readyAt) order.readyAt = readyAt;
   },
 
+  async countOrdersByPhone(phone, sinceIso) {
+    return state.orders.filter((o) => o.customerPhone === phone && o.createdAt >= sinceIso).length;
+  },
+  async forgetCustomers(beforeIso) {
+    for (const o of state.orders.filter((o) => o.createdAt < beforeIso)) {
+      Object.assign(o, { customerName: "Slettet", customerPhone: "", note: undefined, delivery: undefined });
+      state.push.delete(pushKey({ kind: "order", id: o.id }));
+    }
+    for (const b of state.bookings.filter((b) => b.createdAt < beforeIso)) {
+      Object.assign(b, { customerName: "Slettet", customerPhone: "", note: undefined });
+      state.push.delete(pushKey({ kind: "booking", id: b.id }));
+    }
+    for (const [id, g] of state.groups) if (g.group.createdAt < beforeIso) state.groups.delete(id);
+  },
+
   async createBooking(b) {
     const booking: Booking = { ...b, id: crypto.randomUUID(), status: "requested", createdAt: new Date().toISOString() };
     state.bookings.push(booking);

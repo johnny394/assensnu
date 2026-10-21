@@ -260,4 +260,16 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "Ups, noget gik galt": { en: "Oops, something went wrong", de: "Hoppla, etwas ist schiefgelaufen" },
   "Prøv igen om lidt. Bliver det ved, kan du se hvad der mangler på opsætningssiden.": { en: "Try again in a moment.", de: "Versuchen Sie es gleich noch einmal." },
   "Se opsætning": { en: "See setup", de: "Einrichtung ansehen" },
+
+  // Privatliv, handelsbetingelser og allergener
+  Privatlivspolitik: { en: "Privacy policy", de: "Datenschutz" },
+  Handelsbetingelser: { en: "Terms of sale", de: "AGB" },
+  "Denne side findes kun på dansk.": { en: "This page is only available in Danish.", de: "Diese Seite gibt es nur auf Dänisch." },
+  "Når du bestiller, accepterer du": { en: "By ordering, you accept the", de: "Mit Ihrer Bestellung akzeptieren Sie die" },
+  handelsbetingelserne: { en: "terms of sale", de: "AGB" },
+  "Sådan passer vi på dine oplysninger:": { en: "How we look after your details:", de: "So schützen wir Ihre Daten:" },
+  privatlivspolitikken: { en: "privacy policy", de: "Datenschutzerklärung" },
+  "Allergier? Ring og spørg {navn}, før du bestiller.": { en: "Allergies? Call {navn} and ask before you order.", de: "Allergien? Rufen Sie {navn} an und fragen Sie vor der Bestellung." },
+  "Allergier? Spørg {navn}, før du bestiller.": { en: "Allergies? Ask {navn} before you order.", de: "Allergien? Fragen Sie {navn} vor der Bestellung." },
+  "Der er sendt mange bestillinger fra dit nummer den sidste time. Ring til restauranten, så hjælper de dig.": { en: "Many orders have been sent from your number in the last hour. Call the restaurant and they will help you.", de: "In der letzten Stunde wurden viele Bestellungen von Ihrer Nummer gesendet. Rufen Sie das Restaurant an, dort hilft man Ihnen." },
 };
