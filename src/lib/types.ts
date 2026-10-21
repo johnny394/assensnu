@@ -56,6 +56,7 @@ export type Place = {
   busyUntil?: string; // "HH:MM", når "travlt" slukker af sig selv
   news?: PlaceNews; // dagens tilbud, kun hvis det er skrevet i dag
   lastChance?: LastChance; // halv pris på rester til lukketid
+  chef?: Chef; // Mød kokken
   demo?: boolean;
   member?: boolean; // stedet har sagt ja til AssensNu og har en kode til panelet
 };
@@ -64,6 +65,9 @@ export type Place = {
 // sentAt er ISO. Med pris kan tilbuddet bestilles. wasPrice er normalprisen, som vises overstreget.
 // Sidste chance før lukketid: retterne til halv pris, og hvornår det slutter (ISO)
 export type LastChance = { itemIds: string[]; until: string };
+
+// Mød kokken: hvem står bag, et par linjer, og hvornår billedet sidst blev skiftet (ISO). Uden photoAt er der intet billede.
+export type Chef = { name: string; text: string; photoAt?: string };
 
 export type PlaceNews = { text: string; sentAt: string; price?: number; wasPrice?: number };
 
