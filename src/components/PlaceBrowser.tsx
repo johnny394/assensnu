@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { copenhagenNow, openStatus, pickupOptions } from "@/lib/hours";
 import { clockTime } from "@/lib/live";
 import type { T } from "@/lib/i18n";
+import { NEARBY } from "@/lib/site";
 import type { Place } from "@/lib/types";
 import { LangSwitch } from "./LangSwitch";
 import { OfferStrip } from "./Offers";
@@ -186,6 +187,13 @@ export function PlaceBrowser({ places, title, languages }: { places: Place[]; ti
           </li>
         )}
       </ul>
+      {languages && NEARBY.map((town) => (
+        <a key={town.name} href={town.url} className="mt-6 block border-2 border-ink bg-surface px-4 py-4 active:bg-paper">
+          <p className="font-display text-xl font-semibold leading-tight">{t("Fandt du ikke det, du havde lyst til?")}</p>
+          <p className="mt-1 text-base">{t("Der er flere spisesteder i {by}.", { by: town.name })}</p>
+          <p className="mt-2 font-bold underline">{t("Se spisestederne i {by} ›", { by: town.name })}</p>
+        </a>
+      ))}
     </div>
   );
 }
