@@ -6,6 +6,7 @@ import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import type { Booking, Chef, ClosedPeriod, GroupEntry, GroupOrder, MenuCategory, Order, Place, Weekday } from "../types";
 import type { AssensEvent } from "../events";
+import { CITY } from "../site";
 import type { PushSubscription, Store } from "./types";
 
 type PlaceRow = {
@@ -61,6 +62,13 @@ async function withFallback(select: string, run: (select: string) => PromiseLike
     res = await run(select);
   }
   return res;
+}
+
+// Hver by viser kun sine egne steder og events. Indtil tilfoej-byer.sql er kørt, findes kolonnen town
+// ikke, og så vises alt som før (der er kun Assens).
+async function inTown(run: (town: string | null) => PromiseLike<Res>): Promise<Res> {
+  const res = await run(CITY);
+  return mentions(res.error, "town") ? run(null) : res;
 }
 
 const byPosition = (a: { position: number }, b: { position: number }) => a.position - b.position;
@@ -207,7 +215,12 @@ export function supabaseStore(url: string, serviceKey: string): Store {
 
   return {
     async getPlaces() {
-      const res = await withFallback(PLACE_SELECT, (select) => db.from("places").select(select).eq("published", true).order("name"));
+      const res = await inTown((town) =>
+        withFallback(PLACE_SELECT, (select) => {
+          const q = db.from("places").select(select).eq("published", true);
+          return (town ? q.eq("town", town) : q).order("name");
+        }),
+      );
       const rows = check(res);
       return (rows as unknown as PlaceRow[]).map(toPlace);
     },
@@ -378,7 +391,12 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     async adminListPlaces() {
       const select =
         "slug, name, address, cuisines, phone, takeaway, dine_in, published, accepts_orders, accepts_bookings, delivery, panel_pin_hash, opening_hours (day, open, close), menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))";
-      const res = await withFallback(select, (s) => db.from("places").select(s).order("name"));
+      const res = await inTown((town) =>
+        withFallback(select, (s) => {
+          const q = db.from("places").select(s);
+          return (town ? q.eq("town", town) : q).order("name");
+        }),
+      );
       const rows = check(res) as unknown as (Pick<PlaceRow, "slug" | "name" | "address" | "cuisines" | "phone" | "takeaway" | "dine_in" | "accepts_orders" | "accepts_bookings" | "delivery"> & {
         published: boolean;
         panel_pin_hash: string | null;
@@ -419,18 +437,9 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       if (Object.keys(patch).length) check(await db.from("places").update(patch).eq("slug", slug));
     },
     async createPlace(slug, b) {
-      check(
-        await db.from("places").insert({
-          slug,
-          name: b.name,
-          address: b.address,
-          cuisines: b.cuisines,
-          phone: b.phone,
-          takeaway: b.takeaway,
-          dine_in: b.dineIn,
-          published: true,
-        }),
-      );
+      const row = { slug, name: b.name, address: b.address, cuisines: b.cuisines, phone: b.phone, takeaway: b.takeaway, dine_in: b.dineIn, published: true };
+      const res = await db.from("places").insert({ ...row, town: CITY });
+      check(mentions(res.error, "town") ? await db.from("places").insert(row) : res);
     },
     async deletePlace(slug) {
       // Bestillinger og bordforespørgsler holder fast i stedet, så de skal ud først.
@@ -550,7 +559,10 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     },
 
     async listEvents(fromDate) {
-      const res = await db.from("events").select("id, title, date, time, venue, text, link").gte("date", fromDate).order("date").order("time");
+      const res = await inTown((town) => {
+        const q = db.from("events").select("id, title, date, time, venue, text, link").gte("date", fromDate);
+        return (town ? q.eq("town", town) : q).order("date").order("time");
+      });
       // Uden tabellen (tilfoej-events.sql ikke kørt) er der bare ingen events endnu
       if (res.error) return [];
       return (res.data as EventRow[]).map(toEvent);
@@ -564,7 +576,7 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       const saved = check(
         id
           ? await db.from("events").update(row).eq("id", id).select("id, title, date, time, venue, text, link").single()
-          : await db.from("events").insert(row).select("id, title, date, time, venue, text, link").single(),
+          : await inTown((town) => db.from("events").insert(town ? ({ ...row, town } as typeof row) : row).select("id, title, date, time, venue, text, link").single()),
       ) as EventRow;
       return toEvent(saved);
     },

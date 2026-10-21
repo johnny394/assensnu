@@ -12,7 +12,7 @@ import { AdminEvents } from "./AdminEvents";
 import { AdminOrders } from "./AdminOrders";
 import { AdminSigns } from "./AdminSigns";
 import { WEEKDAYS } from "@/lib/hours";
-import { SITE } from "@/lib/site";
+import { CITY, SITE } from "@/lib/site";
 
 async function post(url: string, body: unknown): Promise<{ ok: boolean; error?: string; pin?: string; slug?: string }> {
   const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
@@ -72,7 +72,7 @@ export function AdminPanel({ places, events }: { places: AdminPlace[]; events: A
       </div>
       <h1 className="mt-6 font-display text-[2.3rem] font-extrabold leading-tight tracking-tight">Dit panel</h1>
       <p className="text-lg text-ink-soft">
-        {places.length} spisesteder · {withCode} kan logge ind · {ordering} tager imod bestillinger
+        {places.length} spisesteder i {CITY} · {withCode} kan logge ind · {ordering} tager imod bestillinger
       </p>
 
       <button onClick={() => setOpen("new")} className="mt-6 min-h-14 w-full rounded-2xl bg-buoy px-5 text-xl font-bold">

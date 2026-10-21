@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { company, companyComplete } from "@/lib/company";
 import webpush from "web-push";
 import { supabaseOrigin } from "@/lib/store/url";
-import { SITE } from "@/lib/site";
+import { CITY, SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: `Opsætning · ${SITE}`, robots: { index: false } };
@@ -180,6 +180,13 @@ async function runChecks(): Promise<Check[]> {
     lukkedage.error
       ? { ok: false, text: "Restauranterne kan ikke sætte lukkedage på forhånd endnu.", fix: "Kør tilfoej-lukkedage.sql i Supabase under SQL Editor. Den sletter ingenting." }
       : { ok: true, text: "Restauranterne kan sætte lukkedage på forhånd." },
+  );
+
+  const byer = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("town").limit(1);
+  checks.push(
+    byer.error
+      ? { ok: false, text: "Databasen kan ikke holde styr på flere byer endnu.", fix: "Kør tilfoej-byer.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: `Databasen kan holde styr på flere byer. Den her side viser ${CITY}.` },
   );
 
   const panelBesked = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("panel_push").limit(1);
