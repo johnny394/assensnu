@@ -4,7 +4,7 @@ import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
 import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
-import { shownToPlace } from "../payment";
+import { shownToPlace, type Subscription } from "../payment";
 import type { Booking, Chef, ClosedPeriod, GroupEntry, GroupOrder, MenuCategory, Order, OrderPayment, Place, Weekday } from "../types";
 import type { AssensEvent } from "../events";
 import { withoutCustomer } from "../export";
@@ -55,7 +55,7 @@ const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, d
 // Indtil tilfoej-levering.sql, tilfoej-tilvalg.sql, tilfoej-folg.sql, tilfoej-dagens-ret.sql, tilfoej-tilbud.sql og tilfoej-sidste-chance.sql er kørt, findes de nyere kolonner ikke.
 // Så spørger vi uden dem, så siden virker som før, bare uden levering, tilvalg, dagens tilbud og travlt-tid.
 type Res = { data: unknown; error: unknown };
-const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["last_chance"], ["chef"], ["closed_days"], ["online_pay"]];
+const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["last_chance"], ["chef"], ["closed_days"], ["online_pay"], ["subscription"]];
 const mentions = (error: unknown, column: string) => new RegExp(`\\b${column}\\b`).test(String((error as { message?: string } | null)?.message));
 async function withFallback(select: string, run: (select: string) => PromiseLike<Res>): Promise<Res> {
   let res = await run(select);
@@ -397,6 +397,15 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     async saveStripeAccount(slug, account, ready) {
       check(await db.from("places").update({ stripe_account: account, online_pay: ready }).eq("slug", slug));
     },
+    async getSubscription(slug) {
+      const res = await db.from("places").select("subscription").eq("slug", slug).maybeSingle();
+      // Uden tilfoej-abonnement.sql er der intet abonnement
+      if (res.error) return null;
+      return (res.data as { subscription: Subscription | null } | null)?.subscription ?? null;
+    },
+    async saveSubscription(slug, subscription) {
+      check(await db.from("places").update({ subscription }).eq("slug", slug));
+    },
 
     async countOrdersByPhone(phone, sinceIso) {
       const res = await db.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", phone).gte("created_at", sinceIso);
@@ -445,7 +454,7 @@ export function supabaseStore(url: string, serviceKey: string): Store {
 
     async adminListPlaces() {
       const select =
-        "slug, name, address, cuisines, phone, takeaway, dine_in, published, accepts_orders, accepts_bookings, delivery, panel_pin_hash, opening_hours (day, open, close), menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))";
+        "slug, name, address, cuisines, phone, takeaway, dine_in, published, accepts_orders, accepts_bookings, delivery, subscription, panel_pin_hash, opening_hours (day, open, close), menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))";
       const res = await inTown((town) =>
         withFallback(select, (s) => {
           const q = db.from("places").select(s);
@@ -454,6 +463,7 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       );
       const rows = check(res) as unknown as (Pick<PlaceRow, "slug" | "name" | "address" | "cuisines" | "phone" | "takeaway" | "dine_in" | "accepts_orders" | "accepts_bookings" | "delivery"> & {
         published: boolean;
+        subscription?: { status?: string } | null;
         panel_pin_hash: string | null;
         opening_hours: { day: number; open: string; close: string }[];
         menu_categories: PlaceRow["menu_categories"];
@@ -470,6 +480,7 @@ export function supabaseStore(url: string, serviceKey: string): Store {
         acceptsOrders: r.accepts_orders,
         acceptsBookings: r.accepts_bookings,
         hasCode: Boolean(r.panel_pin_hash),
+        subscription: r.subscription?.status,
         hours: r.opening_hours
           .map((h) => ({ day: h.day as Weekday, open: h.open.slice(0, 5), close: h.close.slice(0, 5) }))
           .sort((a, b) => a.day - b.day || a.open.localeCompare(b.open)),

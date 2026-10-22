@@ -208,6 +208,12 @@ async function runChecks(): Promise<Check[]> {
       ? { ok: false, text: "Databasen kan ikke gemme online betalinger endnu.", fix: "Kør tilfoej-betaling.sql i Supabase under SQL Editor. Den sletter ingenting." }
       : { ok: true, text: "Databasen kan gemme online betalinger." },
   );
+  const abonnement = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("subscription").limit(1);
+  checks.push(
+    abonnement.error
+      ? { ok: false, text: "Databasen kan ikke gemme restauranternes abonnement endnu.", fix: "Kør tilfoej-abonnement.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan gemme restauranternes abonnement." },
+  );
   const stripeKey = process.env.STRIPE_SECRET_KEY?.trim();
   checks.push(
     !stripeKey

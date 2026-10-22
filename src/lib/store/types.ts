@@ -1,4 +1,5 @@
 import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
+import type { Subscription } from "../payment";
 import type { AssensEvent } from "../events";
 import type { ExportBooking, ExportOrder } from "../export";
 import type { BookingFact, OrderFact } from "../stats";
@@ -53,6 +54,9 @@ export type Store = {
   getStripeAccount(slug: string): Promise<string | null>;
   /** ready: Stripe har sagt god for kontoen, så kunderne kan betale online */
   saveStripeAccount(slug: string, account: string, ready: boolean): Promise<void>;
+  /** Abonnementet hos ByNu (Stripe-kunde og status), eller null */
+  getSubscription(slug: string): Promise<Subscription | null>;
+  saveSubscription(slug: string, subscription: Subscription): Promise<void>;
 
   /** Hvor mange bestillinger et telefonnummer har sendt siden et tidspunkt, på tværs af steder */
   countOrdersByPhone(phone: string, sinceIso: string): Promise<number>;

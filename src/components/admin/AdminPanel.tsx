@@ -92,6 +92,8 @@ export function AdminPanel({ places, events }: { places: AdminPlace[]; events: A
               <span className="mt-2 flex flex-wrap gap-1.5">
                 {!p.published && <Badge tone="dark">Skjult</Badge>}
                 {p.hasCode ? <Badge tone="go">Har kode</Badge> : <Badge tone="warn">Mangler kode</Badge>}
+                {(p.subscription === "active" || p.subscription === "trialing") && <Badge tone="go">Betaler abonnement</Badge>}
+                {(p.subscription === "past_due" || p.subscription === "unpaid") && <Badge tone="warn">Abonnement ikke betalt</Badge>}
                 {p.acceptsOrders && <Badge tone="go">Bestilling</Badge>}
                 {p.acceptsBookings && <Badge tone="go">Bordbooking</Badge>}
                 {p.menu.length === 0 && <Badge tone="soft">Ingen menu</Badge>}

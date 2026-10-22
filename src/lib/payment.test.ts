@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bynuFee, shownToPlace } from "./payment";
+import { bynuFee, monthlyKr, shownToPlace, subscriptionState } from "./payment";
 
 describe("online betaling", () => {
   it("viser kun ordren for restauranten, når kunden har betalt", () => {
@@ -19,5 +19,17 @@ describe("online betaling", () => {
     expect(bynuFee(200, "")).toBe(0);
     expect(bynuFee(200, "abc")).toBe(0);
     expect(bynuFee(200, "80")).toBe(0);
+  });
+
+  it("viser abonnementet som betalt, ikke betalt eller ikke startet", () => {
+    expect(subscriptionState(null)).toBe("none");
+    expect(subscriptionState({ customer: "cus_1" })).toBe("none");
+    expect(subscriptionState({ customer: "cus_1", status: "active" })).toBe("active");
+    expect(subscriptionState({ customer: "cus_1", status: "past_due" })).toBe("problem");
+    expect(subscriptionState({ customer: "cus_1", status: "canceled" })).toBe("none");
+    expect(subscriptionState({ customer: "cus_1", status: "active" }, false)).toBe("unavailable");
+    expect(monthlyKr(undefined)).toBe(299);
+    expect(monthlyKr("349")).toBe(349);
+    expect(monthlyKr("x")).toBe(299);
   });
 });

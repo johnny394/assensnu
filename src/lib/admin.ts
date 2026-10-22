@@ -18,6 +18,7 @@ export type AdminPlace = {
   hours: OpeningPeriod[];
   menu: MenuCategory[];
   delivery: DeliverySettings | null;
+  subscription?: string; // Stripes status for abonnementet, fx "active"
 };
 
 export type PlaceBasics = {

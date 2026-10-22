@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // En falsk Stripe, der husker, hvad den blev bedt om
 const calls: { what: string; args: unknown[] }[] = [];
-const fake = { session: "open" as string, intent: "requires_capture" as string };
+const fake = { session: "open" as string, intent: "requires_capture" as string, subscriptions: [] as { status: string; created: number }[] };
 vi.mock("server-only", () => ({}));
 vi.mock("stripe", () => ({
   default: class {
@@ -21,6 +21,9 @@ vi.mock("stripe", () => ({
       create: async (...args: unknown[]) => (calls.push({ what: "account", args }), { id: "acct_1" }),
       retrieve: async () => ({ id: "acct_1", charges_enabled: true }),
     };
+    customers = { create: async (...args: unknown[]) => (calls.push({ what: "customer", args }), { id: "cus_1" }) };
+    subscriptions = { list: async () => ({ data: fake.subscriptions }) };
+    billingPortal = { sessions: { create: async (...args: unknown[]) => (calls.push({ what: "portal", args }), { url: "https://billing.stripe.com/p/1" }) } };
     accountLinks = { create: async (...args: unknown[]) => (calls.push({ what: "link", args }), { url: "https://connect.stripe.com/setup/1" }) };
   },
 }));
@@ -37,6 +40,7 @@ describe("online betaling med Stripe", () => {
     calls.length = 0;
     fake.session = "open";
     fake.intent = "requires_capture";
+    fake.subscriptions = [];
     process.env.STRIPE_SECRET_KEY = "sk_test_x";
     process.env.BYNU_PROCENT = "2,5";
   });
@@ -103,5 +107,25 @@ describe("online betaling med Stripe", () => {
     const held = await store.createOrder({ placeSlug: place.slug, placeName: place.name, customerName: "Jens", customerPhone: "12345678", pickup: "asap", lines: [], total: 120, payment: { status: "held", intent: "pi_1" } });
     expect(await s.settlePayment(held, true)).toBe(false);
     expect((await store.getOrder(held.id))!.payment!.status).toBe("held");
+  });
+
+  it("starter et månedligt abonnement med kort og sender betalende videre til siden, hvor de kan stoppe", async () => {
+    const { store, s, place } = await setup();
+    calls.length = 0;
+    expect(await s.subscriptionLink(place, "https://assens.bynu.dk")).toBe("https://checkout.stripe.com/c/cs_1");
+    const [params, options] = calls.find((c) => c.what === "session")!.args as [{ mode: string; customer: string; line_items: { price_data: { unit_amount: number; recurring: { interval: string } } }[] }, unknown];
+    expect(params.mode).toBe("subscription");
+    expect(params.customer).toBe("cus_1");
+    expect(params.line_items[0].price_data).toMatchObject({ unit_amount: 29900, recurring: { interval: "month" } });
+    // På ByNus egen konto, ikke restaurantens
+    expect(options).toBeUndefined();
+
+    fake.subscriptions = [{ status: "incomplete_expired", created: 1 }, { status: "active", created: 2 }];
+    expect(await s.checkSubscription(place.slug)).toBe("active");
+    expect((await store.adminListPlaces()).find((p) => p.slug === place.slug)!.subscription).toBe("active");
+    expect(await s.subscriptionLink(place, "https://assens.bynu.dk")).toBe("https://billing.stripe.com/p/1");
+
+    fake.subscriptions = [{ status: "past_due", created: 3 }];
+    expect(await s.checkSubscription(place.slug)).toBe("problem");
   });
 });

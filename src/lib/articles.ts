@@ -51,6 +51,7 @@ export const ARTICLES: Article[] = [
           { title: "Nå dine faste gæster", text: "Læg dagens tilbud ud, så får de gæster, der følger dig, en besked på telefonen. Har du mad tilbage sidst på aftenen, kan du sælge den til halv pris." },
           { title: "Levering, havn og camping", text: "Bringer du selv ud, sætter du dine egne postnumre og dit eget gebyr. Du kan også levere til bådene i havnen og til gæsterne på campingpladsen." },
           { title: "Se dine tal", text: "Se hvor mange bestillinger du har haft, hvad du har solgt, og hvad gæsterne køber mest." },
+          { title: "Ingen binding", text: "Du kan stoppe, når du vil. Der er ingen opsigelsesperiode." },
         ],
       },
       { contact: true },
