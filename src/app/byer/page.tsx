@@ -1,4 +1,7 @@
+import Link from "next/link";
 import type { Metadata } from "next";
+import { BynuMasthead } from "@/components/BynuMasthead";
+import { ARTICLES } from "@/lib/articles";
 import { BRAND, TOWN_SITES } from "@/lib/site";
 import { pageT } from "@/lib/translate";
 
@@ -13,9 +16,7 @@ export default async function TownsPage() {
   const towns = Object.entries(TOWN_SITES);
   return (
     <main className="mx-auto min-h-dvh max-w-2xl px-5 pb-16 pt-5">
-      <p className="text-center font-display text-[2.6rem] font-black leading-none tracking-tight">{BRAND}</p>
-      <div className="mt-3 h-[7px] border-y border-t-[3px] border-ink" aria-hidden />
-      <p className="border-b border-ink py-2 text-center text-sm uppercase tracking-[0.12em]">{t("Lokal mad, by for by")}</p>
+      <BynuMasthead />
 
       <h1 className="mt-8 font-display text-[2.3rem] font-black leading-[1.05]">{t("Hvor er du?")}</h1>
       <p className="mt-2 text-lg text-ink-soft">{t("Vælg din by, og se hvem der har åbent lige nu.")}</p>
@@ -37,6 +38,17 @@ export default async function TownsPage() {
       <p className="mt-10 border-2 border-dashed border-ink-soft px-4 py-4 text-base text-ink-soft">
         {t("Flere byer er på vej.")}
       </p>
+
+      <section className="mt-12 border-t-[3px] border-double border-ink">
+        {ARTICLES.map((a) => (
+          <Link key={a.slug} href={`/artikel/${a.slug}`} className="group block border-b border-ink py-5 active:bg-surface">
+            <span className="text-sm font-bold uppercase tracking-[0.12em] text-stamp">{a.kicker}</span>
+            <span className="mt-1 block font-display text-[1.6rem] font-semibold leading-tight group-hover:underline">{a.title}</span>
+            <span className="mt-1 block text-base text-ink-soft">{a.lead}</span>
+            <span className="mt-2 block font-bold underline">Læs mere ›</span>
+          </Link>
+        ))}
+      </section>
     </main>
   );
 }
