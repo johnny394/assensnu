@@ -1,5 +1,6 @@
 import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
 import type { AssensEvent } from "../events";
+import type { ExportBooking, ExportOrder } from "../export";
 import type { BookingFact, OrderFact } from "../stats";
 import type { Booking, BookingStatus, CartItem, Chef, ClosedPeriod, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
 
@@ -41,6 +42,9 @@ export type Store = {
   /** Til tal og fakturering: ordrer siden sinceIso, for ét sted eller alle */
   orderFacts(sinceIso: string, slug?: string): Promise<OrderFact[]>;
   bookingFacts(sinceIso: string, slug: string): Promise<BookingFact[]>;
+  /** Til dashboard: alle ordrer og borde siden sinceIso, uden navn, telefon, adresse og besked */
+  exportOrders(sinceIso: string): Promise<ExportOrder[]>;
+  exportBookings(sinceIso: string): Promise<ExportBooking[]>;
   /** Hvornår hver følger begyndte at følge stedet (ISO) */
   followerDates(slug: string): Promise<string[]>;
   setOrderStatus(id: string, status: OrderStatus, readyAt?: string): Promise<void>;

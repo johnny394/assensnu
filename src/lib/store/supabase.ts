@@ -6,6 +6,7 @@ import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import type { Booking, Chef, ClosedPeriod, GroupEntry, GroupOrder, MenuCategory, Order, Place, Weekday } from "../types";
 import type { AssensEvent } from "../events";
+import { withoutCustomer } from "../export";
 import { CITY } from "../site";
 import type { PushSubscription, Store } from "./types";
 
@@ -328,6 +329,27 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     async bookingFacts(sinceIso, slug) {
       const rows = check(await db.from("bookings").select("place_slug, created_at, status, guests").eq("place_slug", slug).gte("created_at", sinceIso)) as { place_slug: string; created_at: string; status: string; guests: number }[];
       return rows.map((r) => ({ placeSlug: r.place_slug, createdAt: r.created_at, status: r.status, guests: r.guests }));
+    },
+    async exportOrders(sinceIso) {
+      // Navn, telefon og besked hentes slet ikke. Adressen i delivery fjernes af withoutCustomer.
+      type Row = Pick<OrderRow, "id" | "number" | "place_slug" | "place_name" | "pickup" | "delivery" | "lines" | "total_kr" | "status" | "ready_at" | "created_at">;
+      const rows: Row[] = [];
+      for (let from = 0; from < 100_000; from += 1000) {
+        const page = check(await db.from("orders").select("id, number, place_slug, place_name, pickup, delivery, lines, total_kr, status, ready_at, created_at").gte("created_at", sinceIso).order("created_at").range(from, from + 999)) as Row[];
+        rows.push(...page);
+        if (page.length < 1000) break;
+      }
+      return rows.map((r) => withoutCustomer({ id: r.id, number: r.number, placeSlug: r.place_slug, placeName: r.place_name, pickup: r.pickup, delivery: r.delivery ?? undefined, lines: r.lines ?? [], total: r.total_kr, status: r.status, readyAt: r.ready_at ?? undefined, createdAt: r.created_at }));
+    },
+    async exportBookings(sinceIso) {
+      type Row = Pick<BookingRow, "id" | "place_slug" | "place_name" | "date" | "time" | "guests" | "status" | "created_at">;
+      const rows: Row[] = [];
+      for (let from = 0; from < 100_000; from += 1000) {
+        const page = check(await db.from("bookings").select("id, place_slug, place_name, date, time, guests, status, created_at").gte("created_at", sinceIso).order("created_at").range(from, from + 999)) as Row[];
+        rows.push(...page);
+        if (page.length < 1000) break;
+      }
+      return rows.map((r) => ({ id: r.id, placeSlug: r.place_slug, placeName: r.place_name, date: r.date, time: r.time.slice(0, 5), guests: r.guests, status: r.status, createdAt: r.created_at }));
     },
     async followerDates(slug) {
       const res = await db.from("followers").select("created_at").eq("place_slug", slug);
