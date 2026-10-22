@@ -15,6 +15,10 @@ describe("bynu.dk", () => {
     expect(res.headers.get("location")).toBe("https://assens.bynu.dk/sted/proevepizza?x=1");
   });
 
+  it("viser artiklerne på bynu.dk", () => {
+    expect(on("bynu.dk", "/artikel/til-spisesteder").headers.get("x-middleware-next")).toBe("1");
+  });
+
   it("lader byernes egne adresser være", () => {
     expect(on("assens.bynu.dk", "/").headers.get("x-middleware-next")).toBe("1");
   });
