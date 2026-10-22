@@ -6,6 +6,7 @@ import { PanelLogin } from "@/components/panel/PanelLogin";
 import { panelSlug } from "@/lib/panel-auth";
 import { pushPublicKey } from "@/lib/push";
 import { isDemo, store } from "@/lib/store";
+import { onlinePayState, ordersForPlace } from "@/lib/stripe";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +17,13 @@ async function PanelPage() {
   const place = slug ? await store.getPlace(slug) : null;
 
   if (place) {
-    const [orders, bookings, followers] = await Promise.all([
-      store.listOrders(place.slug),
+    const [orders, bookings, followers, onlinePay] = await Promise.all([
+      ordersForPlace(place.slug),
       store.listBookings(place.slug),
       store.listFollowers(place.slug).then((f) => f.length, () => null),
+      onlinePayState(place),
     ]);
-    return <Panel initial={{ place, orders, bookings, followers }} noDatabase={isDemo && !!process.env.VERCEL} pushKey={pushPublicKey()} />;
+    return <Panel initial={{ place, orders, bookings, followers, onlinePay }} noDatabase={isDemo && !!process.env.VERCEL} pushKey={pushPublicKey()} />;
   }
 
   // Alle steder kan logge ind og rette deres oplysninger, når AssensNu har givet dem en kode

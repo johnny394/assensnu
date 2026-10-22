@@ -6,11 +6,12 @@ import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
 import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
+import { shownToPlace } from "../payment";
 import type { Booking, Chef, ClosedPeriod, GroupOrder, Order, Place, PlaceNews } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { leftovers?: boolean; createdAt?: string }>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { leftovers?: boolean; createdAt?: string }>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]>; stripe: Map<string, { account: string; ready: boolean }> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -26,6 +27,7 @@ const state: State = (g.__assensnu ??= {
   news: new Map(),
   closedDays: new Map(),
   placePush: new Map(),
+  stripe: new Map(),
   followers: new Map(),
   groups: new Map(),
   lastChance: new Map(),
@@ -39,6 +41,7 @@ state.news ??= new Map();
 state.followers ??= new Map();
 state.closedDays ??= new Map();
 state.placePush ??= new Map();
+state.stripe ??= new Map();
 state.groups ??= new Map();
 state.lastChance ??= new Map();
 state.translations ??= new Map();
@@ -59,6 +62,7 @@ function withToday(place: Place): Place {
     closedToday: state.closedOn.get(place.slug) === todayInCopenhagen() || isClosedOn(state.closedDays.get(place.slug), todayInCopenhagen()),
     closedDays: currentClosed(state.closedDays.get(place.slug), todayInCopenhagen()),
     member: state.pins.has(place.slug) || Boolean(place.demo),
+    onlinePay: (state.stripe.get(place.slug)?.ready && Boolean(process.env.STRIPE_SECRET_KEY?.trim())) || undefined,
   };
 }
 
@@ -121,13 +125,13 @@ export const memoryStore: Store = {
     return state.orders.find((o) => o.id === id) ?? null;
   },
   async orderFacts(sinceIso, slug) {
-    return state.orders.filter((o) => o.createdAt >= sinceIso && (!slug || o.placeSlug === slug)).map((o) => ({ placeSlug: o.placeSlug, placeName: o.placeName, createdAt: o.createdAt, status: o.status, total: o.total, lines: o.lines }));
+    return state.orders.filter((o) => o.createdAt >= sinceIso && (!slug || o.placeSlug === slug) && shownToPlace(o)).map((o) => ({ placeSlug: o.placeSlug, placeName: o.placeName, createdAt: o.createdAt, status: o.status, total: o.total, lines: o.lines }));
   },
   async bookingFacts(sinceIso, slug) {
     return state.bookings.filter((b) => b.createdAt >= sinceIso && b.placeSlug === slug).map((b) => ({ placeSlug: b.placeSlug, createdAt: b.createdAt, status: b.status, guests: b.guests }));
   },
   async exportOrders(sinceIso) {
-    return state.orders.filter((o) => o.createdAt >= sinceIso).map(withoutCustomer);
+    return state.orders.filter((o) => o.createdAt >= sinceIso && shownToPlace(o)).map(withoutCustomer);
   },
   async exportBookings(sinceIso) {
     return state.bookings.filter((b) => b.createdAt >= sinceIso).map(bookingWithoutCustomer);
@@ -143,6 +147,16 @@ export const memoryStore: Store = {
     if (!order) return;
     order.status = status;
     if (readyAt) order.readyAt = readyAt;
+  },
+  async setOrderPayment(id, payment) {
+    const order = state.orders.find((o) => o.id === id);
+    if (order) order.payment = payment;
+  },
+  async getStripeAccount(slug) {
+    return state.stripe.get(slug)?.account ?? null;
+  },
+  async saveStripeAccount(slug, account, ready) {
+    state.stripe.set(slug, { account, ready });
   },
 
   async countOrdersByPhone(phone, sinceIso) {

@@ -5,6 +5,7 @@ import { OrderStatusView } from "@/components/OrderStatusView";
 import { PlaceLang } from "@/components/PlaceLang";
 import { pushPublicKey } from "@/lib/push";
 import { store } from "@/lib/store";
+import { syncPayment } from "@/lib/stripe";
 import { pageT } from "@/lib/translate";
 import { SITE } from "@/lib/site";
 
@@ -12,8 +13,10 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: `Din bestilling · ${SITE}`, robots: { index: false } };
 
 export default async function OrderStatusPage({ params }: { params: Promise<{ id: string }> }) {
-  const order = await store.getOrder((await params).id);
-  if (!order) notFound();
+  const found = await store.getOrder((await params).id);
+  if (!found) notFound();
+  // Tilbage fra Stripe: vis med det samme, om betalingen gik igennem
+  const order = await syncPayment(found);
   const place = await store.getPlace(order.placeSlug);
   const t = await pageT();
   return (

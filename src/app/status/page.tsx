@@ -202,6 +202,26 @@ async function runChecks(): Promise<Check[]> {
       ? { ok: false, text: "Følgere kan ikke få besked om rester til halv pris endnu.", fix: "Kør tilfoej-rester-besked.sql i Supabase under SQL Editor. Den sletter ingenting." }
       : { ok: true, text: "Følgere kan få besked om rester til halv pris." },
   );
+  const betaling = await createClient(url, key, { auth: { persistSession: false } }).from("orders").select("payment").limit(1);
+  checks.push(
+    betaling.error
+      ? { ok: false, text: "Databasen kan ikke gemme online betalinger endnu.", fix: "Kør tilfoej-betaling.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan gemme online betalinger." },
+  );
+  const stripeKey = process.env.STRIPE_SECRET_KEY?.trim();
+  checks.push(
+    !stripeKey
+      ? {
+          ok: false,
+          text: "Kunderne kan ikke betale online, fordi STRIPE_SECRET_KEY mangler.",
+          fix: "Find den hemmelige nøgle i Stripe under Developers og API keys, og tilføj den som STRIPE_SECRET_KEY på Vercel. Tryk Redeploy bagefter.",
+        }
+      : !/^(sk|rk)_(test|live)_/.test(stripeKey)
+        ? { ok: false, text: "STRIPE_SECRET_KEY ser forkert ud.", fix: "Den skal starte med sk_test_ eller sk_live_. Brug den hemmelige nøgle, ikke den, der starter med pk_." }
+        : stripeKey.includes("_test_")
+          ? { ok: true, text: "STRIPE_SECRET_KEY er en testnøgle. Ingen rigtige penge bliver trukket. Skift til sk_live_, når I går i luften." }
+          : { ok: true, text: "STRIPE_SECRET_KEY er sat. Kunderne kan betale med rigtige penge." },
+  );
   checks.push(
     process.env.ANTHROPIC_API_KEY?.trim()
       ? { ok: true, text: "ANTHROPIC_API_KEY er sat, så menuen kan oversættes til engelsk og tysk." }

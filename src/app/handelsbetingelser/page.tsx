@@ -12,7 +12,7 @@ export default async function TermsPage() {
   const c = company();
   return (
     <AppShell>
-      <LegalPage title="Handelsbetingelser" updated="21. oktober 2026" lang={await chooseLang()} t={await pageT()}>
+      <LegalPage title="Handelsbetingelser" updated="22. oktober 2026" lang={await chooseLang()} t={await pageT()}>
         <p>{SITE} er byens side for mad. Vi sender din bestilling videre til restauranten. Det er restauranten, der laver maden og sælger den til dig.</p>
 
         <h2>Hvem er hvem</h2>
@@ -24,11 +24,11 @@ export default async function TermsPage() {
         <ul>
           <li>Du lægger mad i kurven, skriver navn og telefon og trykker send.</li>
           <li>Aftalen er først indgået, når restauranten har accepteret bestillingen. Det kan du se på siden, du kommer til.</li>
-          <li>Afviser restauranten, er der ingen aftale, og du skal ikke betale noget.</li>
+          <li>Afviser restauranten, er der ingen aftale, og du skal ikke betale noget. Har du betalt online, bliver pengene frigivet igen af sig selv.</li>
         </ul>
 
         <h2>Priser og betaling</h2>
-        <p>Alle priser er i danske kroner med moms. Du betaler restauranten, når du henter maden, eller ved døren, hvis den bringes ud. Levering koster det gebyr, der står i kassen, før du sender.</p>
+        <p>Alle priser er i danske kroner med moms. Hos nogle restauranter kan du betale online med MobilePay eller kort, når du bestiller. Pengene bliver reserveret og først trukket, når restauranten har accepteret bestillingen. Ellers betaler du restauranten, når du henter maden, eller ved døren, hvis den bringes ud. Levering koster det gebyr, der står i kassen, før du sender.</p>
 
         <h2>Fortrydelse</h2>
         <p>Der er ikke fortrydelsesret på mad, der laves til dig til et bestemt tidspunkt (forbrugeraftalelovens § 18, stk. 2). Vil du ændre eller aflyse en bestilling, så ring til restauranten hurtigst muligt.</p>
