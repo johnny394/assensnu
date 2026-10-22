@@ -3,6 +3,7 @@ import { copenhagenNow, toTime } from "@/lib/hours";
 import { panelSlug } from "@/lib/panel-auth";
 import { notify } from "@/lib/push";
 import { store } from "@/lib/store";
+import { settlePayment } from "@/lib/stripe";
 import type { T } from "@/lib/i18n";
 import type { OrderStatus } from "@/lib/types";
 
@@ -18,6 +19,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // Har kunden valgt et tidspunkt, er det det, restauranten lover
   const readyAt =
     status !== "accepted" ? undefined : order.pickup !== "asap" ? order.pickup : readyInMinutes ? toTime(copenhagenNow().minutes + readyInMinutes) : undefined;
+  // Betalt online: pengene trækkes, når restauranten siger ja, og frigives, når den siger nej
+  if (order.status === "new" && !(await settlePayment(order, status !== "rejected"))) {
+    return NextResponse.json({ error: "Betalingen gik ikke igennem hos Stripe. Prøv igen om lidt, eller ring til kunden." }, { status: 502 });
+  }
   await store.setOrderStatus(order.id, status, readyAt);
 
   const navn = order.placeName;

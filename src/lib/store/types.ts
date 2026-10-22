@@ -2,7 +2,7 @@ import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
 import type { AssensEvent } from "../events";
 import type { ExportBooking, ExportOrder } from "../export";
 import type { BookingFact, OrderFact } from "../stats";
-import type { Booking, BookingStatus, CartItem, Chef, ClosedPeriod, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderStatus, Place } from "../types";
+import type { Booking, BookingStatus, CartItem, Chef, ClosedPeriod, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderPayment, OrderStatus, Place } from "../types";
 
 export type NewOrder = Omit<Order, "id" | "number" | "status" | "createdAt" | "readyAt">;
 export type NewBooking = Omit<Booking, "id" | "status" | "createdAt" | "suggestedTime">;
@@ -48,6 +48,11 @@ export type Store = {
   /** Hvornår hver følger begyndte at følge stedet (ISO) */
   followerDates(slug: string): Promise<string[]>;
   setOrderStatus(id: string, status: OrderStatus, readyAt?: string): Promise<void>;
+  setOrderPayment(id: string, payment: OrderPayment): Promise<void>;
+  /** Stedets egen Stripe-konto (acct_...), eller null */
+  getStripeAccount(slug: string): Promise<string | null>;
+  /** ready: Stripe har sagt god for kontoen, så kunderne kan betale online */
+  saveStripeAccount(slug: string, account: string, ready: boolean): Promise<void>;
 
   /** Hvor mange bestillinger et telefonnummer har sendt siden et tidspunkt, på tværs af steder */
   countOrdersByPhone(phone: string, sinceIso: string): Promise<number>;

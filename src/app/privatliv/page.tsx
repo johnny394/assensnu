@@ -13,7 +13,7 @@ export default async function PrivacyPage() {
   const c = company();
   return (
     <AppShell>
-      <LegalPage title="Privatlivspolitik" updated="21. oktober 2026" lang={await chooseLang()} t={await pageT()}>
+      <LegalPage title="Privatlivspolitik" updated="22. oktober 2026" lang={await chooseLang()} t={await pageT()}>
         <p>Her står, hvad {SITE} gemmer om dig, hvorfor, og hvor længe. Vi gemmer så lidt som muligt, og vi sælger aldrig dine oplysninger.</p>
 
         <h2>Hvem er ansvarlig</h2>
@@ -39,6 +39,7 @@ export default async function PrivacyPage() {
         <ul>
           <li><strong>Vercel</strong> kører hjemmesiden.</li>
           <li><strong>Supabase</strong> gemmer bestillinger og menuer.</li>
+          <li><strong>Stripe</strong> tager imod betalingen, hvis du betaler online med MobilePay eller kort. Pengene går til restaurantens egen Stripe-konto. Vi ser aldrig dit kortnummer.</li>
           <li><strong>Anthropic</strong> oversætter restauranternes menuer til engelsk og tysk. Der sendes kun menutekster, aldrig oplysninger om dig.</li>
         </ul>
         <p>De må kun bruge oplysningerne til at hjælpe os. Nogle af dem har servere uden for EU. Så sker det efter EU&apos;s regler for overførsel, fx EU-Kommissionens standardkontrakter.</p>

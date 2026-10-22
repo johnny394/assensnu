@@ -40,6 +40,10 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
   const [pitch, setPitch] = useState("");
   const [address, setAddress] = useState("");
   const [postcode, setPostcode] = useState("");
+  // Betal nu med MobilePay eller kort, hvis stedet har slået det til. Fællesbestillinger betales ved afhentning.
+  const canPayOnline = !!place.onlinePay && !group;
+  const [pay, setPay] = useState<"online" | "later">("online");
+  const online = canPayOnline && pay === "online";
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const { t } = useLang();
@@ -107,6 +111,7 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
         pickup: chosen,
         note,
         delivery: mode === "door" ? { address, postcode: zip } : mode === "boat" ? { harbour: spot, jetty, boat } : mode === "camp" ? { camping: campSpot, pitch } : null,
+        pay: online ? "online" : "later",
       }),
     }).catch(() => null);
     const data = await res?.json().catch(() => null);
@@ -118,6 +123,11 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
     try {
       localStorage.setItem(CUSTOMER_KEY, JSON.stringify({ name, phone, address, postcode: zip || postcode, jetty, boat, pitch }));
     } catch {}
+    // Til Stripe for at betale. Kurven bliver liggende, til betalingen er gået igennem, så den er der, hvis kunden fortryder.
+    if (data.payUrl) {
+      window.location.href = data.payUrl;
+      return;
+    }
     if (group) leaveGroup(place.slug, group.id);
     else clear();
     router.push(`/ordre/${data.id}`);
@@ -327,8 +337,24 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
         </div>
       </div>
 
+      {canPayOnline && (
+        <fieldset className="min-w-0">
+          <legend className={label}>{t("Hvordan vil du betale?")}</legend>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setPay("online")} aria-pressed={pay === "online"} className={choice(pay === "online")}>
+              {t("Betal nu")} <span className="block font-normal">{t("MobilePay eller kort")}</span>
+            </button>
+            <button type="button" onClick={() => setPay("later")} aria-pressed={pay === "later"} className={choice(pay === "later")}>
+              {t(delivering ? "Betal ved døren" : "Betal ved afhentning")}
+            </button>
+          </div>
+        </fieldset>
+      )}
+
       <p className="border-2 border-ink bg-surface px-5 py-4 text-lg">
-        {delivering ? (
+        {online ? (
+          <><strong>{t("Du betaler nu med MobilePay eller kort.")}</strong> {t("Pengene trækkes først, når {navn} har sagt ja til bestillingen.", { navn: place.name })}</>
+        ) : delivering ? (
           <><strong>{t("Du betaler, når maden kommer")}</strong> {t("til {adresse}.", { adresse: mode === "boat" ? boatPlace : mode === "camp" ? campPlace : address.trim() || t("din adresse") })}</>
         ) : (
           <><strong>{t("Du betaler, når du henter maden")}</strong> {t("hos {navn}, {adresse}.", { navn: place.name, adresse: place.address.replace(/, \d{4} .*/, "") })}</>
@@ -338,7 +364,7 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
       {error && <p role="alert" className="bg-stamp-soft px-4 py-3 text-lg text-stamp">{error}</p>}
 
       <button disabled={sending || !chosen || missing > 0} className="w-full bg-stamp px-5 py-4.5 text-xl font-bold text-white disabled:opacity-50">
-        {sending ? t("Sender…") : t("Send bestilling · {pris}", { pris: kr(total) })}
+        {sending ? t(online ? "Et øjeblik…" : "Sender…") : t(online ? "Gå til betaling · {pris}" : "Send bestilling · {pris}", { pris: kr(total) })}
       </button>
       <p className="text-center text-ink-soft">
         {t("Når du bestiller, accepterer du")} <Link href="/handelsbetingelser" className="underline">{t("handelsbetingelserne")}</Link>.{" "}

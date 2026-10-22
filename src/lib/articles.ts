@@ -26,7 +26,7 @@ export const ARTICLES: Article[] = [
       {
         list: [
           { title: "Se hvem der har åbent", text: "Listen viser med det samme, hvem der har åbent lige nu, og hvornår de lukker." },
-          { title: "Bestil takeaway", text: "Læg maden i kurven, skriv navn og telefonnummer, og vælg hvornår du vil hente den. Du betaler, når du henter. Mange steder kan også bringe maden ud." },
+          { title: "Bestil takeaway", text: "Læg maden i kurven, skriv navn og telefonnummer, og vælg hvornår du vil hente den. Du kan ofte betale med MobilePay eller kort med det samme, ellers betaler du, når du henter. Mange steder kan også bringe maden ud." },
           { title: "Book bord", text: "Vælg dag, tid og hvor mange I er, så svarer restauranten dig." },
           { title: "Få besked", text: "Sig ja til beskeder, så får du besked på telefonen, når maden er klar." },
           { title: "Dagens tilbud", text: "Se dagens tilbud fra byens steder, og følg dine favoritter." },
@@ -45,7 +45,7 @@ export const ARTICLES: Article[] = [
     body: [
       {
         list: [
-          { title: "Bestillinger direkte til dig", text: "Bestillingen dukker op på din tablet eller telefon med lyd. Du trykker Accepter og skriver, hvornår maden er klar. Kunden betaler hos dig." },
+          { title: "Bestillinger direkte til dig", text: "Bestillingen dukker op på din tablet eller telefon med lyd. Du trykker Accepter og skriver, hvornår maden er klar. Kunden betaler online med MobilePay eller kort, eller hos dig." },
           { title: "Du bestemmer selv", text: "Du skriver selv menukort, priser, åbningstider og lukkedage. Er der travlt, skruer du op for ventetiden med ét tryk." },
           { title: "Bordbestilling", text: "Gæsterne beder om et bord, og du siger ja eller nej." },
           { title: "Nå dine faste gæster", text: "Læg dagens tilbud ud, så får de gæster, der følger dig, en besked på telefonen. Har du mad tilbage sidst på aftenen, kan du sælge den til halv pris." },

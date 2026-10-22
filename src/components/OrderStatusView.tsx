@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { kr, telLink } from "@/lib/format";
 import type { T } from "@/lib/i18n";
@@ -8,6 +9,7 @@ import { CAMPSITE } from "@/lib/orders";
 import { townName } from "@/lib/postcodes";
 import type { Order } from "@/lib/types";
 import { HomeScreenGuide, type PushFor } from "./HomeScreenGuide";
+import { useCart } from "./useCart";
 import { useLang } from "./useLang";
 import { useNow } from "./useNow";
 import { usePolling } from "./usePolling";
@@ -21,6 +23,14 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
   const previous = useRef(order.status);
   const delivery = order.delivery;
   const { t } = useLang();
+  const paid = order.payment?.status;
+  const waitingForPayment = paid === "pending" || paid === "failed";
+
+  // Betalingen er gået igennem, så kurven kan tømmes. Den blev liggende, mens kunden var hos Stripe.
+  const { clear } = useCart(order.placeSlug);
+  useEffect(() => {
+    if (paid === "held") clear();
+  }, [paid, clear]);
 
   // Giv besked, når maden er klar
   useEffect(() => {
@@ -39,7 +49,7 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
   }, [order.status, order.number, order.placeName, order.id, delivery, t]);
 
   const waitedMinutes = now ? (now.getTime() - Date.parse(order.createdAt)) / 60000 : 0;
-  const noAnswer = order.status === "new" && waitedMinutes > NO_ANSWER_MINUTES;
+  const noAnswer = order.status === "new" && !waitingForPayment && waitedMinutes > NO_ANSWER_MINUTES;
   const pickupText = order.pickup === "asap" ? t("hurtigst muligt") : t("kl. {tid}", { tid: order.pickup });
 
   const steps = [
@@ -63,7 +73,7 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
             : t("Sig nummeret, når du henter hos {navn}.", { navn: order.placeName })}
         </p>
 
-        {(order.status === "new" || order.status === "accepted") && (
+        {(order.status === "new" || order.status === "accepted") && !waitingForPayment && (
           <div className="mt-5">
             <HomeScreenGuide
               title={t(delivery ? "Få besked, når maden kører" : "Få besked, når maden er klar")}
@@ -73,9 +83,22 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
           </div>
         )}
 
-        {order.status === "rejected" ? (
+        {paid === "pending" ? (
+          <div className="mt-5 bg-stamp-soft px-4 py-4 text-lg">
+            <p className="font-bold">{t("Venter på din betaling")}</p>
+            <p>{t("Har du betalt, kommer bestillingen frem her om et øjeblik.")}</p>
+          </div>
+        ) : paid === "failed" ? (
+          <div className="mt-5 bg-stamp-soft px-4 py-4 text-lg text-stamp">
+            <p className="font-bold">{t("Betalingen blev ikke gennemført, så bestillingen er ikke sendt.")}</p>
+            <Link href={`/sted/${order.placeSlug}/bestil`} className="mt-3 block bg-ink px-5 py-3.5 text-center font-bold text-paper">
+              {t("Prøv igen")}
+            </Link>
+          </div>
+        ) : order.status === "rejected" ? (
           <div className="mt-5 bg-stamp-soft px-4 py-4 text-lg text-stamp">
             <p className="font-bold">{t("{navn} kan desværre ikke lave din bestilling.", { navn: order.placeName })}</p>
+            {paid === "released" && <p>{t("Du skal ikke betale noget. Det reserverede beløb bliver frigivet, og det kan tage et par dage, før din bank viser det.")}</p>}
             {placePhone && <p>{t("Ring til dem, hvis du vil høre hvorfor.")}</p>}
           </div>
         ) : order.status === "ready" || order.status === "picked_up" ? (
@@ -132,9 +155,10 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
           </p>
         )}
         <p className="mt-2 flex justify-between border-t border-line pt-2 font-bold">
-          <span>{t(delivery ? "Betales, når maden kommer" : "Betales ved afhentning")}</span>
+          <span>{t(paid === "held" || paid === "paid" ? "Betalt online" : paid === "released" ? "Ikke betalt" : paid ? "Betal nu" : delivery ? "Betales, når maden kommer" : "Betales ved afhentning")}</span>
           <span className="tabular-nums">{kr(order.total)}</span>
         </p>
+        {paid === "held" && <p className="text-ink-soft">{t("Pengene trækkes, når {navn} siger ja.", { navn: order.placeName })}</p>}
         <p className="mt-2 text-ink-soft">
           {t(delivery ? "Levering {tid}" : "Afhentning {tid}", { tid: pickupText })} · {order.customerName}, {order.customerPhone}
         </p>

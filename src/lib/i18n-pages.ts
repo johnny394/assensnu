@@ -73,6 +73,40 @@ export const PAGES: Record<string, { en: string; de: string }> = {
   "Du betaler, når du henter maden": { en: "You pay when you pick up the food", de: "Sie bezahlen bei der Abholung" },
   "hos {navn}, {adresse}.": { en: "at {navn}, {adresse}.", de: "bei {navn}, {adresse}." },
   "Send bestilling · {pris}": { en: "Send order · {pris}", de: "Bestellung senden · {pris}" },
+  // Online betaling
+  "Hvordan vil du betale?": { en: "How would you like to pay?", de: "Wie möchten Sie bezahlen?" },
+  "Betal nu": { en: "Pay now", de: "Jetzt bezahlen" },
+  "MobilePay eller kort": { en: "MobilePay or card", de: "MobilePay oder Karte" },
+  "Betal ved døren": { en: "Pay at the door", de: "An der Tür bezahlen" },
+  "Betal ved afhentning": { en: "Pay at pick-up", de: "Bei Abholung bezahlen" },
+  "Du betaler nu med MobilePay eller kort.": { en: "You pay now with MobilePay or card.", de: "Sie bezahlen jetzt mit MobilePay oder Karte." },
+  "Pengene trækkes først, når {navn} har sagt ja til bestillingen.": {
+    en: "The money is only taken when {navn} has accepted the order.",
+    de: "Das Geld wird erst abgebucht, wenn {navn} die Bestellung angenommen hat.",
+  },
+  "Gå til betaling · {pris}": { en: "Go to payment · {pris}", de: "Zur Zahlung · {pris}" },
+  "Et øjeblik…": { en: "One moment…", de: "Einen Moment…" },
+  "Betalingen kunne ikke startes. Prøv igen, eller vælg at betale ved afhentning.": {
+    en: "The payment could not be started. Try again, or choose to pay at pick-up.",
+    de: "Die Zahlung konnte nicht gestartet werden. Versuchen Sie es erneut oder bezahlen Sie bei Abholung.",
+  },
+  "Venter på din betaling": { en: "Waiting for your payment", de: "Wir warten auf Ihre Zahlung" },
+  "Har du betalt, kommer bestillingen frem her om et øjeblik.": {
+    en: "If you have paid, your order will show up here in a moment.",
+    de: "Wenn Sie bezahlt haben, erscheint Ihre Bestellung hier gleich.",
+  },
+  "Betalingen blev ikke gennemført, så bestillingen er ikke sendt.": {
+    en: "The payment was not completed, so the order has not been sent.",
+    de: "Die Zahlung wurde nicht abgeschlossen, daher wurde die Bestellung nicht gesendet.",
+  },
+  "Betalt med MobilePay eller kort": { en: "Paid with MobilePay or card", de: "Bezahlt mit MobilePay oder Karte" },
+  "Pengene trækkes, når {navn} siger ja.": { en: "The money is taken when {navn} accepts.", de: "Das Geld wird abgebucht, wenn {navn} annimmt." },
+  "Du skal ikke betale noget. Det reserverede beløb bliver frigivet, og det kan tage et par dage, før din bank viser det.": {
+    en: "You do not have to pay anything. The reserved amount is released, and it can take a few days before your bank shows it.",
+    de: "Sie müssen nichts bezahlen. Der reservierte Betrag wird freigegeben. Es kann ein paar Tage dauern, bis Ihre Bank das anzeigt.",
+  },
+  "Betalt online": { en: "Paid online", de: "Online bezahlt" },
+  "Ikke betalt": { en: "Not paid", de: "Nicht bezahlt" },
   "Bestillingen blev ikke sendt. Tjek din forbindelse og prøv igen.": { en: "The order was not sent. Check your connection and try again.", de: "Die Bestellung wurde nicht gesendet. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut." },
 
   // Fejl fra serveren, når en bestilling eller booking tjekkes

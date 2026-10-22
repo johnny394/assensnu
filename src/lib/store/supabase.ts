@@ -4,7 +4,8 @@ import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
 import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
-import type { Booking, Chef, ClosedPeriod, GroupEntry, GroupOrder, MenuCategory, Order, Place, Weekday } from "../types";
+import { shownToPlace } from "../payment";
+import type { Booking, Chef, ClosedPeriod, GroupEntry, GroupOrder, MenuCategory, Order, OrderPayment, Place, Weekday } from "../types";
 import type { AssensEvent } from "../events";
 import { withoutCustomer } from "../export";
 import { CITY } from "../site";
@@ -35,6 +36,7 @@ type PlaceRow = {
   chef?: Chef | null;
   closed_on: string | null;
   closed_days?: ClosedPeriod[] | null;
+  online_pay?: boolean;
   panel_pin_hash: string | null;
   opening_hours: { day: number; open: string; close: string }[];
   menu_categories: {
@@ -46,14 +48,14 @@ type PlaceRow = {
 };
 
 const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, description, takeaway, dine_in,
-  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, last_chance, chef, closed_on, closed_days, panel_pin_hash,
+  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, last_chance, chef, closed_on, closed_days, online_pay, panel_pin_hash,
   opening_hours (day, open, close),
   menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))`;
 
 // Indtil tilfoej-levering.sql, tilfoej-tilvalg.sql, tilfoej-folg.sql, tilfoej-dagens-ret.sql, tilfoej-tilbud.sql og tilfoej-sidste-chance.sql er kørt, findes de nyere kolonner ikke.
 // Så spørger vi uden dem, så siden virker som før, bare uden levering, tilvalg, dagens tilbud og travlt-tid.
 type Res = { data: unknown; error: unknown };
-const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["last_chance"], ["chef"], ["closed_days"]];
+const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["last_chance"], ["chef"], ["closed_days"], ["online_pay"]];
 const mentions = (error: unknown, column: string) => new RegExp(`\\b${column}\\b`).test(String((error as { message?: string } | null)?.message));
 async function withFallback(select: string, run: (select: string) => PromiseLike<Res>): Promise<Res> {
   let res = await run(select);
@@ -99,6 +101,8 @@ function toPlace(r: PlaceRow): Place {
     demo: r.slug === "proevepizza" || undefined,
     // Kun ja/nej sendes videre, aldrig selve fingeraftrykket af koden
     member: Boolean(r.panel_pin_hash),
+    // Uden Stripe-nøglen på Vercel kan ingen betale online, selv om kontoen er klar
+    onlinePay: (r.online_pay && Boolean(process.env.STRIPE_SECRET_KEY?.trim())) || undefined,
     hours: r.opening_hours.map((h) => ({ day: h.day as Weekday, open: h.open.slice(0, 5), close: h.close.slice(0, 5) })),
     menu: toMenu(r.menu_categories),
   };
@@ -132,6 +136,7 @@ type OrderRow = {
   total_kr: number;
   status: Order["status"];
   ready_at: string | null;
+  payment?: OrderPayment | null;
   created_at: string;
 };
 
@@ -149,8 +154,15 @@ const toOrder = (r: OrderRow): Order => ({
   total: Number(r.total_kr),
   status: r.status,
   readyAt: r.ready_at ?? undefined,
+  ...(r.payment && { payment: r.payment }),
   createdAt: r.created_at,
 });
+
+// Indtil tilfoej-betaling.sql er kørt, findes kolonnen payment ikke. Så spørges der uden den.
+async function withPayment(select: string, run: (select: string) => PromiseLike<Res>): Promise<Res> {
+  const res = await run(`${select}, payment`);
+  return mentions(res.error, "payment") ? run(select) : res;
+}
 
 type BookingRow = {
   id: string;
@@ -303,6 +315,7 @@ export function supabaseStore(url: string, serviceKey: string): Store {
             note: o.note,
             lines: o.lines,
             total_kr: o.total,
+            ...(o.payment && { payment: o.payment }),
           })
           .select()
           .single(),
@@ -315,16 +328,20 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     },
     async orderFacts(sinceIso, slug) {
       // Supabase giver højst 1000 rækker ad gangen, så de hentes i bidder
-      type Row = { place_slug: string; place_name: string; created_at: string; status: string; total_kr: number; lines: { name: string; quantity: number }[] };
+      type Row = { place_slug: string; place_name: string; created_at: string; status: string; total_kr: number; lines: { name: string; quantity: number }[]; payment?: OrderPayment | null };
       const rows: Row[] = [];
       for (let from = 0; from < 50_000; from += 1000) {
-        let query = db.from("orders").select("place_slug, place_name, created_at, status, total_kr, lines").gte("created_at", sinceIso).order("created_at").range(from, from + 999);
-        if (slug) query = query.eq("place_slug", slug);
-        const page = check(await query) as Row[];
+        const page = check(
+          await withPayment("place_slug, place_name, created_at, status, total_kr, lines", (select) => {
+            const query = db.from("orders").select(select).gte("created_at", sinceIso).order("created_at").range(from, from + 999);
+            return slug ? query.eq("place_slug", slug) : query;
+          }),
+        ) as Row[];
         rows.push(...page);
         if (page.length < 1000) break;
       }
-      return rows.map((r) => ({ placeSlug: r.place_slug, placeName: r.place_name, createdAt: r.created_at, status: r.status, total: r.total_kr, lines: r.lines ?? [] }));
+      // Ordrer, kunden aldrig fik betalt, tæller ikke med
+      return rows.filter((r) => shownToPlace({ payment: r.payment ?? undefined })).map((r) => ({ placeSlug: r.place_slug, placeName: r.place_name, createdAt: r.created_at, status: r.status, total: r.total_kr, lines: r.lines ?? [] }));
     },
     async bookingFacts(sinceIso, slug) {
       const rows = check(await db.from("bookings").select("place_slug, created_at, status, guests").eq("place_slug", slug).gte("created_at", sinceIso)) as { place_slug: string; created_at: string; status: string; guests: number }[];
@@ -332,14 +349,18 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     },
     async exportOrders(sinceIso) {
       // Navn, telefon og besked hentes slet ikke. Adressen i delivery fjernes af withoutCustomer.
-      type Row = Pick<OrderRow, "id" | "number" | "place_slug" | "place_name" | "pickup" | "delivery" | "lines" | "total_kr" | "status" | "ready_at" | "created_at">;
+      type Row = Pick<OrderRow, "id" | "number" | "place_slug" | "place_name" | "pickup" | "delivery" | "lines" | "total_kr" | "status" | "ready_at" | "created_at" | "payment">;
       const rows: Row[] = [];
       for (let from = 0; from < 100_000; from += 1000) {
-        const page = check(await db.from("orders").select("id, number, place_slug, place_name, pickup, delivery, lines, total_kr, status, ready_at, created_at").gte("created_at", sinceIso).order("created_at").range(from, from + 999)) as Row[];
+        const page = check(
+          await withPayment("id, number, place_slug, place_name, pickup, delivery, lines, total_kr, status, ready_at, created_at", (select) =>
+            db.from("orders").select(select).gte("created_at", sinceIso).order("created_at").range(from, from + 999),
+          ),
+        ) as Row[];
         rows.push(...page);
         if (page.length < 1000) break;
       }
-      return rows.map((r) => withoutCustomer({ id: r.id, number: r.number, placeSlug: r.place_slug, placeName: r.place_name, pickup: r.pickup, delivery: r.delivery ?? undefined, lines: r.lines ?? [], total: r.total_kr, status: r.status, readyAt: r.ready_at ?? undefined, createdAt: r.created_at }));
+      return rows.filter((r) => shownToPlace({ payment: r.payment ?? undefined })).map((r) => withoutCustomer({ id: r.id, number: r.number, placeSlug: r.place_slug, placeName: r.place_name, pickup: r.pickup, delivery: r.delivery ?? undefined, lines: r.lines ?? [], total: r.total_kr, status: r.status, readyAt: r.ready_at ?? undefined, createdAt: r.created_at }));
     },
     async exportBookings(sinceIso) {
       type Row = Pick<BookingRow, "id" | "place_slug" | "place_name" | "date" | "time" | "guests" | "status" | "created_at">;
@@ -363,6 +384,18 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     },
     async setOrderStatus(id, status, readyAt) {
       check(await db.from("orders").update(readyAt ? { status, ready_at: readyAt } : { status }).eq("id", id));
+    },
+    async setOrderPayment(id, payment) {
+      check(await db.from("orders").update({ payment }).eq("id", id));
+    },
+    async getStripeAccount(slug) {
+      const res = await db.from("places").select("stripe_account").eq("slug", slug).maybeSingle();
+      // Uden tilfoej-betaling.sql er der ingen konto
+      if (res.error) return null;
+      return (res.data as { stripe_account: string | null } | null)?.stripe_account ?? null;
+    },
+    async saveStripeAccount(slug, account, ready) {
+      check(await db.from("places").update({ stripe_account: account, online_pay: ready }).eq("slug", slug));
     },
 
     async countOrdersByPhone(phone, sinceIso) {

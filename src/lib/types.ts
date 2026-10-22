@@ -62,6 +62,7 @@ export type Place = {
   chef?: Chef; // Mød kokken
   demo?: boolean;
   member?: boolean; // stedet har sagt ja til AssensNu og har en kode til panelet
+  onlinePay?: boolean; // kunderne kan betale med MobilePay og kort gennem stedets egen Stripe-konto
 };
 
 // Lukket fra og med from til og med to, fx { from: "2026-12-24", to: "2026-12-26", note: "Jul" }
@@ -104,8 +105,15 @@ export type Order = {
   total: number;
   status: OrderStatus;
   readyAt?: string; // "HH:MM", sat når restauranten accepterer
+  payment?: OrderPayment; // mangler = kunden betaler ved afhentning eller ved døren
   createdAt: string; // ISO
 };
+
+// Betalt online gennem Stripe. Kunden betaler, og pengene er reserveret (held). De trækkes først (paid),
+// når restauranten trykker Accepter. Afviser restauranten, frigives de igen (released).
+// pending: kunden er ved at betale. failed: kunden gav op, eller betalingen gik ikke igennem.
+export type PaymentStatus = "pending" | "held" | "paid" | "released" | "failed";
+export type OrderPayment = { status: PaymentStatus; session?: string; intent?: string };
 
 // harbour: maden skal ned i havnen, og address er fx "Bro 3, båd Frida" eller "Havnekontoret"
 // camping: maden skal ud på campingpladsen, og address er fx "CityCamp Assens Strand, plads 112"

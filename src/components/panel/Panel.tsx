@@ -15,13 +15,15 @@ import { DeliveryEditor, HoursEditor, MenuEditor } from "./DetailsEditors";
 import { isClosedOn } from "@/lib/closed-days";
 import { ChefBox } from "./ChefBox";
 import { PanelPushBox } from "./PanelPushBox";
+import { OnlinePayBox } from "./OnlinePayBox";
+import type { OnlinePayState } from "@/lib/payment";
 import { StatsTab } from "./StatsTab";
 import { ClosedDaysBox } from "./ClosedDaysBox";
 import { LastChanceBox, NewsBox, WaitBar } from "./LiveBoxes";
 import { useAlarm } from "./useAlarm";
 import { SITE } from "@/lib/site";
 
-type Data = { place: Place; orders: Order[]; bookings: Booking[]; followers: number | null };
+type Data = { place: Place; orders: Order[]; bookings: Booking[]; followers: number | null; onlinePay: OnlinePayState };
 type Tab = "orders" | "bookings" | "stats" | "settings";
 
 async function post(url: string, body: unknown) {
@@ -36,6 +38,12 @@ export function Panel({ initial, noDatabase, pushKey = null }: { initial: Data; 
   const data = usePolling<Data>(`/api/panel?v=${version}`, initial, 4000);
   const refresh = () => setVersion((v) => v + 1);
   const [tab, setTab] = useState<Tab>("orders");
+  // Tilbage fra Stripe: vis indstillingerne, hvor svaret står. Boksen har allerede læst svaret.
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has("betaling")) return;
+    setTab("settings");
+    window.history.replaceState(null, "", "/panel");
+  }, []);
   const [wide, setWide] = useState(false);
   useEffect(() => {
     const query = window.matchMedia("(min-width: 1024px)");
@@ -122,6 +130,7 @@ export function Panel({ initial, noDatabase, pushKey = null }: { initial: Data; 
           <Settings
             place={data.place}
             followers={data.followers}
+            onlinePay={data.onlinePay}
             pushKey={pushKey}
             onChange={refresh}
             onLogout={async () => {
@@ -188,6 +197,15 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
             <><strong>CAMPING</strong> · {o.delivery.address.replace(`${CAMPSITE}, `, "")}</>
           ) : (
             <><strong>LEVERING</strong> til {o.delivery.address}, {townName(o.delivery.postcode)}</>
+          )}
+        </p>
+      )}
+      {o.payment && (
+        <p className="mt-2 rounded-xl bg-go px-3 py-2 text-lg text-white">
+          {o.payment.status === "released" ? (
+            <><strong>PENGENE ER FRIGIVET</strong> · kunden har ikke betalt</>
+          ) : (
+            <><strong>BETALT ONLINE</strong> · kunden skal ikke betale{o.payment.status === "held" && ". Pengene trækkes, når I accepterer"}</>
           )}
         </p>
       )}
@@ -265,7 +283,7 @@ function Orders({ orders: fromServer, waitMinutes, onChange }: { orders: Order[]
           <ul className="mt-2 space-y-1 text-ink-soft">
             {done.map((o) => (
               <li key={o.id}>
-                {o.number} · {o.customerName} · {kr(o.total)} · {o.status === "rejected" ? "afvist" : o.delivery ? "leveret" : "hentet"}
+                {o.number} · {o.customerName} · {kr(o.total)}{o.payment?.status === "paid" && " betalt online"} · {o.status === "rejected" ? "afvist" : o.delivery ? "leveret" : "hentet"}
               </li>
             ))}
           </ul>
@@ -339,7 +357,7 @@ function Bookings({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
   );
 }
 
-function Settings({ place: fromServer, followers, pushKey, onChange, onLogout }: { place: Place; followers: number | null; pushKey: string | null; onChange: () => void; onLogout: () => void }) {
+function Settings({ place: fromServer, followers, onlinePay, pushKey, onChange, onLogout }: { place: Place; followers: number | null; onlinePay: OnlinePayState; pushKey: string | null; onChange: () => void; onLogout: () => void }) {
   // Valget vises med det samme; serveren gemmer i baggrunden
   const [place, setPlace] = useState(fromServer);
   const [editing, setEditing] = useState<"hours" | "menu" | "delivery" | null>(null);
@@ -360,6 +378,7 @@ function Settings({ place: fromServer, followers, pushKey, onChange, onLogout }:
   return (
     <div className="space-y-3">
       <PanelPushBox publicKey={pushKey} />
+      <OnlinePayBox state={onlinePay} />
       <NewsBox place={fromServer} followers={followers} onChange={onChange} />
       <LastChanceBox place={fromServer} open={openStatus(fromServer).state === "open"} onChange={onChange} />
       <div className="rounded-3xl bg-surface px-5 py-4">
