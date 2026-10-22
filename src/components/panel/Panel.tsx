@@ -16,14 +16,15 @@ import { isClosedOn } from "@/lib/closed-days";
 import { ChefBox } from "./ChefBox";
 import { PanelPushBox } from "./PanelPushBox";
 import { OnlinePayBox } from "./OnlinePayBox";
-import type { OnlinePayState } from "@/lib/payment";
+import type { OnlinePayState, SubscriptionState } from "@/lib/payment";
+import { SubscriptionBox } from "./SubscriptionBox";
 import { StatsTab } from "./StatsTab";
 import { ClosedDaysBox } from "./ClosedDaysBox";
 import { LastChanceBox, NewsBox, WaitBar } from "./LiveBoxes";
 import { useAlarm } from "./useAlarm";
 import { SITE } from "@/lib/site";
 
-type Data = { place: Place; orders: Order[]; bookings: Booking[]; followers: number | null; onlinePay: OnlinePayState };
+type Data = { place: Place; orders: Order[]; bookings: Booking[]; followers: number | null; onlinePay: OnlinePayState; subscription: { state: SubscriptionState; kr: number } };
 type Tab = "orders" | "bookings" | "stats" | "settings";
 
 async function post(url: string, body: unknown) {
@@ -40,7 +41,8 @@ export function Panel({ initial, noDatabase, pushKey = null }: { initial: Data; 
   const [tab, setTab] = useState<Tab>("orders");
   // Tilbage fra Stripe: vis indstillingerne, hvor svaret står. Boksen har allerede læst svaret.
   useEffect(() => {
-    if (!new URLSearchParams(window.location.search).has("betaling")) return;
+    const back = new URLSearchParams(window.location.search);
+    if (!back.has("betaling") && !back.has("abonnement")) return;
     setTab("settings");
     window.history.replaceState(null, "", "/panel");
   }, []);
@@ -131,6 +133,7 @@ export function Panel({ initial, noDatabase, pushKey = null }: { initial: Data; 
             place={data.place}
             followers={data.followers}
             onlinePay={data.onlinePay}
+            subscription={data.subscription}
             pushKey={pushKey}
             onChange={refresh}
             onLogout={async () => {
@@ -357,7 +360,7 @@ function Bookings({ bookings, onChange }: { bookings: Booking[]; onChange: () =>
   );
 }
 
-function Settings({ place: fromServer, followers, onlinePay, pushKey, onChange, onLogout }: { place: Place; followers: number | null; onlinePay: OnlinePayState; pushKey: string | null; onChange: () => void; onLogout: () => void }) {
+function Settings({ place: fromServer, followers, onlinePay, subscription, pushKey, onChange, onLogout }: { place: Place; followers: number | null; onlinePay: OnlinePayState; subscription: Data["subscription"]; pushKey: string | null; onChange: () => void; onLogout: () => void }) {
   // Valget vises med det samme; serveren gemmer i baggrunden
   const [place, setPlace] = useState(fromServer);
   const [editing, setEditing] = useState<"hours" | "menu" | "delivery" | null>(null);
@@ -379,6 +382,7 @@ function Settings({ place: fromServer, followers, onlinePay, pushKey, onChange, 
     <div className="space-y-3">
       <PanelPushBox publicKey={pushKey} />
       <OnlinePayBox state={onlinePay} />
+      <SubscriptionBox state={subscription.state} kr={subscription.kr} />
       <NewsBox place={fromServer} followers={followers} onChange={onChange} />
       <LastChanceBox place={fromServer} open={openStatus(fromServer).state === "open"} onChange={onChange} />
       <div className="rounded-3xl bg-surface px-5 py-4">

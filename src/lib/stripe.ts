@@ -1,6 +1,6 @@
 import "server-only";
 import Stripe from "stripe";
-import { bynuFee, shownToPlace, type OnlinePayState } from "./payment";
+import { bynuFee, monthlyKr, shownToPlace, subscriptionState, type OnlinePayState, type SubscriptionState } from "./payment";
 import { store } from "./store";
 import type { Order, OrderPayment, Place } from "./types";
 
@@ -135,4 +135,62 @@ export async function checkAccount(slug: string): Promise<boolean> {
   const ready = Boolean((await s.accounts.retrieve(account)).charges_enabled);
   await store.saveStripeAccount(slug, account, ready);
   return ready;
+}
+
+// Abonnementet hos ByNu. Det betales med kort på ByNus egen Stripe-konto og trækkes automatisk hver måned.
+// Ingen binding: restauranten kan stoppe, når den vil, og abonnementet kører så måneden ud.
+
+/** Stripes side, hvor restauranten skriver sit kort. Har de allerede et abonnement, kommer de til siden, hvor de kan skifte kort eller stoppe. */
+export async function subscriptionLink(place: Place, origin: string): Promise<string | null> {
+  const s = stripe();
+  if (!s) return null;
+  let sub = await store.getSubscription(place.slug);
+  if (sub && subscriptionState(sub) !== "none") return billingLink(sub.customer, origin);
+  if (!sub) {
+    const customer = await s.customers.create({ name: place.name, metadata: { sted: place.slug } });
+    sub = { customer: customer.id };
+    await store.saveSubscription(place.slug, sub);
+  }
+  const session = await s.checkout.sessions.create({
+    mode: "subscription",
+    customer: sub.customer,
+    locale: "da",
+    line_items: [
+      {
+        quantity: 1,
+        price_data: { currency: "dkk", unit_amount: Math.round(monthlyKr() * 100), recurring: { interval: "month" }, product_data: { name: `ByNu abonnement · ${place.name}` } },
+      },
+    ],
+    subscription_data: { metadata: { sted: place.slug } },
+    success_url: `${origin}/api/panel/abonnement?tjek=1`,
+    cancel_url: `${origin}/panel?abonnement=fortrudt`,
+  });
+  return session.url;
+}
+
+/** Siden hos Stripe, hvor restauranten kan skifte kort, se kvitteringer eller stoppe abonnementet */
+export async function billingLink(customer: string, origin: string): Promise<string | null> {
+  const s = stripe();
+  if (!s) return null;
+  const session = await s.billingPortal.sessions.create({ customer, return_url: `${origin}/api/panel/abonnement?tjek=1` });
+  return session.url;
+}
+
+/** Spørger Stripe, hvordan det står med stedets abonnement, og gemmer svaret */
+export async function checkSubscription(slug: string): Promise<SubscriptionState> {
+  const s = stripe();
+  const sub = await store.getSubscription(slug).catch(() => null);
+  if (!s) return "unavailable";
+  if (!sub) return "none";
+  const list = await s.subscriptions.list({ customer: sub.customer, status: "all", limit: 10 });
+  // Det nyeste abonnement, der ikke er opgivet halvvejs, tæller
+  const latest = list.data.filter((x) => x.status !== "incomplete_expired").sort((a, b) => b.created - a.created)[0];
+  const next = { customer: sub.customer, ...(latest && { status: latest.status }) };
+  if (next.status !== sub.status) await store.saveSubscription(slug, next);
+  return subscriptionState(next);
+}
+
+/** Det, panelet viser, uden at spørge Stripe */
+export async function storedSubscriptionState(slug: string): Promise<SubscriptionState> {
+  return subscriptionState(await store.getSubscription(slug).catch(() => null), Boolean(stripe()));
 }

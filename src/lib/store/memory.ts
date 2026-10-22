@@ -6,12 +6,12 @@ import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
 import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
-import { shownToPlace } from "../payment";
+import { shownToPlace, type Subscription } from "../payment";
 import type { Booking, Chef, ClosedPeriod, GroupOrder, Order, Place, PlaceNews } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { leftovers?: boolean; createdAt?: string }>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]>; stripe: Map<string, { account: string; ready: boolean }> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { leftovers?: boolean; createdAt?: string }>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]>; stripe: Map<string, { account: string; ready: boolean }>; subscriptions: Map<string, Subscription> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -28,6 +28,7 @@ const state: State = (g.__assensnu ??= {
   closedDays: new Map(),
   placePush: new Map(),
   stripe: new Map(),
+  subscriptions: new Map(),
   followers: new Map(),
   groups: new Map(),
   lastChance: new Map(),
@@ -42,6 +43,7 @@ state.followers ??= new Map();
 state.closedDays ??= new Map();
 state.placePush ??= new Map();
 state.stripe ??= new Map();
+state.subscriptions ??= new Map();
 state.groups ??= new Map();
 state.lastChance ??= new Map();
 state.translations ??= new Map();
@@ -158,6 +160,12 @@ export const memoryStore: Store = {
   async saveStripeAccount(slug, account, ready) {
     state.stripe.set(slug, { account, ready });
   },
+  async getSubscription(slug) {
+    return state.subscriptions.get(slug) ?? null;
+  },
+  async saveSubscription(slug, subscription) {
+    state.subscriptions.set(slug, subscription);
+  },
 
   async countOrdersByPhone(phone, sinceIso) {
     return state.orders.filter((o) => o.customerPhone === phone && o.createdAt >= sinceIso).length;
@@ -207,6 +215,7 @@ export const memoryStore: Store = {
         acceptsOrders: p.acceptsOrders,
         acceptsBookings: p.acceptsBookings,
         hasCode: state.pins.has(p.slug) || Boolean(p.demo),
+        subscription: state.subscriptions.get(p.slug)?.status,
         hours: p.hours,
         menu: p.menu,
         delivery: p.delivery ?? null,

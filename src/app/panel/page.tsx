@@ -6,7 +6,8 @@ import { PanelLogin } from "@/components/panel/PanelLogin";
 import { panelSlug } from "@/lib/panel-auth";
 import { pushPublicKey } from "@/lib/push";
 import { isDemo, store } from "@/lib/store";
-import { onlinePayState, ordersForPlace } from "@/lib/stripe";
+import { checkSubscription, onlinePayState, ordersForPlace, storedSubscriptionState } from "@/lib/stripe";
+import { monthlyKr } from "@/lib/payment";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -17,13 +18,15 @@ async function PanelPage() {
   const place = slug ? await store.getPlace(slug) : null;
 
   if (place) {
-    const [orders, bookings, followers, onlinePay] = await Promise.all([
+    const [orders, bookings, followers, onlinePay, subscription] = await Promise.all([
       ordersForPlace(place.slug),
       store.listBookings(place.slug),
       store.listFollowers(place.slug).then((f) => f.length, () => null),
       onlinePayState(place),
+      // Her spørges Stripe, så et udløbet kort ses, når panelet åbnes. Polling bruger det gemte svar.
+      checkSubscription(place.slug).catch(() => storedSubscriptionState(place.slug)),
     ]);
-    return <Panel initial={{ place, orders, bookings, followers, onlinePay }} noDatabase={isDemo && !!process.env.VERCEL} pushKey={pushPublicKey()} />;
+    return <Panel initial={{ place, orders, bookings, followers, onlinePay, subscription: { state: subscription, kr: monthlyKr() } }} noDatabase={isDemo && !!process.env.VERCEL} pushKey={pushPublicKey()} />;
   }
 
   // Alle steder kan logge ind og rette deres oplysninger, når AssensNu har givet dem en kode
