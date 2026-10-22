@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-auth";
+import { toCsv } from "@/lib/export";
 import { todayInCopenhagen } from "@/lib/hours";
 import { monthByPlace, monthStartIso } from "@/lib/stats";
 import { SITE } from "@/lib/site";
@@ -16,10 +17,8 @@ export async function GET(request: Request) {
   const rows = monthByPlace(facts, month);
 
   if (params.get("format") === "csv") {
-    // Semikolon og komma som decimaltegn, så det åbner rigtigt i dansk Excel
-    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const lines = [["Sted", "Ordrer", "Omsætning (kr.)", "Afviste"], ...rows.map((r) => [r.placeName, r.orders, String(r.revenue).replace(".", ","), r.rejected])];
-    return new NextResponse("﻿" + lines.map((l) => l.map(cell).join(";")).join("\r\n"), {
+    const lines = [["Sted", "Ordrer", "Omsætning (kr.)", "Afviste"], ...rows.map((r) => [r.placeName, r.orders, r.revenue, r.rejected])];
+    return new NextResponse(toCsv(lines), {
       headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="${SITE.toLowerCase()}-ordrer-${month}.csv"` },
     });
   }

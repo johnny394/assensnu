@@ -1,5 +1,6 @@
 import { seedPlaces } from "@/data/places";
 import type { AssensEvent } from "../events";
+import { bookingWithoutCustomer, withoutCustomer } from "../export";
 import { createHash } from "node:crypto";
 import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
@@ -124,6 +125,12 @@ export const memoryStore: Store = {
   },
   async bookingFacts(sinceIso, slug) {
     return state.bookings.filter((b) => b.createdAt >= sinceIso && b.placeSlug === slug).map((b) => ({ placeSlug: b.placeSlug, createdAt: b.createdAt, status: b.status, guests: b.guests }));
+  },
+  async exportOrders(sinceIso) {
+    return state.orders.filter((o) => o.createdAt >= sinceIso).map(withoutCustomer);
+  },
+  async exportBookings(sinceIso) {
+    return state.bookings.filter((b) => b.createdAt >= sinceIso).map(bookingWithoutCustomer);
   },
   async followerDates(slug) {
     return [...(state.followers.get(slug)?.values() ?? [])].map((f) => f.createdAt ?? new Date().toISOString());
