@@ -201,6 +201,13 @@ async function runChecks(): Promise<Check[]> {
       ? { ok: false, text: "Databasen kan ikke gemme restauranternes abonnement endnu.", fix: "Kør tilfoej-abonnement.sql i Supabase under SQL Editor. Den sletter ingenting." }
       : { ok: true, text: "Databasen kan gemme restauranternes abonnement." },
   );
+  const pakker = await createClient(url, key, { auth: { persistSession: false } }).from("events").select("place_slug").limit(1);
+  const beskeder = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("push_used").limit(1);
+  checks.push(
+    pakker.error || beskeder.error
+      ? { ok: false, text: "Databasen kan ikke tælle beskeder til følgerne eller gemme stedernes egne events endnu.", fix: "Kør tilfoej-pakker.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan tælle beskeder til følgerne og gemme stedernes egne events." },
+  );
   const stripeKey = process.env.STRIPE_SECRET_KEY?.trim();
   checks.push(
     !stripeKey

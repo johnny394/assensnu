@@ -6,11 +6,12 @@ import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import { shownToPlace, type Subscription } from "../payment";
+import { withPlan, type PushUse } from "../plans";
 import type { Booking, Chef, ClosedPeriod, GroupOrder, Order, Place, PlaceNews } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { createdAt?: string }>>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]>; stripe: Map<string, { account: string; ready: boolean }>; subscriptions: Map<string, Subscription> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { createdAt?: string }>>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]>; stripe: Map<string, { account: string; ready: boolean }>; subscriptions: Map<string, Subscription>; pushUse: Map<string, PushUse> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -28,6 +29,7 @@ const state: State = (g.__assensnu ??= {
   placePush: new Map(),
   stripe: new Map(),
   subscriptions: new Map(),
+  pushUse: new Map(),
   followers: new Map(),
   groups: new Map(),
   translations: new Map(),
@@ -42,6 +44,7 @@ state.closedDays ??= new Map();
 state.placePush ??= new Map();
 state.stripe ??= new Map();
 state.subscriptions ??= new Map();
+state.pushUse ??= new Map();
 state.groups ??= new Map();
 state.translations ??= new Map();
 state.chefs ??= new Map();
@@ -52,7 +55,7 @@ const DEMO_PIN = "1234";
 
 function withToday(place: Place): Place {
   const news = state.news.get(place.slug);
-  return {
+  return withPlan({
     ...place,
     ...activeWait(place.extraWaitMinutes, state.busyUntil.get(place.slug) ?? null),
     news: todaysNews(news?.text, news?.sentAt, news),
@@ -61,7 +64,7 @@ function withToday(place: Place): Place {
     closedDays: currentClosed(state.closedDays.get(place.slug), todayInCopenhagen()),
     member: state.pins.has(place.slug) || Boolean(place.demo),
     onlinePay: (state.stripe.get(place.slug)?.ready && Boolean(process.env.STRIPE_SECRET_KEY?.trim())) || undefined,
-  };
+  }, state.subscriptions.get(place.slug), todayInCopenhagen());
 }
 
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
@@ -162,6 +165,12 @@ export const memoryStore: Store = {
   async saveSubscription(slug, subscription) {
     state.subscriptions.set(slug, subscription);
   },
+  async getPushUse(slug) {
+    return state.pushUse.get(slug) ?? null;
+  },
+  async savePushUse(slug, use) {
+    state.pushUse.set(slug, use);
+  },
 
   async countOrdersByPhone(phone, sinceIso) {
     return state.orders.filter((o) => o.customerPhone === phone && o.createdAt >= sinceIso).length;
@@ -212,6 +221,7 @@ export const memoryStore: Store = {
         acceptsBookings: p.acceptsBookings,
         hasCode: state.pins.has(p.slug) || Boolean(p.demo),
         subscription: state.subscriptions.get(p.slug)?.status,
+        plan: state.subscriptions.get(p.slug)?.plan,
         hours: p.hours,
         menu: p.menu,
         delivery: p.delivery ?? null,

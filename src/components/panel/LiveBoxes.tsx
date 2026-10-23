@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { kr } from "@/lib/format";
 import { clockTime, NEWS_MAX, WAIT_STEPS } from "@/lib/live";
+import { PUSH_KR } from "@/lib/plans";
 import type { Place } from "@/lib/types";
 import { SITE } from "@/lib/site";
 
@@ -55,11 +56,13 @@ export function WaitBar({ place, onChange }: { place: Place; onChange: () => voi
 }
 
 // Dagens tilbud: står på stedets side i dag, og følgerne får en besked på telefonen
-export function NewsBox({ place, followers, onChange }: { place: Place; followers: number | null; onChange: () => void }) {
+// push: de gratis beskeder, der er tilbage i måneden, og om stedet har en pakke med kort, så en ekstra kan betales
+export function NewsBox({ place, followers, push, onChange }: { place: Place; followers: number | null; push: { left: number; canPay: boolean }; onChange: () => void }) {
   const [text, setText] = useState(place.news?.text ?? "");
   const [price, setPrice] = useState(place.news?.price ? String(place.news.price) : "");
   const [wasPrice, setWasPrice] = useState(place.news?.wasPrice ? String(place.news.wasPrice) : "");
   const [editing, setEditing] = useState(!place.news);
+  const [notify, setNotify] = useState(push.left > 0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -69,7 +72,7 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
   const send = async () => {
     setBusy(true);
     setError(null);
-    const res = await post("/api/panel/news", { text, price: price.trim(), wasPrice: price.trim() ? wasPrice.trim() : "" });
+    const res = await post("/api/panel/news", { text, price: price.trim(), wasPrice: price.trim() ? wasPrice.trim() : "", push: canNotify && notify });
     setBusy(false);
     if (!res?.ok) {
       const body = (await res?.json().catch(() => null)) as { error?: string } | null;
@@ -81,7 +84,9 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
   };
 
   const who = followers === null ? null : followers === 0 ? "Ingen følger jer endnu" : followers === 1 ? "1 kunde følger jer" : `${followers} kunder følger jer`;
-  const sendLabel = place.news ? "Gem rettelsen" : followers ? `Send til ${followers} ${followers === 1 ? "følger" : "følgere"}` : "Læg det ud";
+  const canNotify = !place.news && !!followers && (push.left > 0 || push.canPay);
+  const sendLabel = place.news ? "Gem rettelsen" : canNotify && notify ? `Send til ${followers} ${followers === 1 ? "følger" : "følgere"}` : "Læg det ud";
+  const cost = push.left > 0 ? `Gratis. I har ${push.left} gratis ${push.left === 1 ? "besked" : "beskeder"} tilbage i denne måned.` : `Koster ${kr(PUSH_KR)} plus moms. Det kommer på næste regning.`;
 
   return (
     <div className="rounded-3xl bg-surface px-5 py-4">
@@ -99,7 +104,7 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
               </strong>
             )}
           </p>
-          <p className="mt-2 font-bold text-go">Sendt kl. {clockTime(place.news.sentAt)}. Det står på jeres side resten af dagen.</p>
+          <p className="mt-2 font-bold text-go">Lagt ud kl. {clockTime(place.news.sentAt)}. Det står på jeres side resten af dagen.</p>
           <button onClick={() => setEditing(true)} className="mt-2 w-full py-2 text-lg underline">
             Ret teksten
           </button>
@@ -147,7 +152,16 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
               />
             </label>
           )}
-          {place.news && <p className="mt-2 text-ink-soft">Følgerne har allerede fået dagens besked, så rettelsen kommer kun på jeres side.</p>}
+          {canNotify && (
+            <label className="mt-3 flex items-start gap-3 rounded-2xl border-2 border-line bg-paper px-4 py-3 text-lg">
+              <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="mt-1 h-6 w-6 shrink-0 accent-ink" />
+              <span>
+                <span className="block font-bold">Send en besked til {followers === 1 ? "jeres følger" : `jeres ${followers} følgere`}</span>
+                <span className="block text-ink-soft">{cost}</span>
+              </span>
+            </label>
+          )}
+          {place.news && <p className="mt-2 text-ink-soft">Rettelsen kommer kun på jeres side. Der bliver ikke sendt en ny besked.</p>}
           {error && <p className="mt-1 font-bold text-signal">{error}</p>}
           <button onClick={send} disabled={busy || !text.trim()} className="mt-3 min-h-14 w-full rounded-2xl bg-buoy px-4 text-lg font-bold disabled:opacity-50">
             {busy ? "Sender …" : sendLabel}
@@ -157,7 +171,8 @@ export function NewsBox({ place, followers, onChange }: { place: Place; follower
               Fortryd
             </button>
           )}
-          {!place.news && <p className="mt-2 text-ink-soft">Én besked om dagen, så ingen bliver trætte af jer.</p>}
+          {!place.news && !!followers && !canNotify && <p className="mt-2 text-ink-soft">I har brugt jeres gratis beskeder i denne måned. Vælg en pakke under Jeres pakke for at sende flere. Tilbuddet kommer stadig på jeres side.</p>}
+          {!place.news && <p className="mt-2 text-ink-soft">Højst én besked om dagen, så ingen bliver trætte af jer.</p>}
         </>
       )}
     </div>

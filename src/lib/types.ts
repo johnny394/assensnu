@@ -1,3 +1,5 @@
+import type { PlanId } from "./plans";
+
 // Ugedage som i Danmark: 0 = mandag ... 6 = søndag
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -62,6 +64,7 @@ export type Place = {
   demo?: boolean;
   member?: boolean; // stedet har sagt ja til AssensNu og har en kode til panelet
   onlinePay?: boolean; // kunderne kan betale med MobilePay og kort gennem stedets egen Stripe-konto
+  plan?: PlanId; // den pakke, stedet har lige nu. Uden Fuld pakke kan der ikke bestilles takeaway.
 };
 
 // Lukket fra og med from til og med to, fx { from: "2026-12-24", to: "2026-12-26", note: "Jul" }

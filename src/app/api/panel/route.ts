@@ -2,8 +2,7 @@ import { after, NextResponse } from "next/server";
 import { panelSlug } from "@/lib/panel-auth";
 import { forgetOldCustomers } from "@/lib/privacy";
 import { store } from "@/lib/store";
-import { onlinePayState, ordersForPlace, storedSubscriptionState } from "@/lib/stripe";
-import { monthlyKr } from "@/lib/payment";
+import { onlinePayState, ordersForPlace, planSummary, storedSubscriptionState } from "@/lib/stripe";
 
 // Alt, panelet viser. Hentes igen med få sekunders mellemrum.
 export async function GET() {
@@ -19,5 +18,5 @@ export async function GET() {
     storedSubscriptionState(place.slug),
   ]);
   after(forgetOldCustomers);
-  return NextResponse.json({ place, orders, bookings, followers, onlinePay, subscription: { state: subscription, kr: monthlyKr() } });
+  return NextResponse.json({ place, orders, bookings, followers, onlinePay, subscription: await planSummary(place.slug, subscription) });
 }

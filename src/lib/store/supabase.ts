@@ -4,6 +4,7 @@ import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import { shownToPlace, type Subscription } from "../payment";
+import { withPlan, type PushUse } from "../plans";
 import type { Booking, Chef, ClosedPeriod, GroupEntry, GroupOrder, MenuCategory, Order, OrderPayment, Place, Weekday } from "../types";
 import type { AssensEvent } from "../events";
 import { withoutCustomer } from "../export";
@@ -35,6 +36,7 @@ type PlaceRow = {
   closed_on: string | null;
   closed_days?: ClosedPeriod[] | null;
   online_pay?: boolean;
+  subscription?: Subscription | null;
   panel_pin_hash: string | null;
   opening_hours: { day: number; open: string; close: string }[];
   menu_categories: {
@@ -46,7 +48,7 @@ type PlaceRow = {
 };
 
 const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, description, takeaway, dine_in,
-  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, chef, closed_on, closed_days, online_pay, panel_pin_hash,
+  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, chef, closed_on, closed_days, online_pay, subscription, panel_pin_hash,
   opening_hours (day, open, close),
   menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))`;
 
@@ -75,7 +77,7 @@ async function inTown(run: (town: string | null) => PromiseLike<Res>): Promise<R
 const byPosition = (a: { position: number }, b: { position: number }) => a.position - b.position;
 
 function toPlace(r: PlaceRow): Place {
-  return {
+  return withPlan({
     slug: r.slug,
     name: r.name,
     cuisines: r.cuisines,
@@ -102,7 +104,7 @@ function toPlace(r: PlaceRow): Place {
     onlinePay: (r.online_pay && Boolean(process.env.STRIPE_SECRET_KEY?.trim())) || undefined,
     hours: r.opening_hours.map((h) => ({ day: h.day as Weekday, open: h.open.slice(0, 5), close: h.close.slice(0, 5) })),
     menu: toMenu(r.menu_categories),
-  };
+  }, r.subscription, todayInCopenhagen());
 }
 
 function toMenu(categories: PlaceRow["menu_categories"]): MenuCategory[] {
@@ -403,6 +405,15 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     async saveSubscription(slug, subscription) {
       check(await db.from("places").update({ subscription }).eq("slug", slug));
     },
+    async getPushUse(slug) {
+      const res = await db.from("places").select("push_used").eq("slug", slug).maybeSingle();
+      // Uden tilfoej-pakker.sql er der ikke talt nogen beskeder
+      if (res.error) return null;
+      return (res.data as { push_used: PushUse | null } | null)?.push_used ?? null;
+    },
+    async savePushUse(slug, use) {
+      check(await db.from("places").update({ push_used: use }).eq("slug", slug));
+    },
 
     async countOrdersByPhone(phone, sinceIso) {
       const res = await db.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", phone).gte("created_at", sinceIso);
@@ -460,7 +471,7 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       );
       const rows = check(res) as unknown as (Pick<PlaceRow, "slug" | "name" | "address" | "cuisines" | "phone" | "takeaway" | "dine_in" | "accepts_orders" | "accepts_bookings" | "delivery"> & {
         published: boolean;
-        subscription?: { status?: string } | null;
+        subscription?: Subscription | null;
         panel_pin_hash: string | null;
         opening_hours: { day: number; open: string; close: string }[];
         menu_categories: PlaceRow["menu_categories"];
@@ -478,6 +489,7 @@ export function supabaseStore(url: string, serviceKey: string): Store {
         acceptsBookings: r.accepts_bookings,
         hasCode: Boolean(r.panel_pin_hash),
         subscription: r.subscription?.status,
+        plan: r.subscription?.plan,
         hours: r.opening_hours
           .map((h) => ({ day: h.day as Weekday, open: h.open.slice(0, 5), close: h.close.slice(0, 5) }))
           .sort((a, b) => a.day - b.day || a.open.localeCompare(b.open)),
@@ -611,25 +623,28 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     },
 
     async listEvents(fromDate) {
-      const res = await inTown((town) => {
-        const q = db.from("events").select("id, title, date, time, venue, text, link").gte("date", fromDate);
-        return (town ? q.eq("town", town) : q).order("date").order("time");
-      });
+      const res = await withEventColumns((cols) =>
+        inTown((town) => {
+          const q = db.from("events").select(cols).gte("date", fromDate);
+          return (town ? q.eq("town", town) : q).order("date").order("time");
+        }),
+      );
       // Uden tabellen (tilfoej-events.sql ikke kørt) er der bare ingen events endnu
       if (res.error) return [];
       return (res.data as EventRow[]).map(toEvent);
     },
     async getEvent(id) {
-      const res = await db.from("events").select("id, title, date, time, venue, text, link").eq("id", id).maybeSingle();
+      const res = await withEventColumns((cols) => db.from("events").select(cols).eq("id", id).maybeSingle());
       return res.error || !res.data ? null : toEvent(res.data as EventRow);
     },
     async saveEvent(event, id) {
-      const row = { title: event.title, date: event.date, time: event.time, venue: event.venue, text: event.text ?? null, link: event.link ?? null };
+      const row = { title: event.title, date: event.date, time: event.time, venue: event.venue, text: event.text ?? null, link: event.link ?? null, ...(event.placeSlug && { place_slug: event.placeSlug }) };
+      const cols = event.placeSlug ? `${EVENT_COLUMNS}, place_slug` : EVENT_COLUMNS;
       const saved = check(
         id
-          ? await db.from("events").update(row).eq("id", id).select("id, title, date, time, venue, text, link").single()
-          : await inTown((town) => db.from("events").insert(town ? ({ ...row, town } as typeof row) : row).select("id, title, date, time, venue, text, link").single()),
-      ) as EventRow;
+          ? await db.from("events").update(row).eq("id", id).select(cols).single()
+          : await inTown((town) => db.from("events").insert(town ? ({ ...row, town } as typeof row) : row).select(cols).single()),
+      ) as unknown as EventRow;
       return toEvent(saved);
     },
     async deleteEvent(id) {
@@ -656,5 +671,11 @@ export function supabaseStore(url: string, serviceKey: string): Store {
   };
 }
 
-type EventRow = { id: string; title: string; date: string; time: string; venue: string; text: string | null; link: string | null };
-const toEvent = (r: EventRow): AssensEvent => ({ id: r.id, title: r.title, date: r.date, time: r.time.slice(0, 5), venue: r.venue, text: r.text ?? undefined, link: r.link ?? undefined });
+type EventRow = { id: string; title: string; date: string; time: string; venue: string; text: string | null; link: string | null; place_slug?: string | null };
+const toEvent = (r: EventRow): AssensEvent => ({ id: r.id, title: r.title, date: r.date, time: r.time.slice(0, 5), venue: r.venue, text: r.text ?? undefined, link: r.link ?? undefined, placeSlug: r.place_slug ?? undefined });
+const EVENT_COLUMNS = "id, title, date, time, venue, text, link";
+// Indtil tilfoej-pakker.sql er kørt, ved events ikke, hvilket sted der har lagt dem ud
+async function withEventColumns(run: (cols: string) => PromiseLike<Res>): Promise<Res> {
+  const res = await run(`${EVENT_COLUMNS}, place_slug`);
+  return mentions(res.error, "place_slug") ? run(EVENT_COLUMNS) : res;
+}

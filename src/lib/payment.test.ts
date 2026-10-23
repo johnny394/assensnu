@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bynuFee, monthlyKr, shownToPlace, stripeProfile, subscriptionState } from "./payment";
+import { bynuFee, shownToPlace, stripeProfile, subscriptionState } from "./payment";
 
 describe("online betaling", () => {
   it("viser kun ordren for restauranten, når kunden har betalt", () => {
@@ -28,9 +28,6 @@ describe("online betaling", () => {
     expect(subscriptionState({ customer: "cus_1", status: "past_due" })).toBe("problem");
     expect(subscriptionState({ customer: "cus_1", status: "canceled" })).toBe("none");
     expect(subscriptionState({ customer: "cus_1", status: "active" }, false)).toBe("unavailable");
-    expect(monthlyKr(undefined)).toBe(299);
-    expect(monthlyKr("349")).toBe(349);
-    expect(monthlyKr("x")).toBe(299);
   });
 
   it("udfylder adresse, telefon og beskrivelse til Stripe på forhånd", () => {

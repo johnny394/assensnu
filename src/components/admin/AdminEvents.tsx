@@ -16,11 +16,14 @@ type Form = { title: string; date: string; time: string; venue: string; text: st
 const empty: Form = { title: "", date: "", time: "20:00", venue: "", text: "", link: "" };
 
 // Koncerter, markeder og festivaler. Vises under Events, med steder man kan spise før.
-export function AdminEvents({ events }: { events: AssensEvent[] }) {
+// I admin lægger Johnny dem ud. I panelet lægger et sted sine egne ud (api="/api/panel/events").
+type Where = { api?: string; venue?: string; onSaved?: () => void };
+export function AdminEvents({ events, api = "/api/admin/events", venue, onSaved }: { events: AssensEvent[] } & Where) {
   const [open, setOpen] = useState<AssensEvent | "new" | null>(null);
+  const inPanel = api !== "/api/admin/events";
   return (
-    <section className="mt-10">
-      <h2 className="font-display text-[1.8rem] font-extrabold tracking-tight">Events</h2>
+    <section className={inPanel ? "rounded-3xl bg-surface px-5 py-4" : "mt-10"}>
+      {inPanel ? <p className="text-lg font-bold">Jeres events</p> : <h2 className="font-display text-[1.8rem] font-extrabold tracking-tight">Events</h2>}
       <p className="text-lg text-ink-soft">Kunderne ser dem under Events, med steder de kan spise før.</p>
       <button onClick={() => setOpen("new")} className="mt-4 min-h-14 w-full rounded-2xl border-2 border-ink px-5 text-xl font-bold">
         + Nyt event
@@ -42,14 +45,15 @@ export function AdminEvents({ events }: { events: AssensEvent[] }) {
           ))}
         </ul>
       )}
-      {open && <EventSheet event={open === "new" ? null : open} onClose={() => setOpen(null)} />}
+      {open && <EventSheet event={open === "new" ? null : open} api={api} venue={venue} onSaved={onSaved} onClose={() => setOpen(null)} />}
     </section>
   );
 }
 
-function EventSheet({ event, onClose }: { event: AssensEvent | null; onClose: () => void }) {
+function EventSheet({ event, api, venue, onSaved, onClose }: { event: AssensEvent | null; onClose: () => void } & Where) {
   const router = useRouter();
-  const [form, setForm] = useState<Form>(event ? { ...empty, ...event, text: event.text ?? "", link: event.link ?? "" } : empty);
+  const done = onSaved ?? (() => router.refresh());
+  const [form, setForm] = useState<Form>(event ? { ...empty, ...event, text: event.text ?? "", link: event.link ?? "" } : { ...empty, venue: venue ?? "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const field = "w-full rounded-2xl border-2 border-line bg-surface px-4 py-3 text-lg";
@@ -58,17 +62,17 @@ function EventSheet({ event, onClose }: { event: AssensEvent | null; onClose: ()
   async function save() {
     setSaving(true);
     setError(null);
-    const res = await post("/api/admin/events", { ...form, id: event?.id });
+    const res = await post(api!, { ...form, id: event?.id });
     setSaving(false);
     if (!res.ok) return setError(res.error!);
-    router.refresh();
+    done();
     onClose();
   }
   async function remove() {
     if (!event || !confirm(`Skal "${event.title}" slettes?`)) return;
-    const res = await post(`/api/admin/events/${event.id}/delete`, {});
+    const res = await post(`${api}/${event.id}/delete`, {});
     if (!res.ok) return setError(res.error!);
-    router.refresh();
+    done();
     onClose();
   }
 

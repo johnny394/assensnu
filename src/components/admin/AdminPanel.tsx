@@ -13,6 +13,7 @@ import { AdminExport } from "./AdminExport";
 import { AdminOrders } from "./AdminOrders";
 import { AdminSigns } from "./AdminSigns";
 import { WEEKDAYS } from "@/lib/hours";
+import { PLANS } from "@/lib/plans";
 import { CITY, SITE } from "@/lib/site";
 
 async function post(url: string, body: unknown): Promise<{ ok: boolean; error?: string; pin?: string; slug?: string }> {
@@ -92,7 +93,7 @@ export function AdminPanel({ places, events }: { places: AdminPlace[]; events: A
               <span className="mt-2 flex flex-wrap gap-1.5">
                 {!p.published && <Badge tone="dark">Skjult</Badge>}
                 {p.hasCode ? <Badge tone="go">Har kode</Badge> : <Badge tone="warn">Mangler kode</Badge>}
-                {(p.subscription === "active" || p.subscription === "trialing") && <Badge tone="go">Betaler abonnement</Badge>}
+                {(p.subscription === "active" || p.subscription === "trialing") && <Badge tone="go">{PLANS[p.plan ?? "fuld"].name}{p.subscription === "trialing" ? " fra 1/2" : ""}</Badge>}
                 {(p.subscription === "past_due" || p.subscription === "unpaid") && <Badge tone="warn">Abonnement ikke betalt</Badge>}
                 {p.acceptsOrders && <Badge tone="go">Bestilling</Badge>}
                 {p.acceptsBookings && <Badge tone="go">Bordbooking</Badge>}

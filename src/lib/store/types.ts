@@ -1,5 +1,6 @@
 import type { AdminPatch, AdminPlace, PlaceBasics } from "../admin";
 import type { Subscription } from "../payment";
+import type { PushUse } from "../plans";
 import type { AssensEvent } from "../events";
 import type { ExportBooking, ExportOrder } from "../export";
 import type { BookingFact, OrderFact } from "../stats";
@@ -57,6 +58,9 @@ export type Store = {
   /** Abonnementet hos ByNu (Stripe-kunde og status), eller null */
   getSubscription(slug: string): Promise<Subscription | null>;
   saveSubscription(slug: string, subscription: Subscription): Promise<void>;
+  /** Hvor mange beskeder stedet har sendt til følgerne i måneden */
+  getPushUse(slug: string): Promise<PushUse | null>;
+  savePushUse(slug: string, use: PushUse): Promise<void>;
 
   /** Hvor mange bestillinger et telefonnummer har sendt siden et tidspunkt, på tværs af steder */
   countOrdersByPhone(phone: string, sinceIso: string): Promise<number>;
