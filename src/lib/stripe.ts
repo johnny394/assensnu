@@ -1,6 +1,6 @@
 import "server-only";
 import Stripe from "stripe";
-import { bynuFee, monthlyKr, shownToPlace, subscriptionState, type OnlinePayState, type SubscriptionState } from "./payment";
+import { bynuFee, monthlyKr, shownToPlace, stripeProfile, subscriptionState, type OnlinePayState, type SubscriptionState } from "./payment";
 import { store } from "./store";
 import type { Order, OrderPayment, Place } from "./types";
 
@@ -112,7 +112,8 @@ export async function connectLink(place: Place, origin: string): Promise<string 
       country: "DK",
       // Stedet har sit eget Stripe-login og betaler selv Stripes gebyr
       controller: { fees: { payer: "account" }, losses: { payments: "stripe" }, stripe_dashboard: { type: "full" } },
-      business_profile: { name: place.name, url: `${origin}/sted/${place.slug}`, mcc: "5812" },
+      // Adresse, telefon og beskrivelse er udfyldt på forhånd, så Stripe ikke spørger om dem
+      business_profile: stripeProfile(place, origin),
       metadata: { sted: place.slug },
     });
     account = created.id;
