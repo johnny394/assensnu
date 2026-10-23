@@ -19,6 +19,11 @@ describe("bynu.dk", () => {
     expect(on("bynu.dk", "/artikel/til-spisesteder").headers.get("x-middleware-next")).toBe("1");
   });
 
+  it("har sin egen sitemap og robots.txt", () => {
+    expect(on("bynu.dk", "/sitemap.xml").headers.get("x-middleware-next")).toBe("1");
+    expect(on("bynu.dk", "/robots.txt").headers.get("x-middleware-next")).toBe("1");
+  });
+
   it("lader byernes egne adresser være", () => {
     expect(on("assens.bynu.dk", "/").headers.get("x-middleware-next")).toBe("1");
   });
