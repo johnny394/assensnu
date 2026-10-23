@@ -7,7 +7,7 @@ export function middleware(req: NextRequest) {
   if (host !== BRAND_DOMAIN) return NextResponse.next();
   const { pathname, search } = req.nextUrl;
   if (pathname === "/" || pathname === "/byer") return NextResponse.rewrite(new URL("/byer", req.url));
-  if (pathname.startsWith("/artikel/")) return NextResponse.next();
+  if (pathname.startsWith("/artikel/") || pathname === "/sitemap.xml" || pathname === "/robots.txt") return NextResponse.next();
   return NextResponse.redirect(`${TOWN_SITES.Assens}${pathname}${search}`, 308);
 }
 
