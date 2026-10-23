@@ -140,13 +140,6 @@ async function runChecks(): Promise<Check[]> {
       : { ok: true, text: "Dagens tilbud kan vise normalpris." },
   );
 
-  const sidste = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("last_chance").limit(1);
-  checks.push(
-    sidste.error
-      ? { ok: false, text: "Sidste chance (halv pris før lukketid) kan ikke gemmes endnu.", fix: "Kør tilfoej-sidste-chance.sql i Supabase under SQL Editor. Den sletter ingenting." }
-      : { ok: true, text: "Sidste chance (halv pris før lukketid) kan gemmes." },
-  );
-
   const faelles = await createClient(url, key, { auth: { persistSession: false } }).from("group_entries").select("id").limit(1);
   checks.push(
     faelles.error
@@ -196,12 +189,6 @@ async function runChecks(): Promise<Check[]> {
       : { ok: true, text: "Restauranterne kan få besked om ordrer uden svar." },
   );
 
-  const rester = await createClient(url, key, { auth: { persistSession: false } }).from("followers").select("leftovers").limit(1);
-  checks.push(
-    rester.error
-      ? { ok: false, text: "Følgere kan ikke få besked om rester til halv pris endnu.", fix: "Kør tilfoej-rester-besked.sql i Supabase under SQL Editor. Den sletter ingenting." }
-      : { ok: true, text: "Følgere kan få besked om rester til halv pris." },
-  );
   const betaling = await createClient(url, key, { auth: { persistSession: false } }).from("orders").select("payment").limit(1);
   checks.push(
     betaling.error
@@ -213,6 +200,13 @@ async function runChecks(): Promise<Check[]> {
     abonnement.error
       ? { ok: false, text: "Databasen kan ikke gemme restauranternes abonnement endnu.", fix: "Kør tilfoej-abonnement.sql i Supabase under SQL Editor. Den sletter ingenting." }
       : { ok: true, text: "Databasen kan gemme restauranternes abonnement." },
+  );
+  const pakker = await createClient(url, key, { auth: { persistSession: false } }).from("events").select("place_slug").limit(1);
+  const beskeder = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("push_used").limit(1);
+  checks.push(
+    pakker.error || beskeder.error
+      ? { ok: false, text: "Databasen kan ikke tælle beskeder til følgerne eller gemme stedernes egne events endnu.", fix: "Kør tilfoej-pakker.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan tælle beskeder til følgerne og gemme stedernes egne events." },
   );
   const stripeKey = process.env.STRIPE_SECRET_KEY?.trim();
   checks.push(

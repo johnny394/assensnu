@@ -1,10 +1,11 @@
+import type { PlanId } from "./plans";
 import type { Order, Place } from "./types";
 
 // Panelets boks: Stripe-nøglen mangler på Vercel, ikke i gang, i gang hos Stripe, eller klar
 export type OnlinePayState = "unavailable" | "off" | "started" | "on";
 
-// Abonnementet hos ByNu. Stripes egne ord for status gemmes, og panelet viser dem som en af disse.
-export type Subscription = { customer: string; status?: string };
+// Abonnementet hos ByNu. Stripes egne ord for status gemmes, og panelet viser dem som en af disse. plan er den valgte pakke.
+export type Subscription = { customer: string; status?: string; plan?: PlanId };
 export type SubscriptionState = "unavailable" | "none" | "active" | "problem";
 export function subscriptionState(sub: Subscription | null | undefined, stripeOn = true): SubscriptionState {
   if (!stripeOn) return "unavailable";
@@ -12,12 +13,6 @@ export function subscriptionState(sub: Subscription | null | undefined, stripeOn
   if (s === "active" || s === "trialing") return "active";
   if (s === "past_due" || s === "unpaid" || s === "incomplete") return "problem";
   return "none";
-}
-
-// Månedsprisen i kroner. ABONNEMENT_KR på Vercel kan ændre den.
-export function monthlyKr(value: string | undefined = process.env.ABONNEMENT_KR): number {
-  const n = Number(String(value ?? "").trim().replace(",", "."));
-  return Number.isFinite(n) && n > 0 && n < 100_000 ? n : 299;
 }
 
 // Restauranten ser først en ordre, der skal betales online, når kunden har betalt

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // En falsk Stripe, der husker, hvad den blev bedt om
 const calls: { what: string; args: unknown[] }[] = [];
-const fake = { session: "open" as string, intent: "requires_capture" as string, subscriptions: [] as { status: string; created: number }[] };
+type FakeSub = { id?: string; status: string; created: number; metadata?: Record<string, string>; items?: { data: { id: string }[] } };
+const fake = { session: "open" as string, intent: "requires_capture" as string, subscriptions: [] as FakeSub[], taxRates: [] as { id: string; percentage: number; inclusive: boolean; country: string }[] };
 vi.mock("server-only", () => ({}));
 vi.mock("stripe", () => ({
   default: class {
@@ -22,7 +23,19 @@ vi.mock("stripe", () => ({
       retrieve: async () => ({ id: "acct_1", charges_enabled: true }),
     };
     customers = { create: async (...args: unknown[]) => (calls.push({ what: "customer", args }), { id: "cus_1" }) };
-    subscriptions = { list: async () => ({ data: fake.subscriptions }) };
+    subscriptions = {
+      list: async () => ({ data: fake.subscriptions }),
+      update: async (...args: unknown[]) => (calls.push({ what: "update", args }), {}),
+    };
+    taxRates = {
+      list: async () => ({ data: fake.taxRates }),
+      create: async (...args: unknown[]) => (calls.push({ what: "tax", args }), { id: "txr_1" }),
+    };
+    products = {
+      retrieve: async () => Promise.reject(new Error("No such product")),
+      create: async (...args: unknown[]) => (calls.push({ what: "product", args }), { id: (args[0] as { id: string }).id }),
+    };
+    invoiceItems = { create: async (...args: unknown[]) => (calls.push({ what: "invoiceItem", args }), { id: "ii_1" }) };
     billingPortal = { sessions: { create: async (...args: unknown[]) => (calls.push({ what: "portal", args }), { url: "https://billing.stripe.com/p/1" }) } };
     accountLinks = { create: async (...args: unknown[]) => (calls.push({ what: "link", args }), { url: "https://connect.stripe.com/setup/1" }) };
   },
@@ -109,23 +122,46 @@ describe("online betaling med Stripe", () => {
     expect((await store.getOrder(held.id))!.payment!.status).toBe("held");
   });
 
-  it("starter et månedligt abonnement med kort og sender betalende videre til siden, hvor de kan stoppe", async () => {
+  it("lader restauranten vælge en pakke plus moms og venter med at trække penge til 1. februar", async () => {
     const { store, s, place } = await setup();
     calls.length = 0;
-    expect(await s.subscriptionLink(place, "https://assens.bynu.dk")).toBe("https://checkout.stripe.com/c/cs_1");
-    const [params, options] = calls.find((c) => c.what === "session")!.args as [{ mode: string; customer: string; line_items: { price_data: { unit_amount: number; recurring: { interval: string } } }[] }, unknown];
+    // Uden pakke er der intet at skifte kort på
+    expect(await s.subscriptionLink(place, "https://assens.bynu.dk")).toBeNull();
+    expect(await s.subscriptionLink(place, "https://assens.bynu.dk", "event")).toBe("https://checkout.stripe.com/c/cs_1");
+    const [params, options] = calls.find((c) => c.what === "session")!.args as [
+      { mode: string; customer: string; line_items: { price_data: { unit_amount: number; product: string; recurring: { interval: string } }; tax_rates: string[] }[]; subscription_data: { metadata: { pakke: string }; trial_end?: number } },
+      unknown,
+    ];
     expect(params.mode).toBe("subscription");
     expect(params.customer).toBe("cus_1");
-    expect(params.line_items[0].price_data).toMatchObject({ unit_amount: 29900, recurring: { interval: "month" } });
+    expect(params.line_items[0].price_data).toMatchObject({ unit_amount: 19900, product: "bynu_event", recurring: { interval: "month" } });
+    expect(params.line_items[0].tax_rates).toEqual(["txr_1"]);
+    expect((calls.find((c) => c.what === "tax")!.args[0] as { percentage: number; inclusive: boolean }).percentage).toBe(25);
+    expect(params.subscription_data.metadata.pakke).toBe("event");
+    expect(params.subscription_data.trial_end).toBe(Date.UTC(2027, 0, 31, 23) / 1000);
     // På ByNus egen konto, ikke restaurantens
     expect(options).toBeUndefined();
 
-    fake.subscriptions = [{ status: "incomplete_expired", created: 1 }, { status: "active", created: 2 }];
+    fake.subscriptions = [{ status: "incomplete_expired", created: 1 }, { id: "sub_1", status: "trialing", created: 2, metadata: { pakke: "event" }, items: { data: [{ id: "si_1" }] } }];
     expect(await s.checkSubscription(place.slug)).toBe("active");
-    expect((await store.adminListPlaces()).find((p) => p.slug === place.slug)!.subscription).toBe("active");
+    const listed = (await store.adminListPlaces()).find((p) => p.slug === place.slug)!;
+    expect(listed).toMatchObject({ subscription: "trialing", plan: "event" });
     expect(await s.subscriptionLink(place, "https://assens.bynu.dk")).toBe("https://billing.stripe.com/p/1");
+
+    // Skift til Fuld pakke: samme abonnement, ny pris fra næste regning
+    expect(await s.subscriptionLink(place, "https://assens.bynu.dk", "fuld")).toBe("https://assens.bynu.dk/panel?abonnement=skiftet");
+    const [id, change] = calls.find((c) => c.what === "update")!.args as [string, { items: { id: string; price_data: { unit_amount: number } }[]; metadata: { pakke: string }; proration_behavior: string }];
+    expect(id).toBe("sub_1");
+    expect(change.items[0]).toMatchObject({ id: "si_1", price_data: { unit_amount: 34900 } });
+    expect(change).toMatchObject({ metadata: { pakke: "fuld" }, proration_behavior: "none" });
+    expect((await store.getSubscription(place.slug))!.plan).toBe("fuld");
+
+    // En ekstra besked kommer på næste regning
+    expect(await s.chargeExtraPush(place.slug)).toBe(true);
+    expect(calls.find((c) => c.what === "invoiceItem")!.args[0]).toMatchObject({ customer: "cus_1", subscription: "sub_1", amount: 2900, currency: "dkk" });
 
     fake.subscriptions = [{ status: "past_due", created: 3 }];
     expect(await s.checkSubscription(place.slug)).toBe("problem");
+    expect(await s.chargeExtraPush(place.slug)).toBe(false);
   });
 });

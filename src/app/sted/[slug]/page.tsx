@@ -8,7 +8,6 @@ import { FollowButton } from "@/components/FollowButton";
 import { GroupLink } from "@/components/GroupLink";
 import { LangSwitch, RefreshWhileTranslating } from "@/components/LangSwitch";
 import { Menu } from "@/components/Menu";
-import { LastChanceOffer } from "@/components/LastChanceOffer";
 import { LiveOpenSign } from "@/components/OpenSign";
 import { TakeawayWait } from "@/components/TakeawayWait";
 import { TodaysOffer } from "@/components/TodaysOffer";
@@ -84,7 +83,6 @@ export default async function PlacePage({ params }: Props) {
         <LangSwitch />
 
         <TodaysOffer place={place} t={t} />
-        <LastChanceOffer place={place} />
 
         {place.demo && (
           <p className="mt-5 border-2 border-dashed border-stamp bg-stamp-soft px-4 py-3 text-ink">

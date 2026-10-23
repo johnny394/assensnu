@@ -85,8 +85,6 @@ export const UI: Record<string, { en: string; de: string }> = {
   Takeaway: { en: "Takeaway", de: "Zum Mitnehmen" },
   "Spis på stedet": { en: "Eat in", de: "Vor Ort essen" },
   "Bestil her": { en: "Order here", de: "Hier bestellen" },
-  "Halv pris på 1 ret til kl. {tid}": { en: "Half price on 1 dish until {tid}", de: "Halber Preis auf 1 Gericht bis {tid} Uhr" },
-  "Halv pris på {n} retter til kl. {tid}": { en: "Half price on {n} dishes until {tid}", de: "Halber Preis auf {n} Gerichte bis {tid} Uhr" },
   "Kommer snart": { en: "Coming soon", de: "Bald dabei" },
   "Ingen steder passer.": { en: "No places match.", de: "Keine Lokale gefunden." },
   "Vis alle": { en: "Show all", de: "Alle zeigen" },
@@ -144,9 +142,8 @@ export const UI: Record<string, { en: string; de: string }> = {
   "Ekstra på": { en: "Extras", de: "Extras" },
   Luk: { en: "Close", de: "Schließen" },
   "Læg i kurven · {pris}": { en: "Add to basket · {pris}", de: "In den Korb · {pris}" },
-  " (halv pris)": { en: " (half price)", de: " (halber Preis)" },
 
-  // Dagens tilbud og sidste chance
+  // Dagens tilbud
   Tilbud: { en: "Offer", de: "Angebot" },
   "Dagens tilbud · kl. {tid}": { en: "Today's offer · {tid}", de: "Angebot des Tages · {tid} Uhr" },
   "før {pris}": { en: "was {pris}", de: "vorher {pris}" },
@@ -155,15 +152,6 @@ export const UI: Record<string, { en: string; de: string }> = {
   "✓ {n} i kurven": { en: "✓ {n} in basket", de: "✓ {n} im Korb" },
   "Fjern en": { en: "Remove one", de: "Eins entfernen" },
   "Læg en mere i kurven": { en: "Add one more", de: "Noch eins" },
-  "Sidste chance": { en: "Last chance", de: "Letzte Chance" },
-  "Halv pris til kl. {tid}": { en: "Half price until {tid}", de: "Halber Preis bis {tid} Uhr" },
-  "Det, køkkenet har tilbage i dag. Så bliver det spist i stedet for smidt ud.": {
-    en: "What the kitchen has left today. Eaten instead of thrown away.",
-    de: "Was die Küche heute übrig hat. Lieber gegessen als weggeworfen.",
-  },
-  "Vælg ›": { en: "Choose ›", de: "Wählen ›" },
-  "Læg i kurven": { en: "Add to basket", de: "In den Korb" },
-  "{n} i kurven +": { en: "{n} in basket +", de: "{n} im Korb +" },
 };
 
 // Alt det, restauranten selv har skrevet, og som en turist skal kunne læse

@@ -1,6 +1,8 @@
 import "server-only";
 import Stripe from "stripe";
-import { bynuFee, monthlyKr, shownToPlace, stripeProfile, subscriptionState, type OnlinePayState, type SubscriptionState } from "./payment";
+import { bynuFee, shownToPlace, stripeProfile, subscriptionState, type OnlinePayState, type SubscriptionState } from "./payment";
+import { todayInCopenhagen } from "./hours";
+import { activePlan, chosenPlan, FIRST_CHARGE, freePushLeft, inFreePeriod, isPlanId, MOMS, PLANS, PUSH_KR, type PlanId, type PlanSummary } from "./plans";
 import { store } from "./store";
 import type { Order, OrderPayment, Place } from "./types";
 
@@ -138,31 +140,67 @@ export async function checkAccount(slug: string): Promise<boolean> {
   return ready;
 }
 
-// Abonnementet hos ByNu. Det betales med kort på ByNus egen Stripe-konto og trækkes automatisk hver måned.
-// Ingen binding: restauranten kan stoppe, når den vil, og abonnementet kører så måneden ud.
+// Pakken hos ByNu. Den betales med kort på ByNus egen Stripe-konto, trækkes automatisk hver måned og er plus moms.
+// Ingen binding: restauranten kan stoppe, når den vil, og pakken kører så måneden ud.
 
-/** Stripes side, hvor restauranten skriver sit kort. Har de allerede et abonnement, kommer de til siden, hvor de kan skifte kort eller stoppe. */
-export async function subscriptionLink(place: Place, origin: string): Promise<string | null> {
+// Momsen på 25 % findes én gang hos Stripe og bruges på alle regninger
+let moms: string | undefined;
+async function momsRate(s: Stripe): Promise<string> {
+  if (moms) return moms;
+  const found = (await s.taxRates.list({ active: true, limit: 100 })).data.find((r) => r.percentage === MOMS * 100 && !r.inclusive && r.country === "DK");
+  moms = (found ?? (await s.taxRates.create({ display_name: "Moms", percentage: MOMS * 100, inclusive: false, country: "DK", jurisdiction: "DK", tax_type: "vat" }))).id;
+  return moms;
+}
+
+// Hver pakke er et produkt hos Stripe med et fast id, så regningen viser pakkens navn
+async function planProduct(s: Stripe, plan: PlanId): Promise<string> {
+  const id = `bynu_${plan}`;
+  const found = await s.products.retrieve(id).catch(() => null);
+  return (found ?? (await s.products.create({ id, name: `ByNu ${PLANS[plan].name}` }))).id;
+}
+
+// Det abonnement hos Stripe, der kører nu (eller venter på den første betaling)
+async function runningSubscription(s: Stripe, customer: string) {
+  const list = await s.subscriptions.list({ customer, status: "all", limit: 10 });
+  return list.data.filter((x) => x.status === "active" || x.status === "trialing").sort((a, b) => b.created - a.created)[0] ?? null;
+}
+
+/**
+ * Restauranten vælger en pakke. Uden pakke kommer de til Stripe og skriver deres kort; i den gratis periode trækkes
+ * der først penge 1. februar 2027. Har de allerede en pakke, skiftes den med det samme fra næste regning.
+ * Uden plan kommer de til siden, hvor de kan skifte kort eller stoppe.
+ */
+export async function subscriptionLink(place: Place, origin: string, plan?: PlanId): Promise<string | null> {
   const s = stripe();
   if (!s) return null;
   let sub = await store.getSubscription(place.slug);
-  if (sub && subscriptionState(sub) !== "none") return billingLink(sub.customer, origin);
+  const chosen = chosenPlan(sub);
+  if (sub && (!plan || chosen === plan)) return billingLink(sub.customer, origin);
+  if (!plan) return null;
+  const price = { currency: "dkk", unit_amount: PLANS[plan].kr * 100, recurring: { interval: "month" as const }, product: await planProduct(s, plan) };
+  const running = sub && chosen ? await runningSubscription(s, sub.customer) : null;
+  if (sub && running) {
+    await s.subscriptions.update(running.id, {
+      items: [{ id: running.items.data[0].id, price_data: price, tax_rates: [await momsRate(s)] }],
+      metadata: { sted: place.slug, pakke: plan },
+      proration_behavior: "none",
+    });
+    await store.saveSubscription(place.slug, { ...sub, status: running.status, plan });
+    return `${origin}/panel?abonnement=skiftet`;
+  }
   if (!sub) {
     const customer = await s.customers.create({ name: place.name, metadata: { sted: place.slug } });
     sub = { customer: customer.id };
     await store.saveSubscription(place.slug, sub);
   }
+  // Stripe skal have mindst to døgn til den første betaling
+  const wait = FIRST_CHARGE - Date.now() / 1000 > 2 * 86400;
   const session = await s.checkout.sessions.create({
     mode: "subscription",
     customer: sub.customer,
     locale: "da",
-    line_items: [
-      {
-        quantity: 1,
-        price_data: { currency: "dkk", unit_amount: Math.round(monthlyKr() * 100), recurring: { interval: "month" }, product_data: { name: `ByNu abonnement · ${place.name}` } },
-      },
-    ],
-    subscription_data: { metadata: { sted: place.slug } },
+    line_items: [{ quantity: 1, price_data: price, tax_rates: [await momsRate(s)] }],
+    subscription_data: { metadata: { sted: place.slug, pakke: plan }, ...(wait && { trial_end: FIRST_CHARGE }) },
     success_url: `${origin}/api/panel/abonnement?tjek=1`,
     cancel_url: `${origin}/panel?abonnement=fortrudt`,
   });
@@ -177,7 +215,7 @@ export async function billingLink(customer: string, origin: string): Promise<str
   return session.url;
 }
 
-/** Spørger Stripe, hvordan det står med stedets abonnement, og gemmer svaret */
+/** Spørger Stripe, hvordan det står med stedets pakke, og gemmer svaret */
 export async function checkSubscription(slug: string): Promise<SubscriptionState> {
   const s = stripe();
   const sub = await store.getSubscription(slug).catch(() => null);
@@ -186,12 +224,39 @@ export async function checkSubscription(slug: string): Promise<SubscriptionState
   const list = await s.subscriptions.list({ customer: sub.customer, status: "all", limit: 10 });
   // Det nyeste abonnement, der ikke er opgivet halvvejs, tæller
   const latest = list.data.filter((x) => x.status !== "incomplete_expired").sort((a, b) => b.created - a.created)[0];
-  const next = { customer: sub.customer, ...(latest && { status: latest.status }) };
-  if (next.status !== sub.status) await store.saveSubscription(slug, next);
+  const plan = latest?.metadata?.pakke;
+  const next = { customer: sub.customer, ...(latest && { status: latest.status }), ...(isPlanId(plan) && { plan }) };
+  if (next.status !== sub.status || next.plan !== sub.plan) await store.saveSubscription(slug, next);
   return subscriptionState(next);
+}
+
+/** En ekstra besked til følgerne, når de gratis er brugt: 29 kr. plus moms på næste regning. false = ingen pakke med kort. */
+export async function chargeExtraPush(slug: string): Promise<boolean> {
+  const s = stripe();
+  const sub = await store.getSubscription(slug).catch(() => null);
+  if (!s || !sub || !chosenPlan(sub)) return false;
+  const running = await runningSubscription(s, sub.customer);
+  if (!running) return false;
+  await s.invoiceItems.create({
+    customer: sub.customer,
+    subscription: running.id,
+    currency: "dkk",
+    amount: PUSH_KR * 100,
+    description: "Ekstra besked til følgerne",
+    tax_rates: [await momsRate(s)],
+  });
+  return true;
 }
 
 /** Det, panelet viser, uden at spørge Stripe */
 export async function storedSubscriptionState(slug: string): Promise<SubscriptionState> {
   return subscriptionState(await store.getSubscription(slug).catch(() => null), Boolean(stripe()));
+}
+
+/** Det, panelet viser om pakken og beskederne til følgerne */
+export async function planSummary(slug: string, state: SubscriptionState): Promise<PlanSummary> {
+  const today = todayInCopenhagen();
+  const [sub, use] = await Promise.all([store.getSubscription(slug).catch(() => null), store.getPushUse(slug).catch(() => null)]);
+  const plan = activePlan(sub, today);
+  return { state, chosen: chosenPlan(sub), plan, free: inFreePeriod(today), pushLeft: freePushLeft(plan, use, today) };
 }

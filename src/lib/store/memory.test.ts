@@ -24,11 +24,13 @@ describe("kundedata", () => {
 });
 
 describe("følgere", () => {
-  it("giver kun besked om rester til dem, der har sagt ja", async () => {
+  it("husker hver telefon én gang og glemmer den, når den stopper", async () => {
     const sub = (n: string) => ({ endpoint: `https://push.example/${n}`, keys: { p256dh: "p", auth: "a" } });
     await store.follow("proevepizza", sub("a"));
-    await store.follow("proevepizza", sub("b"), true);
-    expect((await store.listFollowers("proevepizza")).length).toBe(2);
-    expect((await store.listFollowers("proevepizza", { leftovers: true })).map((s) => s.endpoint)).toEqual(["https://push.example/b"]);
+    await store.follow("proevepizza", sub("b"));
+    await store.follow("proevepizza", sub("b"));
+    expect((await store.listFollowers("proevepizza")).map((s) => s.endpoint)).toEqual(["https://push.example/a", "https://push.example/b"]);
+    await store.unfollow("proevepizza", "https://push.example/a");
+    expect((await store.listFollowers("proevepizza")).map((s) => s.endpoint)).toEqual(["https://push.example/b"]);
   });
 });

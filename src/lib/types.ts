@@ -1,3 +1,5 @@
+import type { PlanId } from "./plans";
+
 // Ugedage som i Danmark: 0 = mandag ... 6 = søndag
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -58,11 +60,11 @@ export type Place = {
   extraWaitMinutes: number; // "travlt"-knappen i panelet
   busyUntil?: string; // "HH:MM", når "travlt" slukker af sig selv
   news?: PlaceNews; // dagens tilbud, kun hvis det er skrevet i dag
-  lastChance?: LastChance; // halv pris på rester til lukketid
   chef?: Chef; // Mød kokken
   demo?: boolean;
   member?: boolean; // stedet har sagt ja til AssensNu og har en kode til panelet
   onlinePay?: boolean; // kunderne kan betale med MobilePay og kort gennem stedets egen Stripe-konto
+  plan?: PlanId; // den pakke, stedet har lige nu. Uden Fuld pakke kan der ikke bestilles takeaway.
 };
 
 // Lukket fra og med from til og med to, fx { from: "2026-12-24", to: "2026-12-26", note: "Jul" }
@@ -70,8 +72,6 @@ export type ClosedPeriod = { from: string; to: string; note?: string };
 
 // Restauranten skriver det i panelet, og følgerne får det som besked på telefonen
 // sentAt er ISO. Med pris kan tilbuddet bestilles. wasPrice er normalprisen, som vises overstreget.
-// Sidste chance før lukketid: retterne til halv pris, og hvornår det slutter (ISO)
-export type LastChance = { itemIds: string[]; until: string };
 
 // Mød kokken: hvem står bag, et par linjer, og hvornår billedet sidst blev skiftet (ISO). Uden photoAt er der intet billede.
 export type Chef = { name: string; text: string; photoAt?: string };
@@ -88,7 +88,7 @@ export type OrderLine = {
   size?: string;
   extras?: string[];
   person?: string; // ved fællesbestilling: hvem retten er til
-  halfPrice?: boolean; // bestilt til halv pris under "Sidste chance"
+  halfPrice?: boolean; // gamle ordrer fra "Sidste chance", som ikke findes længere
 };
 
 export type Order = {

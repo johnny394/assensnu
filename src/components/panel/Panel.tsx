@@ -8,7 +8,7 @@ import { kr, longDate, telLink } from "@/lib/format";
 import { choiceText } from "@/lib/menu-options";
 import { CAMPSITE } from "@/lib/orders";
 import { townName } from "@/lib/postcodes";
-import { copenhagenNow, openStatus, todayInCopenhagen, toTime } from "@/lib/hours";
+import { copenhagenNow, todayInCopenhagen, toTime } from "@/lib/hours";
 import { startLater } from "@/lib/later";
 import type { Booking, Order, Place } from "@/lib/types";
 import { DeliveryEditor, HoursEditor, MenuEditor } from "./DetailsEditors";
@@ -16,15 +16,17 @@ import { isClosedOn } from "@/lib/closed-days";
 import { ChefBox } from "./ChefBox";
 import { PanelPushBox } from "./PanelPushBox";
 import { OnlinePayBox } from "./OnlinePayBox";
-import type { OnlinePayState, SubscriptionState } from "@/lib/payment";
+import type { OnlinePayState } from "@/lib/payment";
+import { PLANS, type PlanSummary } from "@/lib/plans";
+import { PanelEvents } from "./PanelEvents";
 import { SubscriptionBox } from "./SubscriptionBox";
 import { StatsTab } from "./StatsTab";
 import { ClosedDaysBox } from "./ClosedDaysBox";
-import { LastChanceBox, NewsBox, WaitBar } from "./LiveBoxes";
+import { NewsBox, WaitBar } from "./LiveBoxes";
 import { useAlarm } from "./useAlarm";
 import { SITE } from "@/lib/site";
 
-type Data = { place: Place; orders: Order[]; bookings: Booking[]; followers: number | null; onlinePay: OnlinePayState; subscription: { state: SubscriptionState; kr: number } };
+type Data = { place: Place; orders: Order[]; bookings: Booking[]; followers: number | null; onlinePay: OnlinePayState; subscription: PlanSummary };
 type Tab = "orders" | "bookings" | "stats" | "settings";
 
 async function post(url: string, body: unknown) {
@@ -378,20 +380,23 @@ function Settings({ place: fromServer, followers, onlinePay, subscription, pushK
     onChange();
   };
 
+  // Takeaway, levering og online betaling er kun med i Fuld pakke
+  const orders = PLANS[fromServer.plan ?? "fuld"].orders;
+
   return (
     <div className="space-y-3">
       <PanelPushBox publicKey={pushKey} />
-      <OnlinePayBox state={onlinePay} />
-      <SubscriptionBox state={subscription.state} kr={subscription.kr} />
-      <NewsBox place={fromServer} followers={followers} onChange={onChange} />
-      <LastChanceBox place={fromServer} open={openStatus(fromServer).state === "open"} onChange={onChange} />
+      {orders && <OnlinePayBox state={onlinePay} />}
+      <SubscriptionBox summary={subscription} />
+      <NewsBox place={fromServer} followers={followers} push={{ left: subscription.pushLeft, canPay: !!subscription.chosen }} onChange={onChange} />
+      {PLANS[fromServer.plan ?? "fuld"].events && <PanelEvents venue={fromServer.name} />}
       <div className="rounded-3xl bg-surface px-5 py-4">
         <p className="text-lg font-bold">Det, kunderne ser</p>
         {saved && <p role="status" className="mt-1 font-bold text-go">Gemt. Kunderne kan se det nu.</p>}
         <div className="mt-3 space-y-2">
           <EditButton label="Telefon og åbningstider" missing={!place.phone || place.hours.length === 0} onClick={() => setEditing("hours")} />
           <EditButton label="Menukort" missing={place.menu.length === 0} onClick={() => setEditing("menu")} />
-          <EditButton label={place.delivery ? `Levering · ${kr(place.delivery.fee)}` : "Levering · slået fra"} missing={false} onClick={() => setEditing("delivery")} />
+          {orders && <EditButton label={place.delivery ? `Levering · ${kr(place.delivery.fee)}` : "Levering · slået fra"} missing={false} onClick={() => setEditing("delivery")} />}
         </div>
       </div>
       {editing && (() => {
@@ -412,7 +417,11 @@ function Settings({ place: fromServer, followers, onlinePay, subscription, pushK
       <ChefBox place={fromServer} onChange={onChange} />
 
       <div className="rounded-3xl bg-surface px-5 py-2">
-        <Toggle label="Tag imod bestillinger" on={place.acceptsOrders} onClick={() => save({ acceptsOrders: !place.acceptsOrders }, (p) => ({ ...p, acceptsOrders: !p.acceptsOrders }))} />
+        {orders ? (
+          <Toggle label="Tag imod bestillinger" on={place.acceptsOrders} onClick={() => save({ acceptsOrders: !place.acceptsOrders }, (p) => ({ ...p, acceptsOrders: !p.acceptsOrders }))} />
+        ) : (
+          <p className="py-3 text-lg text-ink-soft">Takeaway, levering og online betaling er med i Fuld pakke.</p>
+        )}
         <Toggle label="Lukket i dag" hint={isClosedOn(place.closedDays, todayInCopenhagen()) ? "I dag er en lukkedag, I har sat herunder" : "Vises som lukket indtil i morgen"} on={!!place.closedToday} onClick={() => save({ closedToday: !place.closedToday }, (p) => ({ ...p, closedToday: !p.closedToday }))} />
       </div>
       <ClosedDaysBox place={fromServer} onChange={onChange} />

@@ -11,6 +11,7 @@ export type AssensEvent = {
   venue: string; // fx Tobaksgaarden
   text?: string;
   link?: string; // billetter eller mere info
+  placeSlug?: string; // lagt ud af et sted i dets panel (Event eller Fuld pakke). Uden er det lagt ud i admin.
 };
 
 export const EVENT_TEXT_MAX = 400;

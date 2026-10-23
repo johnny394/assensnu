@@ -1,5 +1,6 @@
 import { createHash, randomInt } from "node:crypto";
 import { cleanPhone, type Result } from "./orders";
+import type { PlanId } from "./plans";
 import type { DeliverySettings, MenuCategory, OpeningPeriod } from "./types";
 
 // Det, Johnny ser og retter i sit eget panel
@@ -19,6 +20,7 @@ export type AdminPlace = {
   menu: MenuCategory[];
   delivery: DeliverySettings | null;
   subscription?: string; // Stripes status for abonnementet, fx "active"
+  plan?: PlanId; // den pakke, stedet har valgt
 };
 
 export type PlaceBasics = {
