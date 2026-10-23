@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bynuFee, monthlyKr, shownToPlace, subscriptionState } from "./payment";
+import { bynuFee, monthlyKr, shownToPlace, stripeProfile, subscriptionState } from "./payment";
 
 describe("online betaling", () => {
   it("viser kun ordren for restauranten, når kunden har betalt", () => {
@@ -31,5 +31,21 @@ describe("online betaling", () => {
     expect(monthlyKr(undefined)).toBe(299);
     expect(monthlyKr("349")).toBe(349);
     expect(monthlyKr("x")).toBe(299);
+  });
+
+  it("udfylder adresse, telefon og beskrivelse til Stripe på forhånd", () => {
+    const p = stripeProfile({ name: "Pizza Nord", slug: "pizza-nord", address: "Østergade 12, 5610 Assens", phone: "12 34 56 78", cuisines: ["Pizza", "Kebab"] }, "https://assens.bynu.dk");
+    expect(p).toEqual({
+      name: "Pizza Nord",
+      url: "https://assens.bynu.dk/sted/pizza-nord",
+      mcc: "5812",
+      product_description: "Restaurant (pizza, kebab). Kunderne bestiller takeaway og betaler online gennem ByNu.",
+      support_phone: "+4512345678",
+      support_address: { line1: "Østergade 12", postal_code: "5610", city: "Assens", country: "DK" },
+    });
+    const bare = stripeProfile({ name: "A", slug: "a", address: "Havnen", phone: "123", cuisines: [] }, "https://x.dk");
+    expect(bare).not.toHaveProperty("support_phone");
+    expect(bare).not.toHaveProperty("support_address");
+    expect(bare.product_description).toBe("Restaurant. Kunderne bestiller takeaway og betaler online gennem ByNu.");
   });
 });
