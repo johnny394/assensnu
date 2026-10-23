@@ -5,6 +5,7 @@ import { useState } from "react";
 import { kr } from "@/lib/format";
 import { choiceKey, hasOptions, parseKey, priceChoice } from "@/lib/menu-options";
 import type { MenuItem, MenuOptions, Place } from "@/lib/types";
+import { useDetective } from "./Allergy";
 import { ChoiceSheet } from "./ChoiceSheet";
 import { useCart } from "./useCart";
 import { useActiveGroup } from "./useGroup";
@@ -26,6 +27,7 @@ export function Menu({ place }: { place: Place }) {
   const group = useActiveGroup(place.slug);
   // På engelsk og tysk vises kun teksterne oversat. Kurven bruger stadig de danske navne.
   const { lang, t } = useLang();
+  const detective = useDetective(place.slug);
 
   return (
     <>
@@ -73,7 +75,10 @@ export function Menu({ place }: { place: Place }) {
                   {canOrder && !item.soldOut && !withOptions &&
                     (quantity === 0 ? (
                       <button
-                        onClick={() => change(item.id, 1)}
+                        onClick={() => {
+                          change(item.id, 1);
+                          detective.check(item);
+                        }}
                         aria-label={t("Læg {navn} i kurven", { navn: t(item.name) })}
                         className="grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 border-ink text-2xl font-bold text-ink active:scale-95"
                       >
@@ -104,11 +109,13 @@ export function Menu({ place }: { place: Place }) {
           onClose={() => setChoosing(null)}
           onAdd={(size, extras) => {
             change(choiceKey({ itemId: choosing.item.id, size, extras }), 1);
+            if (inCart(choosing.item.id) === 0) detective.check(choosing.item);
             setChoosing(null);
           }}
         />
       )}
 
+      {detective.toast}
       {canOrder && count > 0 && (
         <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 px-4">
           <Link

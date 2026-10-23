@@ -4,7 +4,7 @@ import type { PushUse } from "../plans";
 import type { AssensEvent } from "../events";
 import type { ExportBooking, ExportOrder } from "../export";
 import type { BookingFact, OrderFact } from "../stats";
-import type { Booking, BookingStatus, CartItem, Chef, ClosedPeriod, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderPayment, OrderStatus, Place } from "../types";
+import type { Booking, BookingStatus, CartItem, Chef, ClosedPeriod, DeliverySettings, GroupEntry, GroupOrder, MenuCategory, OpeningPeriod, Order, OrderPayment, OrderStatus, Place, PlaceVibe } from "../types";
 
 export type NewOrder = Omit<Order, "id" | "number" | "status" | "createdAt" | "readyAt">;
 export type NewBooking = Omit<Booking, "id" | "status" | "createdAt" | "suggestedTime">;
@@ -61,6 +61,12 @@ export type Store = {
   /** Hvor mange beskeder stedet har sendt til følgerne i måneden */
   getPushUse(slug: string): Promise<PushUse | null>;
   savePushUse(slug: string, use: PushUse): Promise<void>;
+
+  /** Kundens mikro-tags på en ordre. Giver false, hvis ordren allerede er bedømt. */
+  saveOrderTags(id: string, tags: string[]): Promise<boolean>;
+  /** Bedømte ordrer hos stedet siden sinceIso */
+  recentTags(slug: string, sinceIso: string): Promise<{ tags: string[]; createdAt: string }[]>;
+  saveVibe(slug: string, vibe: PlaceVibe): Promise<void>;
 
   /** Hvor mange bestillinger et telefonnummer har sendt siden et tidspunkt, på tværs af steder */
   countOrdersByPhone(phone: string, sinceIso: string): Promise<number>;

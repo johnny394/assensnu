@@ -208,6 +208,13 @@ async function runChecks(): Promise<Check[]> {
       ? { ok: false, text: "Databasen kan ikke tælle beskeder til følgerne eller gemme stedernes egne events endnu.", fix: "Kør tilfoej-pakker.sql i Supabase under SQL Editor. Den sletter ingenting." }
       : { ok: true, text: "Databasen kan tælle beskeder til følgerne og gemme stedernes egne events." },
   );
+  const tags = await createClient(url, key, { auth: { persistSession: false } }).from("orders").select("tags").limit(1);
+  const stemning = await createClient(url, key, { auth: { persistSession: false } }).from("places").select("vibe").limit(1);
+  checks.push(
+    tags.error || stemning.error
+      ? { ok: false, text: "Databasen kan ikke gemme kundernes mikro-tags og byens stemning endnu.", fix: "Kør tilfoej-stemning.sql i Supabase under SQL Editor. Den sletter ingenting." }
+      : { ok: true, text: "Databasen kan gemme kundernes mikro-tags og byens stemning." },
+  );
   const stripeKey = process.env.STRIPE_SECRET_KEY?.trim();
   checks.push(
     !stripeKey
@@ -224,10 +231,10 @@ async function runChecks(): Promise<Check[]> {
   );
   checks.push(
     process.env.ANTHROPIC_API_KEY?.trim()
-      ? { ok: true, text: "ANTHROPIC_API_KEY er sat, så menuen kan oversættes til engelsk og tysk." }
+      ? { ok: true, text: "ANTHROPIC_API_KEY er sat, så menuen kan oversættes, og Mad-oraklet og allergidetektiven bruger AI." }
       : {
           ok: false,
-          text: "Menuen kan ikke oversættes til engelsk og tysk, fordi ANTHROPIC_API_KEY mangler.",
+          text: "Menuen kan ikke oversættes til engelsk og tysk, og Mad-oraklet søger kun på ord, fordi ANTHROPIC_API_KEY mangler.",
           fix: "Lav en nøgle på console.anthropic.com under API Keys, og tilføj den som ANTHROPIC_API_KEY på Vercel. Tryk Redeploy bagefter.",
         },
   );

@@ -13,6 +13,7 @@ import { townName } from "@/lib/postcodes";
 import type { OrderLine, Place } from "@/lib/types";
 import { useCart } from "./useCart";
 import { hostKey, leaveGroup } from "./useGroup";
+import { noteKey, readStored, writeStored } from "./useStored";
 import { useLang } from "./useLang";
 import { useNow } from "./useNow";
 
@@ -60,7 +61,10 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
       setBoat(saved.boat ?? "");
       setPitch(saved.pitch ?? "");
     } catch {}
-  }, []);
+    // Fra allergidetektiven: "Uden fløde, tak" står allerede i beskeden til køkkenet
+    const draft = readStored<string>(noteKey(place.slug), "");
+    if (typeof draft === "string" && draft) setNote(draft);
+  }, [place.slug]);
 
   // Fra "Spis før koncerten": maden skal være klar til et bestemt tidspunkt
   const [wantedPickup, setWantedPickup] = useState<string | null>(null);
@@ -123,6 +127,7 @@ export function Checkout({ place, group }: { place: Place; group?: { id: string;
     try {
       localStorage.setItem(CUSTOMER_KEY, JSON.stringify({ name, phone, address, postcode: zip || postcode, jetty, boat, pitch }));
     } catch {}
+    writeStored(noteKey(place.slug), null);
     // Til Stripe for at betale. Kurven bliver liggende, til betalingen er gået igennem, så den er der, hvis kunden fortryder.
     if (data.payUrl) {
       window.location.href = data.payUrl;

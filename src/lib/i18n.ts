@@ -160,6 +160,7 @@ export function placeTexts(place: Place): string[] {
     place.description,
     place.news?.text,
     place.chef?.text,
+    place.vibe?.text,
     ...place.cuisines,
     ...place.menu.flatMap((c) => [
       c.name,
