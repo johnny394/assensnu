@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { copenhagenNow, openStatus, pickupOptions } from "@/lib/hours";
-import { clockTime } from "@/lib/live";
 import type { T } from "@/lib/i18n";
 import { NEARBY } from "@/lib/site";
 import type { Place } from "@/lib/types";
@@ -132,15 +131,6 @@ export function PlaceBrowser({ places, title, languages }: { places: Place[]; ti
                     {p.acceptsOrders && <span className="font-bold text-stamp"> · {t("Bestil her")}</span>}
                     {p.acceptsOrders && now && <WaitText place={p} now={now} />}
                   </p>
-                  {p.lastChance && (
-                    <p className="mt-1 text-base">
-                      <span className="mr-1.5 bg-stamp px-1.5 py-0.5 text-sm font-black uppercase tracking-[0.08em] text-white">{t("Sidste chance")}</span>
-                      {t(p.lastChance.itemIds.length === 1 ? "Halv pris på 1 ret til kl. {tid}" : "Halv pris på {n} retter til kl. {tid}", {
-                        n: p.lastChance.itemIds.length,
-                        tid: clockTime(p.lastChance.until),
-                      })}
-                    </p>
-                  )}
                   {p.news && (
                     <p className="mt-1 line-clamp-2 text-base">
                       <span className="mr-1.5 bg-buoy px-1.5 py-0.5 text-sm font-black uppercase tracking-[0.08em]">{t("Tilbud")}</span>

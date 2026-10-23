@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { kr } from "@/lib/format";
-import { lastChancePrice } from "@/lib/last-chance";
 import { choiceKey, hasOptions, parseKey, priceChoice } from "@/lib/menu-options";
 import type { MenuItem, MenuOptions, Place } from "@/lib/types";
 import { ChoiceSheet } from "./ChoiceSheet";
@@ -25,7 +24,6 @@ export function Menu({ place }: { place: Place }) {
   const inCart = (itemId: string) => priced.filter((l) => l.itemId === itemId).reduce((a, l) => a + l.quantity, 0);
   const canOrder = place.acceptsOrders;
   const group = useActiveGroup(place.slug);
-  const half = new Set(place.lastChance?.itemIds);
   // På engelsk og tysk vises kun teksterne oversat. Kurven bruger stadig de danske navne.
   const { lang, t } = useLang();
 
@@ -51,13 +49,7 @@ export function Menu({ place }: { place: Place }) {
                       ) : (
                         <span className="whitespace-nowrap font-bold tabular-nums">
                           {fromPrice && <span className="font-normal">{t("fra ")}</span>}
-                          {half.has(item.id) ? (
-                            <>
-                              <s className="font-normal text-ink-soft">{kr(item.price)}</s> <span className="text-stamp">{kr(lastChancePrice(item.price))}</span>
-                            </>
-                          ) : (
-                            kr(item.price)
-                          )}
+                          {kr(item.price)}
                         </span>
                       )}
                     </p>
@@ -109,7 +101,6 @@ export function Menu({ place }: { place: Place }) {
         <ChoiceSheet
           item={choosing.item}
           options={choosing.options}
-          halfPrice={half.has(choosing.item.id)}
           onClose={() => setChoosing(null)}
           onAdd={(size, extras) => {
             change(choiceKey({ itemId: choosing.item.id, size, extras }), 1);

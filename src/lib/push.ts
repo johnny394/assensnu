@@ -52,11 +52,10 @@ export async function notify(target: PushTarget, message: (t: T) => PushMessage)
 }
 
 // Dagens tilbud til alle, der følger stedet. Telefoner, der har sagt nej tak, glemmes.
-// Med leftovers kun dem, der har sagt ja til besked om rester til halv pris.
-export async function notifyFollowers(slug: string, message: PushMessage, only?: { leftovers: true }) {
+export async function notifyFollowers(slug: string, message: PushMessage) {
   if (!setup()) return;
-  const followers = await store.listFollowers(slug, only);
-  const payload = JSON.stringify({ ...message, tag: `${only ? "rester" : "nyt"}-${slug}` });
+  const followers = await store.listFollowers(slug);
+  const payload = JSON.stringify({ ...message, tag: `nyt-${slug}` });
   await Promise.all(
     followers.map(async (subscription) => {
       try {

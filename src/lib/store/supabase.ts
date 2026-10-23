@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
-import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import { shownToPlace, type Subscription } from "../payment";
 import type { Booking, Chef, ClosedPeriod, GroupEntry, GroupOrder, MenuCategory, Order, OrderPayment, Place, Weekday } from "../types";
@@ -32,7 +31,6 @@ type PlaceRow = {
   news_at?: string | null;
   news_price?: number | null;
   news_was_price?: number | null;
-  last_chance?: { itemIds: string[]; until: string } | null;
   chef?: Chef | null;
   closed_on: string | null;
   closed_days?: ClosedPeriod[] | null;
@@ -48,14 +46,14 @@ type PlaceRow = {
 };
 
 const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, description, takeaway, dine_in,
-  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, last_chance, chef, closed_on, closed_days, online_pay, panel_pin_hash,
+  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, chef, closed_on, closed_days, online_pay, panel_pin_hash,
   opening_hours (day, open, close),
   menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))`;
 
 // Indtil tilfoej-levering.sql, tilfoej-tilvalg.sql, tilfoej-folg.sql, tilfoej-dagens-ret.sql, tilfoej-tilbud.sql og tilfoej-sidste-chance.sql er kørt, findes de nyere kolonner ikke.
 // Så spørger vi uden dem, så siden virker som før, bare uden levering, tilvalg, dagens tilbud og travlt-tid.
 type Res = { data: unknown; error: unknown };
-const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["last_chance"], ["chef"], ["closed_days"], ["online_pay"], ["subscription"]];
+const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["chef"], ["closed_days"], ["online_pay"], ["subscription"]];
 const mentions = (error: unknown, column: string) => new RegExp(`\\b${column}\\b`).test(String((error as { message?: string } | null)?.message));
 async function withFallback(select: string, run: (select: string) => PromiseLike<Res>): Promise<Res> {
   let res = await run(select);
@@ -94,7 +92,6 @@ function toPlace(r: PlaceRow): Place {
     prepMinutes: r.prep_minutes,
     ...activeWait(r.extra_wait_minutes, r.busy_until ?? null),
     news: todaysNews(r.news, r.news_at, { price: r.news_price, wasPrice: r.news_was_price }),
-    lastChance: activeLastChance(r.last_chance),
     chef: r.chef ?? undefined,
     closedToday: r.closed_on === todayInCopenhagen() || isClosedOn(r.closed_days ?? undefined, todayInCopenhagen()),
     closedDays: currentClosed(r.closed_days, todayInCopenhagen()),
@@ -527,9 +524,6 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       }
       check(res);
     },
-    async setLastChance(slug, value) {
-      check(await db.from("places").update({ last_chance: value }).eq("slug", slug));
-    },
     async setClosedDays(slug, periods) {
       check(await db.from("places").update({ closed_days: periods }).eq("slug", slug));
     },
@@ -554,22 +548,14 @@ export function supabaseStore(url: string, serviceKey: string): Store {
       const row = check(await db.from("places").select("chef_photo").eq("slug", slug).maybeSingle()) as { chef_photo: string | null } | null;
       return row?.chef_photo ?? null;
     },
-    async follow(slug, subscription, leftovers = false) {
-      const row = { place_slug: slug, endpoint: subscription.endpoint, push: subscription, leftovers };
-      let res = await db.from("followers").upsert(row);
-      // Uden tilfoej-rester-besked.sql kan man stadig følge, bare uden besked om rester
-      if (mentions(res.error, "leftovers") && !leftovers) res = await db.from("followers").upsert({ ...row, leftovers: undefined });
-      check(res);
+    async follow(slug, subscription) {
+      check(await db.from("followers").upsert({ place_slug: slug, endpoint: subscription.endpoint, push: subscription }));
     },
     async unfollow(slug, endpoint) {
       check(await db.from("followers").delete().eq("place_slug", slug).eq("endpoint", endpoint));
     },
-    async listFollowers(slug, only) {
-      let query = db.from("followers").select("push").eq("place_slug", slug);
-      if (only?.leftovers) query = query.eq("leftovers", true);
-      const res = await query;
-      if (only?.leftovers && mentions(res.error, "leftovers")) return [];
-      const rows = check(res) as { push: PushSubscription }[];
+    async listFollowers(slug) {
+      const rows = check(await db.from("followers").select("push").eq("place_slug", slug)) as { push: PushSubscription }[];
       return rows.map((r) => r.push);
     },
 

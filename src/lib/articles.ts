@@ -48,7 +48,7 @@ export const ARTICLES: Article[] = [
           { title: "Bestillinger direkte til dig", text: "Bestillingen dukker op på din tablet eller telefon med lyd. Du trykker Accepter og skriver, hvornår maden er klar. Kunden betaler online med MobilePay eller kort, eller hos dig." },
           { title: "Du bestemmer selv", text: "Du skriver selv menukort, priser, åbningstider og lukkedage. Er der travlt, skruer du op for ventetiden med ét tryk." },
           { title: "Bordbestilling", text: "Gæsterne beder om et bord, og du siger ja eller nej." },
-          { title: "Nå dine faste gæster", text: "Læg dagens tilbud ud, så får de gæster, der følger dig, en besked på telefonen. Har du mad tilbage sidst på aftenen, kan du sælge den til halv pris." },
+          { title: "Nå dine faste gæster", text: "Læg dagens tilbud ud, så får de gæster, der følger dig, en besked på telefonen." },
           { title: "Levering, havn og camping", text: "Bringer du selv ud, sætter du dine egne postnumre og dit eget gebyr. Du kan også levere til bådene i havnen og til gæsterne på campingpladsen." },
           { title: "Se dine tal", text: "Se hvor mange bestillinger du har haft, hvad du har solgt, og hvad gæsterne køber mest." },
           { title: "Ingen binding", text: "Du kan stoppe, når du vil. Der er ingen opsigelsesperiode." },

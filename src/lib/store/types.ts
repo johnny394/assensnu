@@ -77,18 +77,15 @@ export type Store = {
 
   /** Dagens tilbud. Erstatter dagens tidligere tekst. */
   postNews(slug: string, text: string, price: number | null, wasPrice: number | null): Promise<void>;
-  /** Sidste chance: retter til halv pris indtil until. null stopper det. */
-  setLastChance(slug: string, value: { itemIds: string[]; until: string } | null): Promise<void>;
   /** Lukkedage sat på forhånd. Tom liste fjerner dem. */
   setClosedDays(slug: string, periods: ClosedPeriod[]): Promise<void>;
   /** Mød kokken. photo: undefined beholder billedet, null fjerner det. chef null fjerner det hele. */
   setChef(slug: string, chef: Omit<Chef, "photoAt"> | null, photo: string | null | undefined): Promise<void>;
   /** Billedet som data-URL, eller null */
   getChefPhoto(slug: string): Promise<string | null>;
-  /** leftovers: vil også have besked, når stedet sætter rester til halv pris */
-  follow(slug: string, subscription: PushSubscription, leftovers?: boolean): Promise<void>;
+  follow(slug: string, subscription: PushSubscription): Promise<void>;
   unfollow(slug: string, endpoint: string): Promise<void>;
-  listFollowers(slug: string, only?: { leftovers: true }): Promise<PushSubscription[]>;
+  listFollowers(slug: string): Promise<PushSubscription[]>;
 
   /** Fællesbestilling. Koderne (hostKey, entryKey) gemmes kun som fingeraftryk. */
   createGroup(slug: string, hostName: string, hostKey: string): Promise<GroupOrder>;

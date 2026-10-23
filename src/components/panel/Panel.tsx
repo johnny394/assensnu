@@ -8,7 +8,7 @@ import { kr, longDate, telLink } from "@/lib/format";
 import { choiceText } from "@/lib/menu-options";
 import { CAMPSITE } from "@/lib/orders";
 import { townName } from "@/lib/postcodes";
-import { copenhagenNow, openStatus, todayInCopenhagen, toTime } from "@/lib/hours";
+import { copenhagenNow, todayInCopenhagen, toTime } from "@/lib/hours";
 import { startLater } from "@/lib/later";
 import type { Booking, Order, Place } from "@/lib/types";
 import { DeliveryEditor, HoursEditor, MenuEditor } from "./DetailsEditors";
@@ -20,7 +20,7 @@ import type { OnlinePayState, SubscriptionState } from "@/lib/payment";
 import { SubscriptionBox } from "./SubscriptionBox";
 import { StatsTab } from "./StatsTab";
 import { ClosedDaysBox } from "./ClosedDaysBox";
-import { LastChanceBox, NewsBox, WaitBar } from "./LiveBoxes";
+import { NewsBox, WaitBar } from "./LiveBoxes";
 import { useAlarm } from "./useAlarm";
 import { SITE } from "@/lib/site";
 
@@ -384,7 +384,6 @@ function Settings({ place: fromServer, followers, onlinePay, subscription, pushK
       <OnlinePayBox state={onlinePay} />
       <SubscriptionBox state={subscription.state} kr={subscription.kr} />
       <NewsBox place={fromServer} followers={followers} onChange={onChange} />
-      <LastChanceBox place={fromServer} open={openStatus(fromServer).state === "open"} onChange={onChange} />
       <div className="rounded-3xl bg-surface px-5 py-4">
         <p className="text-lg font-bold">Det, kunderne ser</p>
         {saved && <p role="status" className="mt-1 font-bold text-go">Gemt. Kunderne kan se det nu.</p>}

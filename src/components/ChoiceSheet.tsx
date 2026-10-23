@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { kr } from "@/lib/format";
-import { lastChancePrice } from "@/lib/last-chance";
 import type { MenuItem, MenuOptions } from "@/lib/types";
 import { useLang } from "./useLang";
 
 // Vinduet, der kommer frem, når man trykker + på en ret med størrelser eller tilvalg
-export function ChoiceSheet({ item, options, halfPrice, onAdd, onClose }: {
+export function ChoiceSheet({ item, options, onAdd, onClose }: {
   item: MenuItem;
   options: MenuOptions;
-  halfPrice?: boolean; // sidste chance: hele linjen til halv pris
   onAdd: (size: string | undefined, extras: string[]) => void;
   onClose: () => void;
 }) {
@@ -29,11 +27,10 @@ export function ChoiceSheet({ item, options, halfPrice, onAdd, onClose }: {
     };
   }, [onClose]);
 
-  const full =
+  const price =
     item.price +
     (sizes.find((s) => s.name === size)?.extra ?? 0) +
     options.extras.filter((e) => extras.includes(e.name)).reduce((sum, e) => sum + e.price, 0);
-  const price = halfPrice ? lastChancePrice(full) : full;
   const toggle = (name: string) => setExtras((all) => (all.includes(name) ? all.filter((x) => x !== name) : [...all, name]));
 
   return (
@@ -96,7 +93,6 @@ export function ChoiceSheet({ item, options, halfPrice, onAdd, onClose }: {
         <div className="border-t border-line px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
           <button onClick={() => onAdd(size, extras)} className="w-full bg-stamp px-5 py-4 text-xl font-bold text-white">
             {t("Læg i kurven · {pris}", { pris: kr(price) })}
-            {halfPrice && <span className="font-normal">{t(" (halv pris)")}</span>}
           </button>
         </div>
       </div>

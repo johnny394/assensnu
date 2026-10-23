@@ -4,14 +4,13 @@ import { bookingWithoutCustomer, withoutCustomer } from "../export";
 import { createHash } from "node:crypto";
 import { currentClosed, isClosedOn } from "../closed-days";
 import { todayInCopenhagen } from "../hours";
-import { activeLastChance } from "../last-chance";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import { shownToPlace, type Subscription } from "../payment";
 import type { Booking, Chef, ClosedPeriod, GroupOrder, Order, Place, PlaceNews } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { leftovers?: boolean; createdAt?: string }>>; lastChance: Map<string, { itemIds: string[]; until: string }>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]>; stripe: Map<string, { account: string; ready: boolean }>; subscriptions: Map<string, Subscription> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { createdAt?: string }>>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]>; stripe: Map<string, { account: string; ready: boolean }>; subscriptions: Map<string, Subscription> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -31,7 +30,6 @@ const state: State = (g.__assensnu ??= {
   subscriptions: new Map(),
   followers: new Map(),
   groups: new Map(),
-  lastChance: new Map(),
   translations: new Map(),
   chefs: new Map(),
   events: [],
@@ -45,7 +43,6 @@ state.placePush ??= new Map();
 state.stripe ??= new Map();
 state.subscriptions ??= new Map();
 state.groups ??= new Map();
-state.lastChance ??= new Map();
 state.translations ??= new Map();
 state.chefs ??= new Map();
 state.events ??= [];
@@ -59,7 +56,6 @@ function withToday(place: Place): Place {
     ...place,
     ...activeWait(place.extraWaitMinutes, state.busyUntil.get(place.slug) ?? null),
     news: todaysNews(news?.text, news?.sentAt, news),
-    lastChance: activeLastChance(state.lastChance.get(place.slug)),
     chef: state.chefs.get(place.slug)?.chef,
     closedToday: state.closedOn.get(place.slug) === todayInCopenhagen() || isClosedOn(state.closedDays.get(place.slug), todayInCopenhagen()),
     closedDays: currentClosed(state.closedDays.get(place.slug), todayInCopenhagen()),
@@ -266,10 +262,6 @@ export const memoryStore: Store = {
   async setClosedDays(slug, periods) {
     state.closedDays.set(slug, periods);
   },
-  async setLastChance(slug, value) {
-    if (value) state.lastChance.set(slug, value);
-    else state.lastChance.delete(slug);
-  },
   async setChef(slug, chef, photo) {
     if (!chef) return void state.chefs.delete(slug);
     const old = state.chefs.get(slug);
@@ -280,15 +272,15 @@ export const memoryStore: Store = {
   async getChefPhoto(slug) {
     return state.chefs.get(slug)?.photo ?? null;
   },
-  async follow(slug, subscription, leftovers = false) {
+  async follow(slug, subscription) {
     if (!state.followers.has(slug)) state.followers.set(slug, new Map());
-    state.followers.get(slug)!.set(subscription.endpoint, { ...subscription, leftovers, createdAt: state.followers.get(slug)!.get(subscription.endpoint)?.createdAt ?? new Date().toISOString() });
+    state.followers.get(slug)!.set(subscription.endpoint, { ...subscription, createdAt: state.followers.get(slug)!.get(subscription.endpoint)?.createdAt ?? new Date().toISOString() });
   },
   async unfollow(slug, endpoint) {
     state.followers.get(slug)?.delete(endpoint);
   },
-  async listFollowers(slug, only) {
-    return [...(state.followers.get(slug)?.values() ?? [])].filter((f) => !only?.leftovers || f.leftovers).map(({ leftovers: _l, createdAt: _c, ...s }) => s); // eslint-disable-line @typescript-eslint/no-unused-vars
+  async listFollowers(slug) {
+    return [...(state.followers.get(slug)?.values() ?? [])].map(({ createdAt: _c, ...s }) => s); // eslint-disable-line @typescript-eslint/no-unused-vars
   },
 
   async createGroup(slug, hostName, hostKey) {
