@@ -5,7 +5,7 @@ import { todayInCopenhagen } from "../hours";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import { shownToPlace, type Subscription } from "../payment";
 import { withPlan, type PushUse } from "../plans";
-import type { Booking, Chef, ClosedPeriod, GroupEntry, GroupOrder, MenuCategory, Order, OrderPayment, Place, Weekday } from "../types";
+import type { Booking, Chef, ClosedPeriod, GroupEntry, GroupOrder, MenuCategory, Order, OrderPayment, Place, PlaceVibe, Weekday } from "../types";
 import type { AssensEvent } from "../events";
 import { withoutCustomer } from "../export";
 import { CITY } from "../site";
@@ -37,6 +37,7 @@ type PlaceRow = {
   closed_days?: ClosedPeriod[] | null;
   online_pay?: boolean;
   subscription?: Subscription | null;
+  vibe?: PlaceVibe | null;
   panel_pin_hash: string | null;
   opening_hours: { day: number; open: string; close: string }[];
   menu_categories: {
@@ -48,14 +49,14 @@ type PlaceRow = {
 };
 
 const PLACE_SELECT = `slug, name, cuisines, address, phone, website, facebook, description, takeaway, dine_in,
-  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, chef, closed_on, closed_days, online_pay, subscription, panel_pin_hash,
+  accepts_orders, accepts_bookings, delivery, prep_minutes, extra_wait_minutes, busy_until, news, news_at, news_price, news_was_price, chef, closed_on, closed_days, online_pay, subscription, vibe, panel_pin_hash,
   opening_hours (day, open, close),
   menu_categories (name, position, options, menu_items (id, name, description, price_kr, sold_out, position))`;
 
 // Indtil tilfoej-levering.sql, tilfoej-tilvalg.sql, tilfoej-folg.sql, tilfoej-dagens-ret.sql, tilfoej-tilbud.sql og tilfoej-sidste-chance.sql er kørt, findes de nyere kolonner ikke.
 // Så spørger vi uden dem, så siden virker som før, bare uden levering, tilvalg, dagens tilbud og travlt-tid.
 type Res = { data: unknown; error: unknown };
-const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["chef"], ["closed_days"], ["online_pay"], ["subscription"]];
+const NEWER_COLUMNS = [["delivery"], ["options"], ["busy_until", "news", "news_at"], ["news_price"], ["news_was_price"], ["chef"], ["closed_days"], ["online_pay"], ["subscription"], ["vibe"]];
 const mentions = (error: unknown, column: string) => new RegExp(`\\b${column}\\b`).test(String((error as { message?: string } | null)?.message));
 async function withFallback(select: string, run: (select: string) => PromiseLike<Res>): Promise<Res> {
   let res = await run(select);
@@ -95,6 +96,7 @@ function toPlace(r: PlaceRow): Place {
     ...activeWait(r.extra_wait_minutes, r.busy_until ?? null),
     news: todaysNews(r.news, r.news_at, { price: r.news_price, wasPrice: r.news_was_price }),
     chef: r.chef ?? undefined,
+    vibe: r.vibe ?? undefined,
     closedToday: r.closed_on === todayInCopenhagen() || isClosedOn(r.closed_days ?? undefined, todayInCopenhagen()),
     closedDays: currentClosed(r.closed_days, todayInCopenhagen()),
     demo: r.slug === "proevepizza" || undefined,
@@ -136,6 +138,7 @@ type OrderRow = {
   status: Order["status"];
   ready_at: string | null;
   payment?: OrderPayment | null;
+  tags?: string[] | null;
   created_at: string;
 };
 
@@ -154,6 +157,7 @@ const toOrder = (r: OrderRow): Order => ({
   status: r.status,
   readyAt: r.ready_at ?? undefined,
   ...(r.payment && { payment: r.payment }),
+  ...(Array.isArray(r.tags) && { tags: r.tags }),
   createdAt: r.created_at,
 });
 
@@ -413,6 +417,20 @@ export function supabaseStore(url: string, serviceKey: string): Store {
     },
     async savePushUse(slug, use) {
       check(await db.from("places").update({ push_used: use }).eq("slug", slug));
+    },
+
+    async saveOrderTags(id, tags) {
+      const rows = check(await db.from("orders").update({ tags }).eq("id", id).is("tags", null).select("id")) as unknown[];
+      return rows.length > 0;
+    },
+    async recentTags(slug, sinceIso) {
+      const res = await db.from("orders").select("tags, created_at").eq("place_slug", slug).gte("created_at", sinceIso).not("tags", "is", null).order("created_at", { ascending: false }).limit(500);
+      // Uden tilfoej-stemning.sql er der ingen tags
+      if (res.error) return [];
+      return (res.data as { tags: string[]; created_at: string }[]).map((r) => ({ tags: r.tags, createdAt: r.created_at }));
+    },
+    async saveVibe(slug, vibe) {
+      check(await db.from("places").update({ vibe }).eq("slug", slug));
     },
 
     async countOrdersByPhone(phone, sinceIso) {

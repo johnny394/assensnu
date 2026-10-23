@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { OrderStatusView } from "@/components/OrderStatusView";
 import { PlaceLang } from "@/components/PlaceLang";
+import { streetName } from "@/lib/badges";
 import { pushPublicKey } from "@/lib/push";
 import { store } from "@/lib/store";
 import { syncPayment } from "@/lib/stripe";
@@ -24,7 +25,7 @@ export default async function OrderStatusPage({ params }: { params: Promise<{ id
     <AppShell>
       <main className="mx-auto max-w-2xl px-5 pb-10 pt-6">
         <h1 className="mb-4 font-display text-[2.3rem] font-black leading-tight tracking-tight">{t("Tak for din bestilling")}</h1>
-        <OrderStatusView initial={order} placePhone={place?.phone} pushKey={pushPublicKey()} />
+        <OrderStatusView initial={order} placePhone={place?.phone} pushKey={pushPublicKey()} cuisines={place?.cuisines} street={place ? streetName(place.address) : ""} />
       </main>
     </AppShell>
     </PlaceLang>

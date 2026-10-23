@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { newBadges, type Badge, type RememberedOrder } from "@/lib/badges";
 import { kr, telLink } from "@/lib/format";
 import type { T } from "@/lib/i18n";
 import { choiceText } from "@/lib/menu-options";
@@ -13,11 +14,14 @@ import { useCart } from "./useCart";
 import { useLang } from "./useLang";
 import { useNow } from "./useNow";
 import { usePolling } from "./usePolling";
-import { SITE } from "@/lib/site";
+import { CITY, SITE } from "@/lib/site";
+import { NewBadges } from "./MyClub";
+import { OrderTags } from "./OrderTags";
+import { readMyOrders, rememberOrder } from "./useStored";
 
 const NO_ANSWER_MINUTES = 5;
 
-export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Order; placePhone?: string; pushKey: string | null }) {
+export function OrderStatusView({ initial, placePhone, pushKey, cuisines = [], street = "" }: { initial: Order; placePhone?: string; pushKey: string | null; cuisines?: string[]; street?: string }) {
   const order = usePolling<Order>(`/api/orders/${initial.id}`, initial);
   const now = useNow(15_000);
   const previous = useRef(order.status);
@@ -31,6 +35,26 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
   useEffect(() => {
     if (paid === "held") clear();
   }, [paid, clear]);
+
+  // Restauranten har sagt ja: husk bestillingen på telefonen til Mester-Spiser-mærkerne
+  const [earned, setEarned] = useState<Badge[]>([]);
+  const accepted = ["accepted", "ready", "picked_up"].includes(order.status);
+  useEffect(() => {
+    if (!accepted) return;
+    const remembered: RememberedOrder = {
+      id: order.id,
+      slug: order.placeSlug,
+      placeName: order.placeName,
+      street,
+      cuisines,
+      dishes: order.lines.map((l) => l.name),
+      at: order.createdAt,
+      offer: order.lines.some((l) => l.itemId.startsWith("dagens-ret-")) || undefined,
+    };
+    if (rememberOrder(remembered)) setEarned(newBadges(readMyOrders(), order.id, CITY));
+    // Bestillingen ændrer sig ikke, når den først er sagt ja til
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accepted, order.id]);
 
   // Giv besked, når maden er klar
   useEffect(() => {
@@ -133,6 +157,9 @@ export function OrderStatusView({ initial, placePhone, pushKey }: { initial: Ord
           </div>
         )}
       </div>
+
+      <NewBadges badges={earned} />
+      {(order.status === "ready" || order.status === "picked_up") && <OrderTags order={order} cuisines={cuisines} />}
 
       <div className="border-2 border-ink bg-surface px-5 py-4 text-lg">
         <p className="font-bold">{t("Du har bestilt")}</p>

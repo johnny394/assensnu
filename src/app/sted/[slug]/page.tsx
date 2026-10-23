@@ -5,10 +5,12 @@ import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { FollowButton } from "@/components/FollowButton";
+import { HensynPicker } from "@/components/Allergy";
 import { GroupLink } from "@/components/GroupLink";
 import { LangSwitch, RefreshWhileTranslating } from "@/components/LangSwitch";
 import { Menu } from "@/components/Menu";
 import { LiveOpenSign } from "@/components/OpenSign";
+import { Oracle } from "@/components/Oracle";
 import { TakeawayWait } from "@/components/TakeawayWait";
 import { TodaysOffer } from "@/components/TodaysOffer";
 import { LangProvider } from "@/components/useLang";
@@ -65,6 +67,13 @@ export default async function PlacePage({ params }: Props) {
           <FavoriteButton slug={place.slug} name={place.name} />
         </div>
         <p className="mt-2 text-sm uppercase tracking-[0.1em] text-ink-soft">{[...place.cuisines.map((c) => t(c)), street].join(" · ")}</p>
+        {place.vibe && (
+          <figure className="mt-3 border-l-4 border-stamp pl-3">
+            <figcaption className="text-sm font-bold uppercase tracking-[0.12em] text-stamp">{t("Byens stemning")}</figcaption>
+            <blockquote className="font-display text-xl italic leading-snug">»{t(place.vibe.text)}«</blockquote>
+            <p className="text-sm text-ink-soft">{t("Ud fra {n} bedømmelser fra kunderne de sidste to måneder.", { n: place.vibe.count })}</p>
+          </figure>
+        )}
 
         <div className="mt-4">
           <LiveOpenSign place={place} large />
@@ -144,6 +153,8 @@ export default async function PlacePage({ params }: Props) {
           <>
             {!place.acceptsOrders && <p className="mt-1 text-ink-soft">{t("Bestilling her kommer snart. Indtil da kan du ringe.")}</p>}
             {place.acceptsOrders && !preview && <GroupLink slug={place.slug} />}
+            <Oracle slug={place.slug} />
+            <HensynPicker />
             <Menu place={place} />
             <p className="mt-4 border-l-4 border-signal pl-3 text-lg text-ink-soft">
               {place.phone ? t("Allergier? Ring og spørg {navn}, før du bestiller.", { navn: place.name }) : t("Allergier? Spørg {navn}, før du bestiller.", { navn: place.name })}

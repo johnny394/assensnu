@@ -65,7 +65,11 @@ export type Place = {
   member?: boolean; // stedet har sagt ja til AssensNu og har en kode til panelet
   onlinePay?: boolean; // kunderne kan betale med MobilePay og kort gennem stedets egen Stripe-konto
   plan?: PlanId; // den pakke, stedet har lige nu. Uden Fuld pakke kan der ikke bestilles takeaway.
+  vibe?: PlaceVibe; // byens stemning på 2 linjer, ud fra kundernes mikro-tags
 };
+
+// Skrevet ud fra de seneste mikro-tags. count er antal bedømmelser, at er hvornår (ISO).
+export type PlaceVibe = { text: string; count: number; at: string };
 
 // Lukket fra og med from til og med to, fx { from: "2026-12-24", to: "2026-12-26", note: "Jul" }
 export type ClosedPeriod = { from: string; to: string; note?: string };
@@ -106,6 +110,7 @@ export type Order = {
   status: OrderStatus;
   readyAt?: string; // "HH:MM", sat når restauranten accepterer
   payment?: OrderPayment; // mangler = kunden betaler ved afhentning eller ved døren
+  tags?: string[]; // kundens mikro-tags, når maden er hentet, fx ["hot", "service"]
   createdAt: string; // ISO
 };
 

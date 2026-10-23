@@ -7,7 +7,9 @@ import type { T } from "@/lib/i18n";
 import { NEARBY } from "@/lib/site";
 import type { Place } from "@/lib/types";
 import { LangSwitch } from "./LangSwitch";
+import { Comeback } from "./MyClub";
 import { OfferStrip } from "./Offers";
+import { Oracle } from "./Oracle";
 import { OpenSign } from "./OpenSign";
 import { offerPrice } from "./TodaysOffer";
 import { useLang } from "./useLang";
@@ -29,7 +31,6 @@ const RANK = { open: 0, closed: 1, unknown: 2 } as const;
 export function PlaceBrowser({ places, title, languages }: { places: Place[]; title?: string; languages?: boolean }) {
   const now = useNow();
   const { lang, t } = useLang();
-  const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Set<Filter>>(new Set());
   const [cuisine, setCuisine] = useState<string | null>(null);
 
@@ -51,13 +52,8 @@ export function PlaceBrowser({ places, title, languages }: { places: Place[]; ti
   const state = (p: Place) => (now ? openStatus(p, now).state : "unknown");
   const openCount = now ? places.filter((p) => p.member && state(p) === "open").length : null;
 
-  const q = query.trim().toLowerCase();
   const visible = places
     .filter((p) => {
-      if (q) {
-        const words = [p.name, ...p.cuisines, ...p.menu.flatMap((c) => c.items.map((i) => i.name))].join(" ").toLowerCase();
-        if (!words.includes(q)) return false;
-      }
       if (cuisine && !p.cuisines.includes(cuisine)) return false;
       if (filters.has("takeaway") && !p.takeaway) return false;
       if (filters.has("dineIn") && !p.dineIn) return false;
@@ -88,20 +84,8 @@ export function PlaceBrowser({ places, title, languages }: { places: Place[]; ti
 
       <OfferStrip places={places} />
 
-      <label className="mt-5 flex items-center gap-3 border-b-2 border-ink px-1">
-        <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-4-4" />
-        </svg>
-        <span className="sr-only">{t("Søg")}</span>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("Søg, fx pizza eller durum")}
-          className="w-full bg-transparent py-3 text-lg outline-none placeholder:text-ink-soft"
-        />
-      </label>
+      {languages && <Comeback places={places} />}
+      {languages && <Oracle />}
 
       <div className="-mx-5 mt-4 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
         {/* "Til båden" og "Til campingpladsen" vises kun, når mindst ét sted kommer derud */}
@@ -167,7 +151,6 @@ export function PlaceBrowser({ places, title, languages }: { places: Place[]; ti
             <button
               className="font-bold text-ink underline"
               onClick={() => {
-                setQuery("");
                 setFilters(new Set());
                 setCuisine(null);
               }}

@@ -7,11 +7,11 @@ import { todayInCopenhagen } from "../hours";
 import { activeWait, busyUntilFrom, todaysNews } from "../live";
 import { shownToPlace, type Subscription } from "../payment";
 import { withPlan, type PushUse } from "../plans";
-import type { Booking, Chef, ClosedPeriod, GroupOrder, Order, Place, PlaceNews } from "../types";
+import type { Booking, Chef, ClosedPeriod, GroupOrder, Order, Place, PlaceNews, PlaceVibe } from "../types";
 import type { PushSubscription, PushTarget, Store } from "./types";
 
 // Gemmer alt i serverens hukommelse. Forsvinder ved genstart, så kun til afprøvning.
-type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { createdAt?: string }>>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]>; stripe: Map<string, { account: string; ready: boolean }>; subscriptions: Map<string, Subscription>; pushUse: Map<string, PushUse> };
+type State = { places: Place[]; closedOn: Map<string, string>; orders: Order[]; bookings: Booking[]; nextNumber: number; push: Map<string, PushSubscription>; hidden: Set<string>; pins: Map<string, string>; busyUntil: Map<string, string>; news: Map<string, PlaceNews>; followers: Map<string, Map<string, PushSubscription & { createdAt?: string }>>; groups: Map<string, { group: GroupOrder; hostHash: string; entryHashes: Map<string, string> }>; translations: Map<string, string>; chefs: Map<string, { chef: Chef; photo: string | null }>; events: AssensEvent[]; closedDays: Map<string, ClosedPeriod[]>; placePush: Map<string, PushSubscription[]>; stripe: Map<string, { account: string; ready: boolean }>; subscriptions: Map<string, Subscription>; pushUse: Map<string, PushUse>; vibes: Map<string, PlaceVibe> };
 
 const g = globalThis as unknown as { __assensnu?: State };
 const state: State = (g.__assensnu ??= {
@@ -30,6 +30,7 @@ const state: State = (g.__assensnu ??= {
   stripe: new Map(),
   subscriptions: new Map(),
   pushUse: new Map(),
+  vibes: new Map(),
   followers: new Map(),
   groups: new Map(),
   translations: new Map(),
@@ -45,6 +46,7 @@ state.placePush ??= new Map();
 state.stripe ??= new Map();
 state.subscriptions ??= new Map();
 state.pushUse ??= new Map();
+state.vibes ??= new Map();
 state.groups ??= new Map();
 state.translations ??= new Map();
 state.chefs ??= new Map();
@@ -60,6 +62,7 @@ function withToday(place: Place): Place {
     ...activeWait(place.extraWaitMinutes, state.busyUntil.get(place.slug) ?? null),
     news: todaysNews(news?.text, news?.sentAt, news),
     chef: state.chefs.get(place.slug)?.chef,
+    vibe: state.vibes.get(place.slug),
     closedToday: state.closedOn.get(place.slug) === todayInCopenhagen() || isClosedOn(state.closedDays.get(place.slug), todayInCopenhagen()),
     closedDays: currentClosed(state.closedDays.get(place.slug), todayInCopenhagen()),
     member: state.pins.has(place.slug) || Boolean(place.demo),
@@ -170,6 +173,19 @@ export const memoryStore: Store = {
   },
   async savePushUse(slug, use) {
     state.pushUse.set(slug, use);
+  },
+
+  async saveOrderTags(id, tags) {
+    const order = state.orders.find((o) => o.id === id);
+    if (!order || order.tags) return false;
+    order.tags = tags;
+    return true;
+  },
+  async recentTags(slug, sinceIso) {
+    return state.orders.filter((o) => o.placeSlug === slug && o.tags && o.createdAt >= sinceIso).map((o) => ({ tags: o.tags!, createdAt: o.createdAt }));
+  },
+  async saveVibe(slug, vibe) {
+    state.vibes.set(slug, vibe);
   },
 
   async countOrdersByPhone(phone, sinceIso) {

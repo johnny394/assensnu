@@ -34,3 +34,16 @@ describe("følgere", () => {
     expect((await store.listFollowers("proevepizza")).map((s) => s.endpoint)).toEqual(["https://push.example/b"]);
   });
 });
+
+describe("mikro-tags", () => {
+  it("gemmer tags én gang pr. ordre og finder dem til stemningen", async () => {
+    const since = new Date(Date.now() - 1000).toISOString();
+    const o = await order("50505050");
+    expect(await store.saveOrderTags(o.id, ["hot", "service"])).toBe(true);
+    expect(await store.saveOrderTags(o.id, ["wait"])).toBe(false);
+    expect((await store.getOrder(o.id))?.tags).toEqual(["hot", "service"]);
+    expect((await store.recentTags("proevepizza", since)).map((r) => r.tags)).toEqual([["hot", "service"]]);
+    await store.saveVibe("proevepizza", { text: "Kunderne roser især den varme mad.", count: 3, at: new Date().toISOString() });
+    expect((await store.getPlace("proevepizza"))?.vibe?.text).toBe("Kunderne roser især den varme mad.");
+  });
+});
