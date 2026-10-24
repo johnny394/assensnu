@@ -3,7 +3,7 @@ import { Atkinson_Hyperlegible, Fraunces } from "next/font/google";
 import { LangProvider } from "@/components/useLang";
 import { chooseLang } from "@/lib/translate";
 import "./globals.css";
-import { CITY, SITE } from "@/lib/site";
+import { CITY, SITE, TEST } from "@/lib/site";
 
 // Atkinson Hyperlegible er lavet til at være let at læse for alle, også med dårligt syn
 const atkinson = Atkinson_Hyperlegible({ variable: "--font-atkinson", subsets: ["latin"], weight: ["400", "700"] });
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   title: `${SITE} · Hvem har åbent i ${CITY}?`,
   description: `Alle spisesteder i ${CITY} ét sted. Se hvem der har åbent, find menuen, bestil takeaway og book bord.`,
   appleWebApp: { title: `${SITE}`, capable: true, statusBarStyle: "default" },
+  ...(TEST ? { robots: { index: false, follow: false } } : {}),
 };
 
 export const viewport: Viewport = {
@@ -26,6 +27,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang={lang} className={`${atkinson.variable} ${fraunces.variable}`}>
       <body className="antialiased">
+        {TEST && (
+          <div className="bg-[var(--color-buoy)] px-4 py-1.5 text-center text-sm font-bold text-[var(--color-ink)]">
+            Testudgave. Bestillinger her er ikke rigtige.
+          </div>
+        )}
         <LangProvider lang={lang} texts={{}}>
           {children}
         </LangProvider>
