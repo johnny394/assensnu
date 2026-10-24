@@ -9,16 +9,26 @@ export const canUseAI = () => !!process.env.ANTHROPIC_API_KEY?.trim();
 const MODEL = "claude-haiku-5-5";
 let client: Anthropic | null = null;
 
-/** Svar som JSON efter et skema. Kaster en fejl, hvis noget går galt, så den, der spørger, kan falde tilbage. */
-export async function askJson<T>(system: string, question: string, schema: Record<string, unknown>, maxTokens = 600): Promise<T> {
+/** Svar som JSON efter et skema. Kaster en fejl, hvis noget går galt, så den, der spørger, kan falde tilbage.
+ *  question kan også være billeder. Store opgaver (fx at læse et helt menukort) kan få en klogere model og mere tid. */
+export async function askJson<T>(
+  system: string,
+  question: string | Anthropic.ContentBlockParam[],
+  schema: Record<string, unknown>,
+  maxTokens = 600,
+  { model = MODEL, timeout }: { model?: string; timeout?: number } = {},
+): Promise<T> {
   client ??= new Anthropic({ timeout: 12_000, maxRetries: 1 });
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: maxTokens,
-    system,
-    output_config: { format: { type: "json_schema", schema } },
-    messages: [{ role: "user", content: question }],
-  });
+  const message = await client.messages.create(
+    {
+      model,
+      max_tokens: maxTokens,
+      system,
+      output_config: { format: { type: "json_schema", schema } },
+      messages: [{ role: "user", content: question }],
+    },
+    timeout ? { timeout } : undefined,
+  );
   if (message.stop_reason === "refusal") throw new Error("Claude ville ikke svare");
   if (message.stop_reason === "max_tokens") throw new Error("Svaret blev for langt");
   const block = message.content.find((b) => b.type === "text");
