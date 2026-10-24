@@ -4,7 +4,9 @@ import { useState } from "react";
 import { WEEKDAYS } from "@/lib/hours";
 import { CAMPSITE } from "@/lib/orders";
 import { townName } from "@/lib/postcodes";
+import { combineMenus, type ReadAnswer } from "@/lib/menu-photo";
 import type { MenuCategory, OpeningPeriod, Place, Weekday } from "@/lib/types";
+import { MenuPhoto } from "./MenuPhoto";
 
 // Restauranten retter selv telefon, åbningstider og menukort. Hver del åbner som en
 // hel side ovenpå panelet med en stor Gem-knap i bunden.
@@ -245,6 +247,22 @@ export function MenuEditor({ place, onClose, onSaved, saveUrl }: {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Når AI'en har læst et billede: hvad der stod før (så det kan fortrydes), og hvad restauranten skal tjekke
+  const [fromPhoto, setFromPhoto] = useState<{ before: DraftCategory[]; dishes: number; note: string } | null>(null);
+
+  function readPhoto(answer: ReadAnswer, how: "replace" | "add") {
+    const read: DraftCategory[] = answer.categories.map((c) => ({
+      key: crypto.randomUUID(),
+      name: c.name,
+      sizes: draftChoices(c.sizes.map((x) => ({ name: x.name, price: x.extra }))),
+      extras: draftChoices(c.extras),
+      items: c.items.map((i) => ({ ...newItem(), name: i.name, description: i.description, price: i.price === null ? "" : priceText(i.price) })),
+    }));
+    setFromPhoto({ before: categories, dishes: read.reduce((n, c) => n + c.items.length, 0), note: answer.note });
+    setCategories(combineMenus(categories, read, how));
+    setError(null);
+  }
+  const noPrice = fromPhoto ? categories.reduce((n, c) => n + c.items.filter((i) => i.name.trim() && !i.price.trim()).length, 0) : 0;
 
   const setCategory = (ci: number, change: (c: DraftCategory) => DraftCategory) => setCategories((all) => all.map((c, i) => (i === ci ? change(c) : c)));
   const setItem = (ci: number, ii: number, change: Partial<DraftItem>) =>
@@ -274,6 +292,19 @@ export function MenuEditor({ place, onClose, onSaved, saveUrl }: {
 
   return (
     <Sheet title="Menukort" onClose={onClose} onSave={save} saving={saving} error={error}>
+      {fromPhoto ? (
+        <div className="mb-6 rounded-3xl bg-go-soft p-5" role="status">
+          <p className="font-display text-xl font-black">Vi har skrevet {fromPhoto.dishes} {fromPhoto.dishes === 1 ? "ret" : "retter"} ind herunder</p>
+          <p className="mt-1 text-lg">Læs navne og priser igennem, og ret det, der er forkert. Intet er gemt, før I trykker Gem.</p>
+          {noPrice > 0 && <p className="mt-2 text-lg font-bold text-signal">{noPrice === 1 ? "1 ret mangler en pris" : `${noPrice} retter mangler en pris`}. Den er markeret med rødt.</p>}
+          {fromPhoto.note && <p className="mt-2 text-lg">{fromPhoto.note}</p>}
+          <button onClick={() => { setCategories(fromPhoto.before); setFromPhoto(null); }} className="mt-3 py-1 text-lg underline">
+            Fortryd og brug det, der stod før
+          </button>
+        </div>
+      ) : (
+        <MenuPhoto hasMenu={categories.some((c) => c.items.some((i) => i.name.trim()))} onRead={readPhoto} />
+      )}
       <p className="text-lg text-ink-soft">Skriv retterne, som de står på jeres menukort. Kunderne ser ændringerne, så snart I trykker Gem.</p>
       <div className="mt-5 space-y-5">
         {categories.map((c, ci) => (
@@ -295,7 +326,7 @@ export function MenuEditor({ place, onClose, onSaved, saveUrl }: {
                   <input aria-label="Rettens navn" value={item.name} onChange={(e) => setItem(ci, ii, { name: e.target.value })} placeholder="Navn, fx Margherita" className={field} />
                   <input aria-label="Beskrivelse" value={item.description} onChange={(e) => setItem(ci, ii, { description: e.target.value })} placeholder="Hvad er der i? (hvis I vil)" className={`${field} mt-2 text-base`} />
                   <div className="mt-2 flex items-center gap-1">
-                    <label className="mr-1 flex w-32 shrink-0 items-center rounded-2xl border-2 border-line bg-surface pr-3 focus-within:border-ink">
+                    <label className={`mr-1 flex w-32 shrink-0 items-center rounded-2xl border-2 bg-surface pr-3 focus-within:border-ink ${fromPhoto && item.name.trim() && !item.price.trim() ? "border-signal" : "border-line"}`}>
                       <input aria-label={`Pris for ${item.name || "retten"}`} inputMode="decimal" value={item.price} onChange={(e) => setItem(ci, ii, { price: e.target.value })} placeholder="Pris" className="w-full min-w-0 bg-transparent px-3 py-3 text-right text-lg tabular-nums outline-none" />
                       <span className="text-ink-soft">kr.</span>
                     </label>
