@@ -11,6 +11,7 @@ const PLACE_EXAMPLES = ["Hvad er mest mættende?", "Noget til 2 under 200 kr.", 
 
 // Mad-oraklet: skriv med dine egne ord, hvad du har lyst til. Som en brevkasse i lokalavisen.
 // slug: kun stedets egne retter (på menukortet)
+// På forsiden starter oraklet som én linje, ligesom et søgefelt, og folder først ud, når man trykker på det.
 export function Oracle({ slug }: { slug?: string }) {
   const { lang, t } = useLang();
   const { hensyn } = useHensyn();
@@ -19,6 +20,8 @@ export function Oracle({ slug }: { slug?: string }) {
   const [answer, setAnswer] = useState<OracleAnswer | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  const [open, setOpen] = useState(false);
+  const compact = !slug && !open && !answer && !busy && !error;
 
   async function ask(q: string) {
     const text = q.trim();
@@ -39,11 +42,25 @@ export function Oracle({ slug }: { slug?: string }) {
   }
 
   return (
-    <section className="mt-5 border-2 border-ink bg-surface px-4 pb-4 pt-3">
-      <p className="text-sm font-bold uppercase tracking-[0.14em] text-stamp">{t("Spørg Mad-oraklet")}</p>
-      <p className="mt-0.5 font-display text-xl font-semibold leading-snug">{t(slug ? "Skriv, hvad du har lyst til, så finder oraklet det på menuen." : "Skriv, hvad du har lyst til, så finder oraklet det i byen.")}</p>
+    <section className={compact ? "mt-4" : "mt-5 border-2 border-ink bg-surface px-4 pb-4 pt-3"}>
+      {!compact && (
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-sm font-bold uppercase tracking-[0.14em] text-stamp">{t("Spørg Mad-oraklet")}</p>
+          {!slug && !answer && !busy && (
+            <button type="button" onClick={() => {
+                setOpen(false);
+                setError(false);
+              }}
+              className="py-1 text-sm font-bold underline">
+              {t("Luk")}
+            </button>
+          )}
+        </div>
+      )}
+      {slug && <p className="mt-0.5 font-display text-xl font-semibold leading-snug">{t("Skriv, hvad du har lyst til, så finder oraklet det på menuen.")}</p>}
+      {!slug && !compact && !answer && !busy && <p className="mt-0.5 text-base text-ink-soft">{t("Skriv, hvad du har lyst til, så finder oraklet det i byen.")}</p>}
       <form
-        className="mt-3 flex gap-2"
+        className={compact ? "flex border-2 border-ink bg-surface" : "mt-3 flex gap-2"}
         onSubmit={(e) => {
           e.preventDefault();
           ask(question);
@@ -52,17 +69,32 @@ export function Oracle({ slug }: { slug?: string }) {
         <input
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
+          onFocus={() => setOpen(true)}
           maxLength={MAX_QUESTION}
           enterKeyHint="search"
           aria-label={t("Hvad har du lyst til?")}
-          placeholder={t("Fx noget varmt og billigt")}
-          className="min-w-0 flex-1 border-2 border-ink bg-paper px-3 py-3 text-lg outline-none placeholder:text-ink-soft focus:border-stamp"
+          placeholder={compact ? `${t("Spørg Mad-oraklet")} …` : t("Fx noget varmt og billigt")}
+          className={
+            compact
+              ? "min-w-0 flex-1 bg-transparent px-3 py-2.5 text-lg outline-none placeholder:text-ink-soft"
+              : "min-w-0 flex-1 border-2 border-ink bg-paper px-3 py-3 text-lg outline-none placeholder:text-ink-soft focus:border-stamp"
+          }
         />
-        <button disabled={busy || question.trim().length < 2} className="shrink-0 bg-ink px-4 text-lg font-bold text-paper disabled:opacity-50">
+        <button
+          disabled={busy || (!compact && question.trim().length < 2)}
+          onClick={(e) => {
+            // I den lille udgave åbner knappen bare oraklet, så man kan se eksemplerne
+            if (compact && question.trim().length < 2) {
+              e.preventDefault();
+              setOpen(true);
+            }
+          }}
+          className={compact ? "shrink-0 bg-ink px-4 text-lg font-bold text-paper" : "shrink-0 bg-ink px-4 text-lg font-bold text-paper disabled:opacity-50"}
+        >
           {t("Spørg")}
         </button>
       </form>
-      {!answer && !busy && (
+      {!compact && !answer && !busy && (
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
           {(slug ? PLACE_EXAMPLES : TOWN_EXAMPLES).map((ex) => (
             <button key={ex} type="button" onClick={() => ask(t(ex))} className="py-1 text-left text-base italic text-ink-soft underline decoration-dotted underline-offset-4">
@@ -110,6 +142,7 @@ export function Oracle({ slug }: { slug?: string }) {
               onClick={() => {
                 setAnswer(null);
                 setQuestion("");
+                setOpen(false);
               }}
               className="shrink-0 py-1 font-bold underline"
             >
